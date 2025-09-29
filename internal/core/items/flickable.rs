@@ -36,6 +36,7 @@ use euclid::num::Zero;
 use i_slint_core_macros::*;
 #[allow(unused)]
 use num_traits::Float;
+use std::println;
 
 /// The implementation of the `Flickable` element
 #[repr(C)]
@@ -456,7 +457,7 @@ impl FlickableData {
                     };
 
                     let new_pos = inner.pressed_viewport_pos + (*position - inner.pressed_pos);
-
+                    println!("New position: {:?}", new_pos);
                     let x = (Flickable::FIELD_OFFSETS.viewport_x).apply_pin(flick);
                     let y = (Flickable::FIELD_OFFSETS.viewport_y).apply_pin(flick);
                     let should_capture = || {
@@ -474,7 +475,7 @@ impl FlickableData {
 
                     if inner.capture_events || should_capture() {
                         let new_pos = ensure_in_bound(flick, new_pos, flick_rc);
-
+                        println!("New position ensure bound: {:?}", new_pos);
                         let old_pos = (x.get(), y.get());
                         x.set(new_pos.x_length());
                         y.set(new_pos.y_length());
