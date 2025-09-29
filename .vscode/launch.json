@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'slint-viewer'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=slint-viewer",
+                    "--package=slint-viewer"
+                ],
+                "filter": {
+                    "name": "slint-viewer",
+                    "kind": "bin"
+                }
+            },
+            "env": {
+				"RUSTFLAGS": "--cfg slint_debug_property"
+			},
+            "args": ["C:\\Users\\martin.marmsoler\\.GIT\\weather\\weather\\ui\\pages\\dhv.slint"],
+            "cwd": "${workspaceFolder}"
+        },
+    ]
+}
