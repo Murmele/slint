@@ -1,6 +1,34 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
+// Test nested TouchAreas. This is useful if a component contains a TouchArea but the parent is a TouchArea which conditionally
+// forwards or reacts on touch events
+export component TestCase2 {
+    in-out property <int> touch1;
+    in-out property <int> touch2;
+
+    TouchArea {
+        x: 100phx;
+        y: 100phx;
+        width: 10phx;
+        height: 10phx;
+        clicked => {touch1 += 1}
+
+        pointer-event(event) => {
+            if self.mouse-x
+        }
+
+        // Completely overlapping
+        TouchArea {
+            x: 0phx;
+            y: 0phx;
+            width: parent.width;
+            height: parent.height;
+            clicked => {touch2 += 1}
+        }
+    }
+}
+
 export component TestCase  {
     in-out property <int> touch1;
     in-out property <int> touch2;
@@ -125,6 +153,20 @@ assert_eq(instance.get_pointer_event_test(), "moveotherupleft"); // no "clicked"
 assert_eq(instance.get_touch1(), 1);
 assert_eq(instance.get_touch2(), 1);
 assert_eq(instance.get_touch3(), 1);
+```
+
+
+Test nested TouchAreas. This is useful if a component contains a TouchArea but the parent is a TouchArea which conditionally
+forwards or reacts on touch events
+
+```rust
+use slint::{platform::WindowEvent, platform::PointerEventButton, platform::Key, LogicalPosition};
+use slint::private_unstable_api::re_exports::MouseCursor;
+
+let instance = TestCase::new().unwrap();
+assert_eq!(slint_testing::access_testing_window(instance.window(), |window| window.mouse_cursor.get()), MouseCursor::Default);
+
+
 ```
 
 ```rust

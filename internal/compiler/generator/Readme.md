@@ -1,3 +1,10 @@
+# Debug considerations
+
+Enable slint_debug_property configuration:
+    - export RUSTFLAGS="--cfg slint_debug_property"
+
+VSCode Launch example:
+```json
 {
     "version": "0.2.0",
     "configurations": [
@@ -19,8 +26,9 @@
             "env": {
 				"RUSTFLAGS": "--cfg slint_debug_property"
 			},
-            "args": ["C:\\Users\\martin.marmsoler\\.GIT\\weather\\weather\\ui\\pages\\austrocontrol.slint"],
+            "args": ["<Path to slint file>"],
             "cwd": "${workspaceFolder}"
         },
     ]
 }
+```
