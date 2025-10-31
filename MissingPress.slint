@@ -1,0 +1,20 @@
+export component MissingPress inherits Rectangle {
+    preferred-height: 400px;
+    preferred-width: 400px;
+    background: green;
+    TouchArea {
+        FocusScope {
+            key-pressed(event) => {
+                return reject;
+            }
+        }
+
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                debug("Pressed x during Press: ", self.pressed-x);
+            } else if event.kind == PointerEventKind.up {
+                debug("Pressed x during Release: ", self.pressed-x);
+            }
+        }
+    }
+}

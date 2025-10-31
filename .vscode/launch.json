@@ -17,7 +17,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": ["${workspaceFolder}/MissingPress.slint"],
             "cwd": "${workspaceFolder}/tools/viewer",
             "terminal": "console"
         },
