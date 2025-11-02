@@ -15,7 +15,8 @@
                 "filter": {
                     "name": "slint-viewer",
                     "kind": "bin"
-                }
+                },
+                "cwd": "${workspaceFolder}/tools/viewer"
             },
             "args": ["${workspaceFolder}/MissingPress.slint"],
             "cwd": "${workspaceFolder}/tools/viewer",

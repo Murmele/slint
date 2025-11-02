@@ -13,6 +13,7 @@ use i_slint_core::rtti::FieldOffset;
 use std::rc::Rc;
 
 unsafe fn construct_fn<T: Default>(ptr: *mut u8) {
+    println!("Construct T: {:?}", std::any::type_name::<T>());
     core::ptr::write(ptr as *mut T, T::default());
 }
 unsafe fn drop_fn<T>(ptr: *mut u8) {

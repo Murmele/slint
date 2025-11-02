@@ -741,6 +741,8 @@ pub(crate) fn send_exit_events(
     }
 }
 
+use std::println;
+
 /// Process the `mouse_event` on the `component`, the `mouse_grabber_stack` is the previous stack
 /// of mouse grabber.
 /// Returns a new mouse grabber stack.
@@ -752,6 +754,14 @@ pub fn process_mouse_input(
 ) -> MouseInputState {
     let mut result =
         MouseInputState { drag_data: mouse_input_state.drag_data.clone(), ..Default::default() };
+    if let MouseEvent::Pressed { position: _, button: _, click_count: _, is_touch: _ } = mouse_event
+    {
+        println!("Input.rs. Itemrc Index: {}, Mouse process_mouse_input: Pressed.", root.index(),);
+    } else if let MouseEvent::Released { position: _, button: _, click_count: _, is_touch: _ } =
+        mouse_event
+    {
+        println!("Input.rs. Itemrc Index: {}, Mouse process_mouse_input: Released.", root.index(),);
+    }
     let r = send_mouse_event_to_item(
         mouse_event,
         root.clone(),
@@ -840,7 +850,6 @@ fn send_mouse_event_to_item(
             event_for_children.transform(inverse_transform);
         }
     }
-
     let filter_result = if mouse_event.position().is_some_and(|p| geom.contains(p))
         || item.as_ref().clips_children()
     {
@@ -852,6 +861,23 @@ fn send_mouse_event_to_item(
     } else {
         InputEventFilterResult::ForwardAndIgnore
     };
+
+    if let MouseEvent::Pressed { position: _, button: _, click_count: _, is_touch: _ } = mouse_event
+    {
+        println!(
+            "Input.rs. Itemrc Index: {}, Mouse send_mouse_event_to_item: Pressed. Filterresult: {:?}",
+            item_rc.index(),
+            filter_result
+        );
+    } else if let MouseEvent::Released { position: _, button: _, click_count: _, is_touch: _ } =
+        mouse_event
+    {
+        println!(
+            "Input.rs. Itemrc Index: {}, Mouse send_mouse_event_to_item: Released. Filterresult: {:?}",
+            item_rc.index(),
+            filter_result
+        );
+    }
 
     let (forward_to_children, ignore) = match filter_result {
         InputEventFilterResult::ForwardEvent => (true, false),
@@ -909,10 +935,32 @@ fn send_mouse_event_to_item(
         let mut event = mouse_event.clone();
         event.translate(-geom.origin.to_vector());
         if last_top_item.is_none_or(|x| *x != item_rc) {
+            println!("Set clickcount to zero");
             event.set_click_count(0);
         }
+        println!("Input event: {:?}", item_rc);
         item.as_ref().input_event(&event, window_adapter, &item_rc)
     };
+
+    if let MouseEvent::Pressed { position: _, button: _, click_count: _, is_touch: _ } = mouse_event
+    {
+        println!(
+            "Input.rs. Event Result: Itemrc Index: {}, Mouse send_mouse_event_to_item: {:?}. FilterEventResult: {:?}",
+            item_rc.index(),
+            mouse_event,
+            r
+        );
+    } else if let MouseEvent::Released { position: _, button: _, click_count: _, is_touch: _ } =
+        mouse_event
+    {
+        println!(
+            "Input.rs. Event Result: Itemrc Index: {}, Mouse send_mouse_event_to_item: {:?}. FilterEventResult: {:?}",
+            item_rc.index(),
+            mouse_event,
+            r
+        );
+    }
+
     match r {
         InputEventResult::EventAccepted => VisitChildrenResult::abort(item_rc.index(), 0),
         InputEventResult::EventIgnored => {

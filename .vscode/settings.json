@@ -9,5 +9,6 @@
     },
     "rust-analyzer.cargo.cfgs": [
         "slint_debug_property"
-    ]
+    ],
+    "rust-analyzer.cargo.noDeps": true,
 }

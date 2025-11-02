@@ -23,6 +23,7 @@ use const_field_offset::FieldOffsets;
 use core::cell::Cell;
 use core::pin::Pin;
 use i_slint_core_macros::*;
+use std::println;
 
 /// The implementation of the `TouchArea` element
 #[repr(C)]
@@ -108,6 +109,7 @@ impl Item for TouchArea {
         window_adapter: &Rc<dyn WindowAdapter>,
         self_rc: &ItemRc,
     ) -> InputEventResult {
+        println!("Touch area input_event");
         if matches!(event, MouseEvent::Exit) {
             Self::FIELD_OFFSETS.has_hover.apply_pin(self).set(false);
             if let Some(x) = window_adapter.internal(crate::InternalToken) {
@@ -120,6 +122,7 @@ impl Item for TouchArea {
 
         match event {
             MouseEvent::Pressed { position, button, is_touch, .. } => {
+                println!("Touch area pressed");
                 self.grabbed.set(true);
                 if *button == PointerEventButton::Left {
                     Self::FIELD_OFFSETS.pressed_x.apply_pin(self).set(position.x_length());
@@ -150,6 +153,7 @@ impl Item for TouchArea {
             }
 
             MouseEvent::Released { button, position, click_count, is_touch } => {
+                println!("Touch Area Released");
                 let geometry = self_rc.geometry();
                 if *button == PointerEventButton::Left
                     && LogicalRect::new(LogicalPoint::default(), geometry.size).contains(*position)

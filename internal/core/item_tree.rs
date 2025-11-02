@@ -17,6 +17,7 @@ use crate::SharedString;
 use alloc::vec::Vec;
 use core::ops::ControlFlow;
 use core::pin::Pin;
+use std::println;
 use vtable::*;
 
 #[repr(C)]
@@ -173,6 +174,7 @@ pub fn register_item_tree(item_tree_rc: &ItemTreeRc, window_adapter: Option<Wind
     let item_tree = c.as_ref().get_item_tree();
     item_tree.iter().enumerate().for_each(|(tree_index, node)| {
         let tree_index = tree_index as u32;
+        println!("Node: {:?}", node);
         if let ItemTreeNode::Item { .. } = &node {
             let item = ItemRc::new(item_tree_rc.clone(), tree_index);
             c.as_ref().get_item_ref(tree_index).as_ref().init(&item);
