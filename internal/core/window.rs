@@ -807,6 +807,8 @@ impl WindowInner {
             let mut item = item.clone();
 
             while let Some(i) = item {
+                let b = i.element_type_names_and_ids(0);
+                std::println!("Check Item for key event: {:?}", b);
                 tmp.push(i.clone());
                 item = i.parent_item(ParentItemTraversalMode::StopAtPopups);
             }

@@ -1,20 +1,165 @@
+import { AboutSlint, Button, VerticalBox } from "std-widgets.slint";
+
+component TextItem inherits VerticalBox {
+    spacing: 0px;
+    preferred-height: 50px;
+    in property <string> title;
+    in property <string> error;
+    Text {
+        vertical-alignment: center;
+        horizontal-alignment: center;
+        text: title;
+    }
+    Text {
+        vertical-alignment: center;
+        horizontal-alignment: center;
+        text: error;
+    }
+}
+
 export component MissingPress inherits Rectangle {
-    preferred-height: 400px;
     preferred-width: 400px;
     background: green;
+
+    TextItem {
+        title: "MissingPress";
+        error: "First touch area event is a release";
+    }
+
     TouchArea {
         FocusScope {
             key-pressed(event) => {
+                debug("MissingPress: Key press");
                 return reject;
             }
         }
 
         pointer-event(event) => {
             if event.kind == PointerEventKind.down {
-                debug("Pressed x during Press: ", self.pressed-x);
+                debug("MissingPress: Pressed x during Press: ", self.pressed-x);
             } else if event.kind == PointerEventKind.up {
-                debug("Pressed x during Release: ", self.pressed-x);
+                debug("MissingPress: Pressed x during Release: ", self.pressed-x);
             }
         }
+    }
+}
+
+export component MissingPressFocusOnClickFalse inherits Rectangle {
+    preferred-width: 400px;
+    background: yellowgreen;
+
+    TextItem {
+        title: "MissingPressFocusOnClickFalse";
+        error: "No key press handled";
+    }
+
+    TouchArea {
+        FocusScope {
+            focus-on-click: false;
+            key-pressed(event) => {
+                debug("MissingPressFocusOnClickFalse: Key press");
+                return reject;
+            }
+        }
+
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                debug("MissingPressFocusOnClickFalse: Pressed x during Press: ", self.pressed-x);
+            } else if event.kind == PointerEventKind.up {
+                debug("MissingPressFocusOnClickFalse: Pressed x during Release: ", self.pressed-x);
+            }
+        }
+    }
+}
+
+// 
+export component TouchAreaFocusScopeSidebySide inherits Rectangle {
+    preferred-width: 400px;
+    background: red;
+
+    TextItem {
+        title: "TouchAreaFocusScopeSidebySide";
+        error: "First touch area event is a release";
+    }
+
+    TouchArea {
+           pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                debug("TouchAreaFocusScopeSidebySide: Pressed x during Press: ", self.pressed-x);
+            } else if event.kind == PointerEventKind.up {
+                debug("TouchAreaFocusScopeSidebySide: Pressed x during Release: ", self.pressed-x);
+            }
+        }
+    }
+    FocusScope {
+        key-pressed(event) => {
+            debug("TouchAreaFocusScopeSidebySide: Key press");
+            return reject;
+        }
+    }
+}
+
+export component TouchAreaFocusScopeSidebySideFocusOnClickFalse inherits Rectangle {
+    preferred-width: 400px;
+    background: violet;
+
+    TextItem {
+        title: "TouchAreaFocusScopeSidebySideFocusOnClickFalse";
+        error: "No keypress possible";
+    }
+
+    TouchArea {
+           pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                debug("TouchAreaFocusScopeSidebySideFocusOnClickFalse: Pressed x during Press: ", self.pressed-x);
+            } else if event.kind == PointerEventKind.up {
+                debug("TouchAreaFocusScopeSidebySideFocusOnClickFalse: Pressed x during Release: ", self.pressed-x);
+            }
+        }
+    }
+    FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            debug("TouchAreaFocusScopeSidebySideFocusOnClickFalse: Key press");
+            return reject;
+        }
+    }
+}
+
+export component FocusScopeTouchAreaSidebySide inherits Rectangle {
+    preferred-width: 400px;
+    background: blue;
+
+    TextItem {
+        title: "FocusScopeTouchAreaSidebySide";
+        error: "No key press handled";
+    }
+
+    FocusScope {
+        key-pressed(event) => {
+            debug("FocusScopeTouchAreaSidebySide: Key press");
+            return reject;
+        }
+    }
+    TouchArea {
+           pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                debug("FocusScopeTouchAreaSidebySide: Pressed x during Press: ", self.pressed-x);
+            } else if event.kind == PointerEventKind.up {
+                debug("FocusScopeTouchAreaSidebySide: Pressed x during Release: ", self.pressed-x);
+            }
+        }
+    }
+}
+
+
+export component Demo {
+    height: 500px;
+    VerticalBox {
+        MissingPress {}
+        MissingPressFocusOnClickFalse {}
+        TouchAreaFocusScopeSidebySide {}
+        TouchAreaFocusScopeSidebySideFocusOnClickFalse {}
+        FocusScopeTouchAreaSidebySide {}
     }
 }

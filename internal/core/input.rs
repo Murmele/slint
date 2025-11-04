@@ -865,16 +865,16 @@ fn send_mouse_event_to_item(
     if let MouseEvent::Pressed { position: _, button: _, click_count: _, is_touch: _ } = mouse_event
     {
         println!(
-            "Input.rs. Itemrc Index: {}, Mouse send_mouse_event_to_item: Pressed. Filterresult: {:?}",
-            item_rc.index(),
+            "Input.rs. Itemrc Index: {:?}, Mouse send_mouse_event_to_item: Pressed. Filterresult: {:?}",
+            item_rc.element_type_names_and_ids(0),
             filter_result
         );
     } else if let MouseEvent::Released { position: _, button: _, click_count: _, is_touch: _ } =
         mouse_event
     {
         println!(
-            "Input.rs. Itemrc Index: {}, Mouse send_mouse_event_to_item: Released. Filterresult: {:?}",
-            item_rc.index(),
+            "Input.rs. Itemrc Index: {:?}, Mouse send_mouse_event_to_item: Released. Filterresult: {:?}",
+            item_rc.element_type_names_and_ids(0),
             filter_result
         );
     }
@@ -935,18 +935,18 @@ fn send_mouse_event_to_item(
         let mut event = mouse_event.clone();
         event.translate(-geom.origin.to_vector());
         if last_top_item.is_none_or(|x| *x != item_rc) {
-            println!("Set clickcount to zero");
+            // println!("Set clickcount to zero");
             event.set_click_count(0);
         }
-        println!("Input event: {:?}", item_rc);
+        // println!("Input event: {:?}", item_rc);
         item.as_ref().input_event(&event, window_adapter, &item_rc)
     };
 
     if let MouseEvent::Pressed { position: _, button: _, click_count: _, is_touch: _ } = mouse_event
     {
         println!(
-            "Input.rs. Event Result: Itemrc Index: {}, Mouse send_mouse_event_to_item: {:?}. FilterEventResult: {:?}",
-            item_rc.index(),
+            "Input.rs. Event Result: Itemrc Index: {:?}, Mouse send_mouse_event_to_item: {:?}. FilterEventResult: {:?}",
+            item_rc.element_type_names_and_ids(0),
             mouse_event,
             r
         );
@@ -954,8 +954,8 @@ fn send_mouse_event_to_item(
         mouse_event
     {
         println!(
-            "Input.rs. Event Result: Itemrc Index: {}, Mouse send_mouse_event_to_item: {:?}. FilterEventResult: {:?}",
-            item_rc.index(),
+            "Input.rs. Event Result: Itemrc Index: {:?}, Mouse send_mouse_event_to_item: {:?}. FilterEventResult: {:?}",
+            item_rc.element_type_names_and_ids(0),
             mouse_event,
             r
         );

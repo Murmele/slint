@@ -109,7 +109,6 @@ impl Item for TouchArea {
         window_adapter: &Rc<dyn WindowAdapter>,
         self_rc: &ItemRc,
     ) -> InputEventResult {
-        println!("Touch area input_event");
         if matches!(event, MouseEvent::Exit) {
             Self::FIELD_OFFSETS.has_hover.apply_pin(self).set(false);
             if let Some(x) = window_adapter.internal(crate::InternalToken) {
