@@ -31,6 +31,7 @@ export component BaseNavigation {
     in_out property <int> current_index;
 
     callback index_changed(index: int);
+    callback selection_changed(index: int);
 
     accessible-role: tab-list;
     // accessible-delegate-focus: root.current-focused >= 0 ? root.current-focused : root.current-index;
@@ -44,8 +45,10 @@ export component BaseNavigation {
             return;
         }
 
-        root.current_index = index;
-        root.index_changed(index);
+        if index != root.current_index {
+            root.current_index = index;
+            root.selection_changed(index);
+        }
     }
 
 }

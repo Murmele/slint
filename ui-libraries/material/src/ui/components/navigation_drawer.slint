@@ -183,6 +183,17 @@ export component ModalNavigationDrawer inherits ModalDrawer {
     in_out property <int> current_group;
     in_out property <int> current_index;
 
+    callback selection_changed(group_index: int, item_index: int);
+
+    init => {
+        if root.groups.length > 0 {
+            root.current_group = 0;
+            if root.groups[current_group].items.length > 0 {
+                root.current_index = 0;
+            }
+        }
+    }
+
     accessible-role: tab-list;
     // accessible-delegate-focus: root.current-focused >= 0 ? root.current-focused : root.current-index;
     // accessible-label: root.title;
@@ -206,6 +217,7 @@ export component ModalNavigationDrawer inherits ModalDrawer {
 
         root.current_group = group_index;
         root.current_index = item_index;
+        root.selection_changed(group_index, item_index);
         root.close();
     }
 }
