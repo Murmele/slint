@@ -9,7 +9,7 @@ use super::{
     Item, ItemConsts, ItemRc, ItemRendererRef, KeyEventResult, PointerEventButton, RenderingResult,
     VoidArg,
 };
-use crate::animations::{EasingCurve, Instant};
+use crate::animations::{EasingCurve, Instant, Kinematic};
 use crate::input::{
     FocusEvent, FocusEventResult, InputEventFilterResult, InputEventResult, KeyEvent, MouseEvent,
 };
@@ -36,6 +36,7 @@ use euclid::num::Zero;
 use i_slint_core_macros::*;
 #[allow(unused)]
 use num_traits::Float;
+use std::println;
 
 /// The implementation of the `Flickable` element
 #[repr(C)]
@@ -567,25 +568,47 @@ impl FlickableData {
                 && millis > 1
             {
                 let speed = dist / (millis as f32);
-
-                let duration = 250;
-                let final_pos = ensure_in_bound(
-                    flick,
-                    (inner.pressed_viewport_pos.cast() + dist + speed * (duration as f32)).cast(),
-                    flick_rc,
-                );
-                let anim = PropertyAnimation {
-                    duration,
-                    easing: EasingCurve::CubicBezier([0.0, 0.0, 0.58, 1.0]),
-                    ..PropertyAnimation::default()
-                };
+                let curr_pos = inner.pressed_viewport_pos.cast() + dist;
+                const FRICTION: f32 = 0.0001;
 
                 let viewport_x = (Flickable::FIELD_OFFSETS.viewport_x).apply_pin(flick);
                 let viewport_y = (Flickable::FIELD_OFFSETS.viewport_y).apply_pin(flick);
+                let (min, max) = viewport_min_max(flick, flick_rc);
+
+                let set_kinematic_animation =
+                    |viewport: &Pin<&Property<euclid::Length<f32, crate::lengths::LogicalPx>>>,
+                     curr_pos: f32,
+                     speed: f32,
+                     pos_min: f32,
+                     pos_max: f32| {
+                        let mut kinematic = Kinematic::new(curr_pos, speed, FRICTION);
+                        let limit = if speed > 0. { pos_max } else { pos_min };
+
+                        // Wether there is no position change or we reached the limit
+                        let max_duration = match kinematic.duration(limit) {
+                            Some(d) => f32::min(d, kinematic.time_velocity_zero()),
+                            None => kinematic.time_velocity_zero(),
+                        };
+                        kinematic.set_max_time(max_duration);
+                        println!("Max Duration: {max_duration}");
+                        let end = LogicalLength::new(kinematic.calculate_value(max_duration));
+
+                        let anim = PropertyAnimation {
+                            duration: max_duration.round() as i32,
+                            easing: EasingCurve::Kinetic(kinematic),
+                            ..PropertyAnimation::default()
+                        };
+                        viewport.set_animated_value(end, anim);
+                        end
+                    };
+
+                let final_pos = (
+                    viewport_x.get(), //set_kinematic_animation(&viewport_x, curr_pos.x, speed.x, min.x, max.x),
+                    set_kinematic_animation(&viewport_y, curr_pos.y, speed.y, min.y, max.y),
+                );
+
                 let old_pos = (viewport_x.get(), viewport_y.get());
-                viewport_x.set_animated_value(final_pos.x_length(), anim.clone());
-                viewport_y.set_animated_value(final_pos.y_length(), anim);
-                if old_pos.0 != final_pos.x_length() || old_pos.1 != final_pos.y_length() {
+                if old_pos != final_pos {
                     (Flickable::FIELD_OFFSETS.flicked).apply_pin(flick).call(&());
                 }
             }
@@ -610,6 +633,18 @@ fn ensure_in_bound(flick: Pin<&Flickable>, p: LogicalPoint, flick_rc: &ItemRc) -
     let min = LogicalPoint::from_lengths(w - vw, h - vh);
     let max = LogicalPoint::default();
     p.max(min).min(max)
+}
+
+fn viewport_min_max(flick: Pin<&Flickable>, flick_rc: &ItemRc) -> (LogicalPoint, LogicalPoint) {
+    let geo = flick_rc.geometry();
+    let w = geo.width_length();
+    let h = geo.height_length();
+    let vw = (Flickable::FIELD_OFFSETS.viewport_width).apply_pin(flick).get();
+    let vh = (Flickable::FIELD_OFFSETS.viewport_height).apply_pin(flick).get();
+
+    let min = LogicalPoint::from_lengths(w - vw, h - vh);
+    let max = LogicalPoint::default();
+    (min, max)
 }
 
 /// # Safety

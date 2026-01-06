@@ -8,6 +8,7 @@ use alloc::boxed::Box;
 use core::cell::Cell;
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
+use std::println;
 
 mod cubic_bezier {
     //! This is a copy from lyon_algorithms::geom::cubic_bezier implementation
@@ -138,6 +139,125 @@ mod cubic_bezier {
     }
 }
 
+/// Not yet implemented!
+/// Solution of the differential equation
+/// y(t) = y_hat - A * exp(-t/tau)
+/// https://ariya.io/2011/10/flick-list-with-its-momentum-scrolling-and-deceleration
+
+/// We have a mass with an initial velocity which gets only slowed down by a friction
+/// p(t) = p0 + v0*t - 1/2 * mu * g * t^2
+/// g: gravity
+/// mu: friction factor
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Kinematic {
+    initial_position: f32,
+    initial_velocity: f32,
+    deceleration: f32,
+    max_time: f32,
+    max_value: f32,
+}
+
+impl Kinematic {
+    /// All values are in SI Units!
+    pub fn new(initial_position: f32, initial_velocity: f32, friction: f32) -> Self {
+        const GRAVITY: f32 = 9.81;
+        let deceleration = friction * GRAVITY;
+        Self {
+            initial_position,
+            initial_velocity,
+            deceleration: deceleration * f32::signum(initial_velocity),
+            max_time: 0.,
+            // dv/dt = 0
+            max_value: initial_position + initial_velocity.powi(2) / deceleration
+                - 0.5 * initial_velocity.powi(2) / deceleration,
+        }
+    }
+
+    /// Set the maximum expected time
+    /// It will be used in the normalized function
+    pub fn set_max_time(&mut self, time: f32) {
+        self.max_time = time;
+    }
+
+    /// Duration to reach target value `target_value`
+    // If the target value will never be reached None will be returned
+    pub fn duration(&self, target_value: f32) -> Option<f32> {
+        let f = self.initial_velocity.powi(2)
+            - 2. * self.deceleration * (target_value - self.initial_position);
+        if f < 0. {
+            return None;
+        }
+        let t = (self.initial_velocity - f32::signum(self.initial_velocity) * f32::sqrt(f))
+            / self.deceleration;
+        if t >= 0. {
+            Some(t)
+        } else {
+            None
+        }
+    }
+
+    /// Time when the velocity gets zero and no position change occurs
+    pub fn time_velocity_zero(&self) -> f32 {
+        // differentiate initial formula und set to zero
+        self.initial_velocity / self.deceleration
+    }
+
+    /// Calculate the position at time `t`
+    pub fn calculate_value(&self, t: f32) -> f32 {
+        let t = f32::min(t, self.time_velocity_zero());
+        let v =
+            self.initial_position + self.initial_velocity * t - 0.5 * self.deceleration * t.powi(2);
+        println!("Calculate. Time: {t}, result: {v}");
+        v
+    }
+
+    /// Outputs a normalized value from a normalized input
+    /// `t` is between 0 and 1
+    pub fn calculate_value_normalized(&self, t: f32) -> f32 {
+        println!("Calculate new value. Time: {t}");
+        let res = self.calculate_value(t * self.max_time);
+        if self.max_value != self.initial_position {
+            f32::signum(self.initial_velocity) * (res - self.initial_position)
+                / (self.max_value - self.initial_position)
+        } else {
+            0.
+        }
+    }
+}
+
+#[test]
+fn test_kinematic_animation_positive_direction() {
+    let mut k = Kinematic::new(10., 3., 0.1 / 9.81);
+    k.set_max_time(30.);
+
+    assert_eq!(k.time_velocity_zero(), 3. / 0.1);
+    assert_eq!(k.calculate_value(10.), 35.);
+    assert_eq!(k.calculate_value(30.), 55.); // We reached the point where velocity got zero
+    assert_eq!(k.calculate_value(100.), 55.); // object did not move anymore because we reached already zero
+    assert_eq!(k.duration(35.), Some(10.));
+    assert_eq!(k.duration(100.), None); // we will never reach
+    assert_eq!(k.duration(1.), None); // we will never reach because we are pushing in the other direction (v0 > 0)
+
+    assert_eq!(k.calculate_value_normalized(0.), 0.);
+    assert_eq!(k.calculate_value_normalized(1.), 1.);
+}
+
+#[test]
+fn test_kinematic_animation_negative_direction() {
+    let mut k = Kinematic::new(10., -5., 0.5 / 9.81);
+    k.set_max_time(30.);
+
+    assert_eq!(k.time_velocity_zero(), 5. / 0.5);
+    assert_eq!(k.calculate_value(6.), -11.);
+    assert_eq!(k.duration(-11.), Some(6.));
+    assert_eq!(k.duration(-100.), None);
+    assert_eq!(k.duration(11.), None); // we will never reach because we are pushing in the other direction (v0 < 0)
+
+    assert_eq!(k.calculate_value_normalized(0.), 0.);
+    assert_eq!(k.calculate_value_normalized(1.), 1.);
+}
+
 /// The representation of an easing curve, for animations
 #[repr(C, u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -145,6 +265,7 @@ pub enum EasingCurve {
     /// The linear curve
     #[default]
     Linear,
+    Kinetic(Kinematic),
     /// A Cubic bezier curve, with its 4 parameters
     CubicBezier([f32; 4]),
     /// Easing curve as defined at: <https://easings.net/#easeInElastic>
@@ -317,6 +438,7 @@ fn ease_out_bounce_curve(value: f32) -> f32 {
 pub fn easing_curve(curve: &EasingCurve, value: f32) -> f32 {
     match curve {
         EasingCurve::Linear => value,
+        EasingCurve::Kinetic(k) => k.calculate_value_normalized(value),
         EasingCurve::CubicBezier([a, b, c, d]) => {
             if !(0.0..=1.0).contains(a) && !(0.0..=1.0).contains(c) {
                 return value;
