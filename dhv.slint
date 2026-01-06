@@ -1,0 +1,222 @@
+import {Vertical, ListView} from "ui-libraries/material/src/material.slint";
+
+export enum Classification {
+    Positive,
+    Negative,
+    Neutral,
+    Exclamation,
+}
+
+export struct WeatherData {
+    date: string,
+    title: string,
+    summary: string,
+    description: string,
+    classification: Classification,
+}
+
+export struct Location {
+    location: string,
+    weather_data: [WeatherData],
+}
+
+export struct Weather {
+    creation_datetime: string,
+    locations: [Location]
+}
+
+export global DHVInterface {
+    in property<Weather> weather_data: { // Data specified for testing only
+        creation_datetime: "",
+        locations: [
+            {
+                location:"Deutschland",
+                weather_data: [
+                   {
+                      date: "2025-09-25",
+                      title: "Norden Hoch - Süden Tief",
+                      summary: "In der Nordhälfte aufgelockert bis freundlich, in der Südhälfte regnerisch, allgemein sehr windig.",
+                      classification: Classification.Neutral,
+                      description:"Wind: Starker Ost-Wind, im Süden mäßiger SW-Wind."
+                   },
+                   {
+                      date:"2025-09-26",
+                      title:"Norden Hoch - Süden Tief",
+                      summary:"Im Norden aufgelockert, sonst  sehr wolkig und nur im Süden etwas Regen.",
+                      classification: Classification.Neutral,
+                      description:"Wind: In der NO-Hälfte starker, sonst mäßiger Ost-Wind."
+                   },
+                   {
+                      date:"2025-09-27",
+                      title:"Hoch im NO - Tief im SW",
+                      summary:"Im Norden freundlich, sonst aufgelockert, im S/SW sehr wolkig und  etwas Regen.",
+                      classification: Classification.Neutral,
+                      description:"Wind: Im NO starker SO-Wind, sonst schwacher SSO-Wind."
+                   }
+                ]
+             },
+             {
+                location:"Nordalpen",
+                weather_data:[
+                   {
+                      date:"2025-09-25",
+                      title:"Tiefdruckwetter (Höhentief)",
+                      summary:"Stark bewölkt mit Schauern und nur wenigen Aufhellungen.",
+                      classification: Classification.Negative,
+                      description:"Wind: Schwacher  bis mäßiger NO-Wind."
+                   },
+                   {
+                      date:"2025-09-26",
+                      title:"Tiefdruck, stark föhnig",
+                      summary:"Wechselnd bis stark bewölkt mit einigen Schauern, stark föhnig.",
+                      classification: Classification.Negative,
+                      description:"Wind: Am Nordalpenrand mäßiger Ostwind, inneralpin stark föhniger Südwind."
+                   },
+                   {
+                      date:"2025-09-27",
+                      title:"Tiefdruck, föhnige Höhenströmung",
+                      summary:"Meist stark bewölkt mit einigen Tropfen, inneralpin föhnig.",
+                      classification: Classification.Negative,
+                      description:"Wind: Am Nordalpenrand schwacher NO-Wind, inneralpin föhniger Südwind."
+                   },
+                   {
+                      date:"2025-09-28",
+                      title:"Höhentief schwächt ab, Besserung +/-",
+                      summary:"Noch unsicher: Meist “ eher wolkig als aufgelockert”, evtl. noch einzelne Tropfen.",
+                      classification: Classification.Neutral,
+                      description:"Wind: Schwacher NO-Wind."
+                   }
+                ]
+             },
+             {
+                location:"Südalpen",
+                weather_data:[
+                   {
+                      date:"2025-09-25",
+                      title:"Tiefdruckeinfluss (Höhentief)",
+                      summary:"Aufgelockert bis wechselnd bewölkt, nachmittags einige Schauer.",
+                      classification: Classification.Neutral,
+                      description:"Thermik: Zeitweise mäßige Bedingungen möglich (deutlich +/-  je Einstrahlung und Schauerneigung).\nWind: Schwacher südlicher Wind."
+                   },
+                   {
+                      date:"2025-09-26",
+                      title:"Höhentief mit Südstau",
+                      summary:"Stark bewölkt und regnerisch.",
+                      classification: Classification.Negative,
+                      description:"Wind: Inneralpinmäßiger SO-Wind, am Südalpenrand starker Ost-Wind."
+                   },
+                   {
+                      date:"2025-09-27",
+                      title:"Tiefdruckeinfluss (Höhentief)",
+                      summary:"Wechselnd bis stark bewölkt mit Schauern.",
+                      classification: Classification.Negative,
+                      description:"Wind: Inneralpin  mäßiger Süd-Wind, am Südalpenrand auflebender -in SLO starker Ostwind."
+                   },
+                   {
+                      date:"2025-09-28",
+                      title:"Höhentief schwächt ab, nordföhnig",
+                      summary:"TREND: Meist aufgelockert, nordföhnig, nachmittags ein Schauer möglich.",
+                      classification: Classification.Neutral,
+                      description:"Bassano: Überwiegend knapp gute Thermik/Basishöhe (deutlich +/-  je Einstrahlung und Schauerneigung).\nWind: Inneralpin schwacher und nordföhniger Nordwind, am Südalpenrand schwacher SO-Wind, in SLO noch auflebender Ostwind."
+                   }
+                ]
+             }
+        ],
+    };
+}
+
+component Weather inherits Rectangle {
+    in property<WeatherData> data;
+
+    background: {
+        if data.classification == Classification.Positive {
+            return green;
+        } else if data.classification == Classification.Negative {
+            return orange;
+        } else if data.classification == Classification.Exclamation {
+            return yellow;
+        }
+        return white;
+    }
+
+    Vertical {
+        Text {
+            text: root.data.date;
+            font-size: 20pt;
+            color: black;
+        }
+
+        Text {
+            text: root.data.title;
+            font-weight: 800;
+            color: black;
+        }
+
+        Text {
+            text: root.data.summary;
+            wrap: word-wrap;
+            color: black;
+        }
+
+        Text {
+            text: root.data.description;
+            wrap: word-wrap;
+            color: black;
+        }
+    }
+}
+
+component LocationWeatherData inherits Rectangle {
+    in property<Location> weather_data;
+
+    Vertical {
+        location:= Text {
+            text: root.weather_data.location;
+            color: #3586f4;
+            font-size: 40pt;
+        }
+
+        for d in weather_data.weather_data: Weather {
+            data: d;
+        }
+    }
+}
+
+export component DHV inherits Rectangle {
+    preferred-width: 600px;
+    preferred-height: 600px;
+
+    Vertical {
+        t:= Rectangle {
+            text:= Text {
+                text: "Data from: " + DHVInterface.weather_data.creation-datetime;
+                horizontal-alignment: right;
+            }
+            background: green;
+            // animate background {
+            //      duration: 3s;
+            // }
+        }
+        ListView {
+            property<length> entry_height: 600px;
+            viewport-width: parent.width;
+            vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+            horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+
+            for l[i] in  DHVInterface.weather_data.locations: LocationWeatherData {
+                x: 0px;
+                y: parent.entry_height * i;
+                weather_data: l;
+            }
+
+            scrolled => {
+                debug("Scrolled");
+                if t.background == Colors.green {
+                    t.background = Colors.red;
+                } else {
+                    t.background = Colors.green;
+                }
+            }
+        }
+    }
+}
