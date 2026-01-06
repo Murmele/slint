@@ -161,12 +161,8 @@ unsafe impl<T: InterpolatedPropertyValue + Clone, A: Fn() -> AnimationDetail> Bi
         match self.state.get() {
             AnimatedBindingState::Animating => {
                 let (val, finished) = self.animation_data.borrow_mut().compute_interpolated_value();
-<<<<<<< refs/remotes/upstream/master
                 *value = val;
-=======
                 std::println!("AnimationBindingCallback::evaluate(), Finished {finished}");
-                *(value as *mut T) = val;
->>>>>>> WIP
                 if finished {
                     self.state.set(AnimatedBindingState::NotAnimating)
                 } else {
