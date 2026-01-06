@@ -45,7 +45,9 @@ use std::println;
 pub struct Flickable {
     pub viewport_x: Property<LogicalLength>,
     pub viewport_y: Property<LogicalLength>,
+    /// Height of the viewport
     pub viewport_width: Property<LogicalLength>,
+    /// Width of the viewport
     pub viewport_height: Property<LogicalLength>,
 
     pub interactive: Property<bool>,
@@ -573,7 +575,7 @@ impl FlickableData {
 
                 let viewport_x = (Flickable::FIELD_OFFSETS.viewport_x).apply_pin(flick);
                 let viewport_y = (Flickable::FIELD_OFFSETS.viewport_y).apply_pin(flick);
-                let (min, max) = viewport_min_max(flick, flick_rc);
+                let (min, max) = viewport_min_max(flick);
 
                 let set_kinematic_animation =
                     |viewport: &Pin<&Property<euclid::Length<f32, crate::lengths::LogicalPx>>>,
@@ -590,11 +592,13 @@ impl FlickableData {
                             None => kinematic.time_velocity_zero(),
                         };
                         kinematic.set_max_time(max_duration);
-                        println!("Max Duration: {max_duration}");
                         let end = LogicalLength::new(kinematic.calculate_value(max_duration));
 
+                        println!("Max Duration: {max_duration}. Start value: {curr_pos}, pos_min: {pos_min}, pos_max: {pos_max}, End value: {}", end.0);
+
+                        let max_duration_millis = (max_duration.round() * 1000.) as i32;
                         let anim = PropertyAnimation {
-                            duration: max_duration.round() as i32,
+                            duration: (max_duration.round() * 1000.) as i32,
                             easing: EasingCurve::Kinetic(kinematic),
                             ..PropertyAnimation::default()
                         };
@@ -603,8 +607,8 @@ impl FlickableData {
                     };
 
                 let final_pos = (
-                    viewport_x.get(), //set_kinematic_animation(&viewport_x, curr_pos.x, speed.x, min.x, max.x),
-                    set_kinematic_animation(&viewport_y, curr_pos.y, speed.y, min.y, max.y),
+                    viewport_x.get(), //set_kinematic_animation(&viewport_x, viewport_x.get().0, speed.x, min.x, max.x),
+                    set_kinematic_animation(&viewport_y, viewport_y.get().0, speed.y, min.y, max.y),
                 );
 
                 let old_pos = (viewport_x.get(), viewport_y.get());
@@ -635,14 +639,11 @@ fn ensure_in_bound(flick: Pin<&Flickable>, p: LogicalPoint, flick_rc: &ItemRc) -
     p.max(min).min(max)
 }
 
-fn viewport_min_max(flick: Pin<&Flickable>, flick_rc: &ItemRc) -> (LogicalPoint, LogicalPoint) {
-    let geo = flick_rc.geometry();
-    let w = geo.width_length();
-    let h = geo.height_length();
+fn viewport_min_max(flick: Pin<&Flickable>) -> (LogicalPoint, LogicalPoint) {
     let vw = (Flickable::FIELD_OFFSETS.viewport_width).apply_pin(flick).get();
     let vh = (Flickable::FIELD_OFFSETS.viewport_height).apply_pin(flick).get();
 
-    let min = LogicalPoint::from_lengths(w - vw, h - vh);
+    let min = LogicalPoint::from_lengths(-vw, -vh);
     let max = LogicalPoint::default();
     (min, max)
 }
