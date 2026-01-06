@@ -36,6 +36,7 @@ use euclid::num::Zero;
 use i_slint_core_macros::*;
 #[allow(unused)]
 use num_traits::Float;
+use std::println;
 
 /// The implementation of the `Flickable` element
 #[repr(C)]
@@ -578,14 +579,26 @@ impl FlickableData {
                 let viewport_x = (Flickable::FIELD_OFFSETS.viewport_x).apply_pin(flick);
                 let viewport_y = (Flickable::FIELD_OFFSETS.viewport_y).apply_pin(flick);
                 let old_pos = (viewport_x.get(), viewport_y.get());
-                let curve = EasingCurve::CubicBezier([0.0, 0.0, 0.58, 1.0]);
-                let anim =
-                    PropertyAnimation { duration, easing: curve, ..PropertyAnimation::default() };
-                viewport_x.set_animated_value(final_pos.x_length(), anim.clone());
 
-                let curve = EasingCurve::CubicBezier([1.0, 0.0, 0.58, 1.0]);
-                let anim =
-                    PropertyAnimation { duration, easing: curve, ..PropertyAnimation::default() };
+                println!(
+                    "Flicker mouse released: old pos: {:?}. New pos: ({}, {})",
+                    old_pos,
+                    viewport_x.get().0,
+                    viewport_y.get().0
+                );
+
+                let anim = PropertyAnimation {
+                    duration,
+                    easing: EasingCurve::CubicBezier([0.0, 0.0, 0.58, 1.0]),
+                    ..PropertyAnimation::default()
+                };
+                viewport_x.set_animated_value(final_pos.x_length(), anim);
+
+                let anim = PropertyAnimation {
+                    duration,
+                    easing: EasingCurve::CubicBezier([1.0, 0.0, 0.58, 1.0]),
+                    ..PropertyAnimation::default()
+                };
                 viewport_y.set_animated_value(final_pos.y_length(), anim);
                 if old_pos.0 != final_pos.x_length() || old_pos.1 != final_pos.y_length() {
                     (Flickable::FIELD_OFFSETS.flicked).apply_pin(flick).call(&());
