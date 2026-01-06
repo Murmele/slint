@@ -580,11 +580,11 @@ impl FlickableData {
                 let set_kinematic_animation =
                     |viewport: &Pin<&Property<euclid::Length<f32, crate::lengths::LogicalPx>>>,
                      curr_pos: f32,
-                     speed: f32,
+                     speed_dim: f32,
                      pos_min: f32,
                      pos_max: f32| {
-                        let mut kinematic = Kinematic::new(curr_pos, speed, FRICTION);
-                        let limit = if speed > 0. { pos_max } else { pos_min };
+                        let mut kinematic = Kinematic::new(curr_pos, speed_dim, FRICTION);
+                        let limit = if speed_dim > 0. { pos_max } else { pos_min };
 
                         // Wether there is no position change or we reached the limit
                         let max_duration = match kinematic.duration(limit) {
@@ -594,15 +594,45 @@ impl FlickableData {
                         kinematic.set_max_time(max_duration);
                         let end = LogicalLength::new(kinematic.calculate_value(max_duration));
 
-                        println!("Max Duration: {max_duration}. Start value: {curr_pos}, pos_min: {pos_min}, pos_max: {pos_max}, End value: {}", end.0);
+                        println!(
+                            "Max Duration: {max_duration}. Start value: {curr_pos}, pos_min: {pos_min}, pos_max: {pos_max}, End value: {}",
+                            end.0
+                        );
 
                         let max_duration_millis = (max_duration.round() * 1000.) as i32;
+
+                        let final_pos = ensure_in_bound(
+                            flick,
+                            (inner.pressed_viewport_pos.cast() + dist + speed * (25000 as f32))
+                                .cast(),
+                            flick_rc,
+                        );
+
+                        // TODO: do not setup an animation if the values did not change
+
+                        println!(
+                            "Viewport curr: ({}, {}). Final: {:?}",
+                            viewport_x.get().0,
+                            viewport_y.get().0,
+                            final_pos
+                        );
+
+                        kinematic.set_name("X Dimension");
                         let anim = PropertyAnimation {
-                            duration: (max_duration.round() * 1000.) as i32,
+                            duration: 25000, //(max_duration.round() * 1000.) as i32,
                             easing: EasingCurve::Kinetic(kinematic),
                             ..PropertyAnimation::default()
                         };
-                        viewport.set_animated_value(end, anim);
+                        viewport_x.set_animated_value(final_pos.x_length(), anim);
+
+                        kinematic.set_name("Y Dimension");
+                        let anim = PropertyAnimation {
+                            duration: 25000, //(max_duration.round() * 1000.) as i32,
+                            easing: EasingCurve::Kinetic(kinematic.clone()),
+                            ..PropertyAnimation::default()
+                        };
+                        viewport_y.set_animated_value(final_pos.y_length(), anim.clone());
+
                         end
                     };
 

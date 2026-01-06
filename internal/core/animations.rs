@@ -8,7 +8,7 @@ use alloc::boxed::Box;
 use core::cell::Cell;
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
-use std::println;
+use std::{println, string::ToString};
 
 mod cubic_bezier {
     //! This is a copy from lyon_algorithms::geom::cubic_bezier implementation
@@ -156,6 +156,7 @@ pub struct Kinematic {
     deceleration: f32,
     max_time: f32,
     max_value: f32,
+    name: &'static str,
 }
 
 impl Kinematic {
@@ -171,7 +172,12 @@ impl Kinematic {
             // dv/dt = 0
             max_value: initial_position + initial_velocity.powi(2) / deceleration
                 - 0.5 * initial_velocity.powi(2) / deceleration,
+            name: "",
         }
+    }
+
+    pub fn set_name(&mut self, s: &'static str) {
+        self.name = s;
     }
 
     /// Set the maximum expected time
@@ -190,11 +196,7 @@ impl Kinematic {
         }
         let t = (self.initial_velocity - f32::signum(self.initial_velocity) * f32::sqrt(f))
             / self.deceleration;
-        if t >= 0. {
-            Some(t)
-        } else {
-            None
-        }
+        if t >= 0. { Some(t) } else { None }
     }
 
     /// Time when the velocity gets zero and no position change occurs
@@ -208,14 +210,16 @@ impl Kinematic {
         let t = f32::min(t, self.time_velocity_zero());
         let v =
             self.initial_position + self.initial_velocity * t - 0.5 * self.deceleration * t.powi(2);
-        println!("Calculate. Time: {t}, result: {v}");
+        // println!("Calculate. Time: {t}, result: {v}");
         v
     }
 
     /// Outputs a normalized value from a normalized input
     /// `t` is between 0 and 1
     pub fn calculate_value_normalized(&self, t: f32) -> f32 {
-        println!("Calculate new value. Time: {t}");
+        // if self.name == "Y Dimension" {
+        println!("{}. Calculate new value. Time: {t}", self.name);
+        // }
         let res = self.calculate_value(t * self.max_time);
         if self.max_value != self.initial_position {
             f32::signum(self.initial_velocity) * (res - self.initial_position)
