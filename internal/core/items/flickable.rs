@@ -577,6 +577,7 @@ impl FlickableData {
 
                 let viewport_x = (Flickable::FIELD_OFFSETS.viewport_x).apply_pin(flick);
                 let viewport_y = (Flickable::FIELD_OFFSETS.viewport_y).apply_pin(flick);
+                let old_pos = (viewport_x.get(), viewport_y.get());
                 let curve = EasingCurve::CubicBezier([0.0, 0.0, 0.58, 1.0]);
                 let anim =
                     PropertyAnimation { duration, easing: curve, ..PropertyAnimation::default() };
@@ -586,7 +587,6 @@ impl FlickableData {
                 let anim =
                     PropertyAnimation { duration, easing: curve, ..PropertyAnimation::default() };
                 viewport_y.set_animated_value(final_pos.y_length(), anim);
-                let old_pos = (viewport_x.get(), viewport_y.get());
                 if old_pos.0 != final_pos.x_length() || old_pos.1 != final_pos.y_length() {
                     (Flickable::FIELD_OFFSETS.flicked).apply_pin(flick).call(&());
                 }
