@@ -1,6 +1,8 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
+use std::println;
+
 use super::*;
 use crate::{
     items::{AnimationDirection, PropertyAnimation},
@@ -9,6 +11,7 @@ use crate::{
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
 
+#[derive(Debug)]
 enum AnimationState {
     /// The animation will start after the delay is finished
     Delaying,
@@ -40,6 +43,10 @@ impl<T: InterpolatedPropertyValue + Clone> PropertyValueAnimationData<T> {
     pub fn compute_interpolated_value(&mut self) -> (T, bool) {
         let new_tick = crate::animations::current_tick();
         let mut time_progress = new_tick.duration_since(self.start_time).as_millis() as u64;
+        println!(
+            "compute_interpolated_value(): State: {:?}, Details: {:?}",
+            self.state, self.details
+        );
         let reversed = |iteration: u64| -> bool {
             match self.details.direction {
                 AnimationDirection::Normal => false,
@@ -154,7 +161,12 @@ unsafe impl<T: InterpolatedPropertyValue + Clone, A: Fn() -> AnimationDetail> Bi
         match self.state.get() {
             AnimatedBindingState::Animating => {
                 let (val, finished) = self.animation_data.borrow_mut().compute_interpolated_value();
+<<<<<<< refs/remotes/upstream/master
                 *value = val;
+=======
+                std::println!("AnimationBindingCallback::evaluate(), Finished {finished}");
+                *(value as *mut T) = val;
+>>>>>>> WIP
                 if finished {
                     self.state.set(AnimatedBindingState::NotAnimating)
                 } else {
@@ -257,12 +269,14 @@ impl<T: Clone + InterpolatedPropertyValue + 'static> Property<T> {
             value,
             animation_data,
         ));
+        println!("set_animated_value()");
         // Safety: the BindingCallable will cast its argument to T
         unsafe {
             self.handle.set_binding(
                 move |val: &mut T| {
                     let (value, finished) = d.borrow_mut().compute_interpolated_value();
                     *val = value;
+                    println!("set_animated_value(). Finished: {finished}");
                     if finished {
                         BindingResult::RemoveBinding
                     } else {

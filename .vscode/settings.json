@@ -1,0 +1,39 @@
+{
+    "rust-analyzer.linkedProjects": [
+        // "Cargo.toml",
+        "tools/viewer/Cargo.toml",
+        // "api/rs/build/Cargo.toml",
+        // "helper_crates/const-field-offset/Cargo.toml",
+        // "helper_crates/vtable/Cargo.toml",
+        // "helper_crates/vtable/macro/Cargo.toml",
+        // //"internal/backends/android-activity/Cargo.toml",
+        // "internal/common/Cargo.toml",
+        // "internal/compiler/Cargo.toml",
+        // "internal/core/Cargo.toml",
+        // "internal/core-macros/Cargo.toml",
+        // "internal/interpreter/Cargo.toml",
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer", // Makes the magic
+        "editor.formatOnSave": true // Optional
+    },
+    "rust-analyzer.cargo.cfgs": [
+        "slint_debug_property"
+    ],
+    "rust-analyzer.references.excludeTests": true,
+    "rust-analyzer.procMacro.attributes.enable": false,
+    "rust-analyzer.semanticHighlighting.doc.comment.inject.enable": false,
+    "rust-analyzer.files.exclude": ["demos", "tests", "target", "../../.cargo/registry", "../../.rustup"],
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/.hg/store/**": true,
+        "demos/**": false,
+        "tests/**": false,
+        "**target/**": false,
+        "../../.cargo/registry": false,
+        "../../.rustup": false,
+    },
+    // "rust-analyzer.cargo.noDeps": true,
+}

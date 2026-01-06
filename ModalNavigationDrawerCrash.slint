@@ -1,0 +1,47 @@
+import {Vertical, MaterialWindow, ModalNavigationDrawer } from "ui-libraries/material/src/material.slint";
+import { BaseButton } from "ui-libraries/material/src/ui/components/base_button.slint";
+
+component Test inherits MaterialWindow {
+    background: green;
+    Vertical {
+        Rectangle {
+            background: blue;
+            BaseButton {
+                text: "Show";
+                clicked => {
+                    drawer.show();
+                }
+            }
+        }        
+    }
+
+    drawer:= ModalNavigationDrawer {
+        //x: -root.absolute_position.x;
+        //y: -root.absolute_position.y;
+        width: root.width;
+        height: root.height;
+
+        init => {
+            debug("Initialize ModalNavigationDrawer");
+        }
+
+        groups: [
+            {
+                title: "Group 1",
+                items: [
+                    {text: "item1"},
+                    {text: "item2"},
+                    {text: "item3"}
+                ]
+            },
+            {
+                title: "Group 2",
+                items: [
+                    {text: "item1"},
+                    {text: "item2"},
+                    {text: "item3"}
+                ]
+            }
+        ];
+    }
+}
