@@ -583,7 +583,7 @@ impl FlickableData {
                     PropertyAnimation { duration, easing: curve, ..PropertyAnimation::default() };
                 viewport_x.set_animated_value(final_pos.x_length(), anim.clone());
 
-                let curve = EasingCurve::CubicBezier([0.0, 0.0, 0.58, 2.0]);
+                let curve = EasingCurve::CubicBezier([1.0, 0.0, 0.58, 1.0]);
                 let anim =
                     PropertyAnimation { duration, easing: curve, ..PropertyAnimation::default() };
                 viewport_y.set_animated_value(final_pos.y_length(), anim);
