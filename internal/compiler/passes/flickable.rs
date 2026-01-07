@@ -158,54 +158,43 @@ fn fixup_geometry(flickable_elem: &ElementRc) {
         forward_minmax_of("max-width", MinMaxOp::Min);
         forward_minmax_of("preferred-width", MinMaxOp::Min);
     }
-    set_binding_if_not_explicit(flickable_elem, "viewport-width", || {
-        Some(
-            flickable_elem
-                .borrow()
-                .children
-                .iter()
-                .filter(|x| is_layout(&x.borrow().base_type))
-                // FIXME: (#407)
-                .filter(|x| x.borrow().repeated.is_none())
-                .map(|x| {
-                    Expression::PropertyReference(NamedReference::new(
-                        x,
-                        SmolStr::new_static("min-width"),
-                    ))
-                })
-                .fold(
-                    Expression::PropertyReference(NamedReference::new(
-                        flickable_elem,
-                        SmolStr::new_static("width"),
-                    )),
-                    |lhs, rhs| crate::builtin_macros::min_max_expression(lhs, rhs, MinMaxOp::Max),
-                ),
-        )
-    });
-    set_binding_if_not_explicit(flickable_elem, "viewport-height", || {
-        Some(
-            flickable_elem
-                .borrow()
-                .children
-                .iter()
-                .filter(|x| is_layout(&x.borrow().base_type))
-                // FIXME: (#407)
-                .filter(|x| x.borrow().repeated.is_none())
-                .map(|x| {
-                    Expression::PropertyReference(NamedReference::new(
-                        x,
-                        SmolStr::new_static("min-height"),
-                    ))
-                })
-                .fold(
-                    Expression::PropertyReference(NamedReference::new(
-                        flickable_elem,
-                        SmolStr::new_static("height"),
-                    )),
-                    |lhs, rhs| crate::builtin_macros::min_max_expression(lhs, rhs, MinMaxOp::Max),
-                ),
-        )
-    });
+
+    fn set_required_bindings(
+        flickable_elem: &ElementRc,
+        viewport_name: &'static str,
+        min_length_name: &'static str,
+        total_length_name: &'static str,
+    ) {
+        set_binding_if_not_explicit(flickable_elem, viewport_name, || {
+            Some(
+                flickable_elem
+                    .borrow()
+                    .children
+                    .iter()
+                    .filter(|x| is_layout(&x.borrow().base_type))
+                    // FIXME: (#407)
+                    .filter(|x| x.borrow().repeated.is_none())
+                    .map(|x| {
+                        Expression::PropertyReference(NamedReference::new(
+                            x,
+                            SmolStr::new_static(min_length_name),
+                        ))
+                    })
+                    .fold(
+                        Expression::PropertyReference(NamedReference::new(
+                            flickable_elem,
+                            SmolStr::new_static(total_length_name),
+                        )),
+                        |lhs, rhs| {
+                            crate::builtin_macros::min_max_expression(lhs, rhs, MinMaxOp::Max)
+                        },
+                    ),
+            )
+        });
+    }
+
+    set_required_bindings(flickable_elem, "viewport-width", "min-width", "width");
+    set_required_bindings(flickable_elem, "viewport-height", "min-height", "height");
 }
 
 /// Set the property binding on the given element to the given expression (computed lazily).
