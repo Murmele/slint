@@ -337,6 +337,7 @@ unsafe impl<T, F: Fn(&mut T) -> BindingResult> BindingCallable<T> for F {
     }
 }
 
+use std::println;
 #[cfg(feature = "std")]
 use std::thread_local;
 #[cfg(feature = "std")]
@@ -612,6 +613,7 @@ impl PropertyHandle {
         }
 
         self.remove_binding();
+        let address = binding as usize;
         debug_assert!((binding as usize) & 0b11 == 0);
         debug_assert!(self.handle.get() & 0b11 == 0);
         let const_sentinel = (&CONSTANT_PROPERTY_SENTINEL) as *const u32 as usize;
@@ -626,7 +628,8 @@ impl PropertyHandle {
                 );
             }
         }
-        self.handle.set((binding as usize) | 0b10);
+        println!("Set_binding_impl(). Binding address: {}. Bin: {:#b}", address, address);
+        self.handle.set((binding as usize) | 0b10); // TODO: why the last two bits can be modified without modifying the pointer address?
         if !is_constant {
             self.mark_dirty(
                 #[cfg(slint_debug_property)]
@@ -704,6 +707,7 @@ impl PropertyHandle {
     }
 
     fn mark_dirty(&self, #[cfg(slint_debug_property)] debug_name: &str) {
+        println!("Mark dirty: {debug_name}");
         #[cfg(not(slint_debug_property))]
         let debug_name = "";
         unsafe {

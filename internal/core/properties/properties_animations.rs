@@ -244,6 +244,8 @@ impl InterpolatedPropertyValue for LogicalLength {
     }
 }
 
+use alloc::fmt::Debug;
+
 impl<T: Clone + InterpolatedPropertyValue + 'static> Property<T> {
     /// Change the value of this property, by animating (interpolating) from the current property's value
     /// to the specified parameter value. The animation is done according to the parameters described by
@@ -264,8 +266,8 @@ impl<T: Clone + InterpolatedPropertyValue + 'static> Property<T> {
             self.handle.set_binding(
                 move |val: &mut T| {
                     let (value, finished) = d.borrow_mut().compute_interpolated_value();
-                    *val = value;
                     println!("set_animated_value(). Finished: {finished}");
+                    *val = value;
                     if finished {
                         BindingResult::RemoveBinding
                     } else {

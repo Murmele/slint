@@ -583,22 +583,26 @@ impl FlickableData {
                 println!(
                     "Flicker mouse released: old pos: {:?}. New pos: ({}, {})",
                     old_pos,
-                    viewport_x.get().0,
-                    viewport_y.get().0
+                    final_pos.x_length().0,
+                    final_pos.y_length().0
                 );
+                // 1. Why only the x animation is executed?
+                //  - Should not even executed when the start and end values are equal
 
                 let anim = PropertyAnimation {
                     duration,
-                    easing: EasingCurve::CubicBezier([0.0, 0.0, 0.58, 1.0]),
+                    easing: EasingCurve::CubicBezier2(([0.0, 0.0, 0.58, 1.0], "Dimension X")),
                     ..PropertyAnimation::default()
                 };
+                println!("Set x Binding");
                 viewport_x.set_animated_value(final_pos.x_length(), anim);
 
                 let anim = PropertyAnimation {
                     duration,
-                    easing: EasingCurve::CubicBezier([1.0, 0.0, 0.58, 1.0]),
+                    easing: EasingCurve::CubicBezier2(([1.0, 0.0, 0.58, 1.0], "Dimension Y")),
                     ..PropertyAnimation::default()
                 };
+                println!("Set y Binding");
                 viewport_y.set_animated_value(final_pos.y_length(), anim);
                 if old_pos.0 != final_pos.x_length() || old_pos.1 != final_pos.y_length() {
                     (Flickable::FIELD_OFFSETS.flicked).apply_pin(flick).call(&());

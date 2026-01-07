@@ -6,6 +6,7 @@
 
 use alloc::boxed::Box;
 use core::cell::Cell;
+use std::println;
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
 
@@ -147,6 +148,7 @@ pub enum EasingCurve {
     Linear,
     /// A Cubic bezier curve, with its 4 parameters
     CubicBezier([f32; 4]),
+    CubicBezier2(([f32; 4], &'static str)),
     /// Easing curve as defined at: <https://easings.net/#easeInElastic>
     EaseInElastic,
     /// Easing curve as defined at: <https://easings.net/#easeOutElastic>
@@ -318,6 +320,19 @@ pub fn easing_curve(curve: &EasingCurve, value: f32) -> f32 {
     match curve {
         EasingCurve::Linear => value,
         EasingCurve::CubicBezier([a, b, c, d]) => {
+            if !(0.0..=1.0).contains(a) && !(0.0..=1.0).contains(c) {
+                return value;
+            };
+            let curve = cubic_bezier::CubicBezierSegment {
+                from: (0., 0.).into(),
+                ctrl1: (*a, *b).into(),
+                ctrl2: (*c, *d).into(),
+                to: (1., 1.).into(),
+            };
+            curve.y(curve.solve_t_for_x(value, 0.0..1.0, 0.01))
+        }
+        EasingCurve::CubicBezier2(([a, b, c, d], name)) => {
+            println!("easing_curve: {name}");
             if !(0.0..=1.0).contains(a) && !(0.0..=1.0).contains(c) {
                 return value;
             };
