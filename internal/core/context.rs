@@ -41,7 +41,7 @@ impl SlintContext {
         Self(Rc::new(SlintContextInner {
             platform,
             window_count: 0.into(),
-            translations_dirty: Box::pin(Property::new_named(0, "SlintContext::translations")),
+            translations_dirty: Box::pin(Property::new(0, "SlintContext::translations")),
             translations_bundle_languages: Default::default(),
             window_shown_hook: Default::default(),
             #[cfg(all(unix, not(target_os = "macos")))]

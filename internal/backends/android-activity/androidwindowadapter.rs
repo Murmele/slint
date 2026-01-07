@@ -185,6 +185,7 @@ impl AndroidWindowAdapter {
                 0x0 => ColorScheme::Unknown, // UI_MODE_NIGHT_UNDEFINED
                 _ => ColorScheme::Unknown,
             },
+            "AndroidWindowAdapter::ColorScheme",
         ));
         Rc::<Self>::new_cyclic(|w| Self {
             app,

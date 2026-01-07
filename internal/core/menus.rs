@@ -67,7 +67,7 @@ impl MenuFromItemTree {
         item_tree: ItemTreeRc,
         condition: impl Fn() -> bool + 'static,
     ) -> Self {
-        let cond_prop = Box::pin(Property::new_named(true, "MenuFromItemTree::condition"));
+        let cond_prop = Box::pin(Property::new(true, "MenuFromItemTree::condition"));
         cond_prop.as_ref().set_binding(condition);
 
         Self {

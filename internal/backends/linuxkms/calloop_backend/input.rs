@@ -134,7 +134,8 @@ impl<'a> LibInputHandler<'a> {
         #[cfg(not(feature = "libseat"))]
         let libinput = DirectDeviceAccess::new();
 
-        let mouse_pos_property = Rc::pin(Property::new(None));
+        let mouse_pos_property =
+            Rc::pin(Property::new(None, "LibInputHandler::mouse_pos_property"));
 
         let handler = Self {
             libinput,

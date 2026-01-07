@@ -509,9 +509,9 @@ impl WindowInner {
             pinned_fields: Box::pin(WindowPinnedFields {
                 redraw_tracker,
                 window_properties_tracker,
-                scale_factor: Property::new_named(1., "i_slint_core::Window::scale_factor"),
-                active: Property::new_named(false, "i_slint_core::Window::active"),
-                text_input_focused: Property::new_named(
+                scale_factor: Property::new(1., "i_slint_core::Window::scale_factor"),
+                active: Property::new(false, "i_slint_core::Window::active"),
+                text_input_focused: Property::new(
                     false,
                     "i_slint_core::Window::text_input_focused",
                 ),

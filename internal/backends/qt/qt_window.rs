@@ -2087,6 +2087,7 @@ impl WindowAdapterInternal for QtWindow {
                 } else {
                     ColorScheme::Light
                 },
+                "QtWindow::ColorScheme",
             ))
         });
         ds.as_ref().get()

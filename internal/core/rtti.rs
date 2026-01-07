@@ -208,7 +208,7 @@ where
 
         let p1 = self.apply_pin(item);
         let value: Value = p1.get_internal().try_into().unwrap_or_default();
-        let shared_property = Rc::pin(Property::new(value));
+        let shared_property = Rc::pin(Property::new(value, "FieldOffset"));
         Property::link_two_way_with_map_to_common_property(
             shared_property.clone(),
             p1,

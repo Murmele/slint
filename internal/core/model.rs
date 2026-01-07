@@ -966,8 +966,8 @@ impl<C: RepeatedItemTree> Default for RepeaterTracker<C> {
     fn default() -> Self {
         Self {
             inner: Default::default(),
-            model: Property::new_named(ModelRc::default(), "i_slint_core::Repeater::model"),
-            is_dirty: Property::new_named(false, "i_slint_core::Repeater::is_dirty"),
+            model: Property::new(ModelRc::default(), "i_slint_core::Repeater::model"),
+            is_dirty: Property::new(false, "i_slint_core::Repeater::is_dirty"),
             listview_geometry_tracker: Default::default(),
         }
     }
@@ -1373,7 +1373,7 @@ pub struct Conditional<C: RepeatedItemTree> {
 impl<C: RepeatedItemTree> Default for Conditional<C> {
     fn default() -> Self {
         Self {
-            model: Property::new_named(false, "i_slint_core::Conditional::model"),
+            model: Property::new(false, "i_slint_core::Conditional::model"),
             instance: RefCell::new(None),
         }
     }

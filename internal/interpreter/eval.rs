@@ -1710,6 +1710,9 @@ fn eval_assignment(lhs: &Expression, op: char, rhs: Value, local_context: &mut E
 }
 
 pub fn load_property(component: InstanceRef, element: &ElementRc, name: &str) -> Result<Value, ()> {
+    if name == "viewport-x" || name == "viewport-y" {
+        println!("Load property: {name}");
+    }
     load_property_helper(&ComponentInstance::InstanceRef(component), element, name)
 }
 

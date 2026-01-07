@@ -270,6 +270,8 @@ type DependencyNode = dependency_tracker::DependencyNode<*const BindingHolder>;
 
 use alloc::boxed::Box;
 use alloc::rc::Rc;
+#[cfg(slint_debug_property)]
+use core::any::type_name;
 use core::cell::{Cell, RefCell, UnsafeCell};
 use core::marker::{PhantomData, PhantomPinned};
 use core::pin::Pin;
@@ -338,6 +340,8 @@ unsafe impl<T, F: Fn(&mut T) -> BindingResult> BindingCallable<T> for F {
 }
 
 use std::println;
+#[cfg(slint_debug_property)]
+use std::string::ToString;
 #[cfg(feature = "std")]
 use std::thread_local;
 #[cfg(feature = "std")]
@@ -562,6 +566,7 @@ impl PropertyHandle {
         }
     }
 
+    /// Removes the current binding to another property if exists
     fn remove_binding(&self) {
         assert!(!self.lock_flag(), "Recursion detected");
         let val = self.handle.get();
@@ -596,11 +601,19 @@ impl PropertyHandle {
         unsafe {
             (*binding).debug_name = debug_name.into();
         }
-        self.set_binding_impl(binding);
+        self.set_binding_impl(
+            binding,
+            #[cfg(slint_debug_property)]
+            debug_name,
+        );
     }
 
     /// Implementation of Self::set_binding.
-    fn set_binding_impl(&self, binding: *mut BindingHolder) {
+    fn set_binding_impl(
+        &self,
+        binding: *mut BindingHolder,
+        #[cfg(slint_debug_property)] debug_name: &str,
+    ) {
         let previous_binding_intercepted = self.access(|b| {
             b.is_some_and(|b| unsafe {
                 // Safety: b is a BindingHolder<T>
@@ -633,7 +646,7 @@ impl PropertyHandle {
         if !is_constant {
             self.mark_dirty(
                 #[cfg(slint_debug_property)]
-                "",
+                debug_name,
             );
         }
     }
@@ -707,6 +720,10 @@ impl PropertyHandle {
     }
 
     fn mark_dirty(&self, #[cfg(slint_debug_property)] debug_name: &str) {
+        if debug_name.is_empty() {
+            println!("No debug name");
+        }
+        #[cfg(slint_debug_property)]
         println!("Mark dirty: {debug_name}");
         #[cfg(not(slint_debug_property))]
         let debug_name = "";
@@ -817,7 +834,7 @@ pub struct Property<T> {
     /// Note that adding this flag will also tell the rust compiler to set this
     /// and that this will not work with C++ because of binary incompatibility
     #[cfg(slint_debug_property)]
-    pub debug_name: RefCell<alloc::string::String>,
+    debug_name: RefCell<alloc::string::String>,
 }
 
 impl<T: core::fmt::Debug + Clone> core::fmt::Debug for Property<T> {
@@ -840,25 +857,17 @@ impl<T: Default> Default for Property<T> {
             value: Default::default(),
             pinned: PhantomPinned,
             #[cfg(slint_debug_property)]
-            debug_name: Default::default(),
+            debug_name: RefCell::new("Property with type: ".to_string() + type_name::<T>()),
         }
     }
 }
 
 impl<T: Clone> Property<T> {
-    /// Create a new property with this value
-    pub fn new(value: T) -> Self {
-        Self {
-            handle: Default::default(),
-            value: UnsafeCell::new(value),
-            pinned: PhantomPinned,
-            #[cfg(slint_debug_property)]
-            debug_name: Default::default(),
+    /// Create a new property with this value and a 'static string use for debugging only
+    pub fn new(value: T, _name: &'static str) -> Self {
+        if _name.is_empty() {
+            println!("Empty property name");
         }
-    }
-
-    /// Same as [`Self::new`] but with a 'static string use for debugging only
-    pub fn new_named(value: T, _name: &'static str) -> Self {
         Self {
             handle: Default::default(),
             value: UnsafeCell::new(value),
@@ -1077,7 +1086,11 @@ unsafe impl<T: PartialEq + Clone + 'static> BindingCallable<T> for TwoWayBinding
     }
 
     unsafe fn intercept_set_binding(self: Pin<&Self>, new_binding: *mut BindingHolder) -> bool {
-        self.common_property.handle.set_binding_impl(new_binding);
+        self.common_property.handle.set_binding_impl(
+            new_binding,
+            #[cfg(slint_debug_property)]
+            self.common_property.debug_name.borrow().as_str(),
+        );
         true
     }
 
@@ -1148,6 +1161,7 @@ impl<T: PartialEq + Clone + 'static> Property<T> {
             PropertyHandle::default()
         };
 
+        println!("Create property. Name: {}", debug_name);
         let common_property = Rc::pin(Property {
             handle,
             value: UnsafeCell::new(value),
@@ -1195,6 +1209,7 @@ impl<T: PartialEq + Clone + 'static> Property<T> {
 
             #[cfg(slint_debug_property)]
             let debug_name = alloc::format!("{}*", prop1.debug_name.borrow());
+            println!("link_two_way_with_map(): debug name: {}", debug_name);
 
             let common_property = Rc::pin(Property {
                 handle,
@@ -1259,7 +1274,11 @@ impl<T: PartialEq + Clone + 'static> Property<T> {
                     map_from: self.map_from.clone(),
                     marker: PhantomData,
                 });
-                self.common_property.handle.set_binding_impl(new_new_binding);
+                self.common_property.handle.set_binding_impl(
+                    new_new_binding,
+                    #[cfg(slint_debug_property)]
+                    self.common_property.debug_name.borrow().as_str(),
+                );
                 true
             }
         }
@@ -1326,7 +1345,11 @@ impl<T: PartialEq + Clone + 'static> Property<T> {
             );
 
             if has_binding {
-                prop2.handle.set_binding_impl((old_handle & !0b11) as *mut BindingHolder);
+                prop2.handle.set_binding_impl(
+                    (old_handle & !0b11) as *mut BindingHolder,
+                    #[cfg(slint_debug_property)]
+                    debug_name.as_str(),
+                );
             }
         };
     }

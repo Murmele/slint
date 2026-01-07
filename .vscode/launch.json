@@ -16,6 +16,9 @@
                     "name": "slint-viewer",
                     "kind": "bin"
                 },
+                "env": {
+                    "RUSTFLAGS": "--cfg slint_debug_property"
+                },
                 "cwd": "${workspaceFolder}/tools/viewer"
             },
             "args": ["${workspaceFolder}/dhv.slint"],

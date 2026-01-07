@@ -800,7 +800,9 @@ impl WinitWindowAdapter {
 
     pub fn set_color_scheme(&self, scheme: ColorScheme) {
         self.color_scheme
-            .get_or_init(|| Box::pin(Property::new(ColorScheme::Unknown)))
+            .get_or_init(|| {
+                Box::pin(Property::new(ColorScheme::Unknown, "WinitWindowAdapter::ColorScheme"))
+            })
             .as_ref()
             .set(scheme);
 
@@ -1433,7 +1435,7 @@ impl WindowAdapterInternal for WinitWindowAdapter {
                             ColorScheme::Unknown
                         }
                     }
-                }))
+                }, "WindowAdapterInteral::ColorScheme"))
             })
             .as_ref()
             .get()

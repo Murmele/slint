@@ -2162,6 +2162,7 @@ unsafe extern "C" fn embed_component(
 
 #[cfg_attr(not(feature = "ffi"), i_slint_core_macros::remove_extern)]
 extern "C" fn item_geometry(component: ItemTreeRefPin, item_index: u32) -> LogicalRect {
+    println!("item_geometry(): load_f32 closure. Item index: {}", item_index);
     generativity::make_guard!(guard);
     let instance_ref = unsafe { InstanceRef::from_pin_ref(component, guard) };
 
@@ -2169,6 +2170,11 @@ extern "C" fn item_geometry(component: ItemTreeRefPin, item_index: u32) -> Logic
     let g = e.geometry_props.as_ref().unwrap();
 
     let load_f32 = |nr: &NamedReference| -> f32 {
+        if nr.name().starts_with("viewport") {
+            println!("item_geometry(): load_f32 closure. Property name: {}", nr.name());
+        } else {
+            println!("item_geometry(): load_f32 closure. Property name: {}", nr.name());
+        }
         crate::eval::load_property(instance_ref, &nr.element(), nr.name())
             .unwrap()
             .try_into()

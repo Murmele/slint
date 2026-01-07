@@ -186,37 +186,20 @@ export component DHV inherits Rectangle {
     preferred-width: 600px;
     preferred-height: 600px;
 
-    Vertical {
-        t:= Rectangle {
-            text:= Text {
-                text: "Data from: " + DHVInterface.weather_data.creation-datetime;
-                horizontal-alignment: right;
-            }
-            background: green;
-            // animate background {
-            //      duration: 3s;
-            // }
+    ListView {
+        property<length> entry_height: 600px;
+        viewport-width: parent.width;
+        vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+        horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+
+        for l[i] in  DHVInterface.weather_data.locations: LocationWeatherData {
+            x: 0px;
+            y: parent.entry_height * i;
+            weather_data: l;
         }
-        ListView {
-            property<length> entry_height: 600px;
-            viewport-width: parent.width;
-            vertical-scrollbar-policy: ScrollBarPolicy.always-off;
-            horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
 
-            for l[i] in  DHVInterface.weather_data.locations: LocationWeatherData {
-                x: 0px;
-                y: parent.entry_height * i;
-                weather_data: l;
-            }
-
-            scrolled => {
-                debug("Scrolled");
-                if t.background == Colors.green {
-                    t.background = Colors.red;
-                } else {
-                    t.background = Colors.green;
-                }
-            }
+        scrolled => {
+            debug("Scrolled");
         }
     }
 }

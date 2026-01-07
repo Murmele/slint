@@ -255,6 +255,11 @@ impl<T: Clone + InterpolatedPropertyValue + 'static> Property<T> {
     /// be marked as dirty.
     pub fn set_animated_value(&self, value: T, animation_data: PropertyAnimation) {
         // FIXME if the current value is a dirty binding, we must run it, but we do not have the context
+        // TODO: if value is equal to the current value. Shall we really add the animation? Is there any usecase?
+        // if *self.value.get() == value {
+        //     remove other binding?
+        //     return;
+        // }
         let d = RefCell::new(properties_animations::PropertyValueAnimationData::new(
             self.get_internal(),
             value,

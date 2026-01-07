@@ -963,7 +963,7 @@ impl TextCursorBlinker {
     /// the blinker properties uses the property system that requires pinning.
     pub fn new() -> Pin<Rc<Self>> {
         Rc::pin(Self {
-            cursor_visible: Property::new(true),
+            cursor_visible: Property::new(true, "TextCursorBlinker::cursor_visible"),
             cursor_blink_timer: Default::default(),
         })
     }
