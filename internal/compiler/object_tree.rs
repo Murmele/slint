@@ -1112,6 +1112,7 @@ impl Element {
         let base_type = if let Some(base_node) = node.QualifiedName() {
             let base = QualifiedTypeName::from_node(base_node.clone());
             let base_string = base.to_smolstr();
+            // println!("Element::from_node(). base_string: {}", base_string);
             match (
                 parent_type.lookup_type_for_child_element(&base_string, tr),
                 expected_relationship_to_parent(&node),
@@ -1852,6 +1853,7 @@ impl Element {
         diag: &mut BuildDiagnostics,
         tr: &TypeRegister,
     ) -> ElementRc {
+        // println!("from_repeated_node(): Parent: {}", parent.borrow().base_type.to_string());
         let is_listview = if parent.borrow().base_type.to_string() == "ListView" {
             Some(ListViewInfo {
                 viewport_y: NamedReference::new(parent, SmolStr::new_static("viewport-y")),

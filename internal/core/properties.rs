@@ -720,11 +720,6 @@ impl PropertyHandle {
     }
 
     fn mark_dirty(&self, #[cfg(slint_debug_property)] debug_name: &str) {
-        if debug_name.is_empty() {
-            println!("No debug name");
-        }
-        #[cfg(slint_debug_property)]
-        println!("Mark dirty: {debug_name}");
         #[cfg(not(slint_debug_property))]
         let debug_name = "";
         unsafe {
@@ -1161,6 +1156,7 @@ impl<T: PartialEq + Clone + 'static> Property<T> {
             PropertyHandle::default()
         };
 
+        #[cfg(slint_debug_property)]
         println!("Create property. Name: {}", debug_name);
         let common_property = Rc::pin(Property {
             handle,
@@ -1209,6 +1205,7 @@ impl<T: PartialEq + Clone + 'static> Property<T> {
 
             #[cfg(slint_debug_property)]
             let debug_name = alloc::format!("{}*", prop1.debug_name.borrow());
+            #[cfg(slint_debug_property)]
             println!("link_two_way_with_map(): debug name: {}", debug_name);
 
             let common_property = Rc::pin(Property {

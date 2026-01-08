@@ -6,9 +6,9 @@
 
 use alloc::boxed::Box;
 use core::cell::Cell;
-use std::println;
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
+use std::println;
 
 mod cubic_bezier {
     //! This is a copy from lyon_algorithms::geom::cubic_bezier implementation
@@ -332,7 +332,7 @@ pub fn easing_curve(curve: &EasingCurve, value: f32) -> f32 {
             curve.y(curve.solve_t_for_x(value, 0.0..1.0, 0.01))
         }
         EasingCurve::CubicBezier2(([a, b, c, d], name)) => {
-            println!("easing_curve: {name}");
+            // println!("easing_curve: {name}");
             if !(0.0..=1.0).contains(a) && !(0.0..=1.0).contains(c) {
                 return value;
             };

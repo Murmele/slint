@@ -36,10 +36,10 @@ impl<T: InterpolatedPropertyValue + Clone> PropertyValueAnimationData<T> {
     pub fn compute_interpolated_value(&mut self) -> (T, bool) {
         let new_tick = crate::animations::current_tick();
         let mut time_progress = new_tick.duration_since(self.start_time).as_millis() as u64;
-        println!(
-            "compute_interpolated_value(): State: {:?}, Details: {:?}",
-            self.state, self.details
-        );
+        // println!(
+        //     "compute_interpolated_value(): State: {:?}, Details: {:?}",
+        //     self.state, self.details
+        // );
         let reversed = |iteration: u64| -> bool {
             match self.details.direction {
                 AnimationDirection::Normal => false,
@@ -265,13 +265,13 @@ impl<T: Clone + InterpolatedPropertyValue + 'static> Property<T> {
             value,
             animation_data,
         ));
-        println!("set_animated_value()");
+        // println!("set_animated_value()");
         // Safety: the BindingCallable will cast its argument to T
         unsafe {
             self.handle.set_binding(
                 move |val: &mut T| {
                     let (value, finished) = d.borrow_mut().compute_interpolated_value();
-                    println!("set_animated_value(). Finished: {finished}");
+                    // println!("set_animated_value(). Finished: {finished}");
                     *val = value;
                     if finished {
                         BindingResult::RemoveBinding

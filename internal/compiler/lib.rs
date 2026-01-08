@@ -371,6 +371,7 @@ pub async fn load_root_file(
 ) -> (std::path::PathBuf, diagnostics::BuildDiagnostics, typeloader::TypeLoader) {
     let mut loader = prepare_for_compile(&mut diagnostics, compiler_config);
 
+    println!("Finished preparing the compiler. Now load the root file");
     let (path, _) =
         loader.load_root_file(path, source_path, source_code, false, &mut diagnostics).await;
 

@@ -1285,7 +1285,15 @@ impl<C: RepeatedItemTree + 'static> Repeater<C> {
             viewport_height.set(inner.cached_item_height * row_count as Coord);
             viewport_width.set(vp_width);
             let new_viewport_y = -inner.anchor_y + new_offset_y;
-            viewport_y.set(new_viewport_y);
+            std::println!(
+                "new_viewport_y: {:?} old_viewport_y: {:?}",
+                new_viewport_y,
+                viewport_y.get()
+            );
+            // if new_viewport_y != viewport_y.get() {
+            //     // If the new value gets set, all bindings are removed which means also an animation gets removed
+            //     viewport_y.set(new_viewport_y);
+            // }
             inner.previous_viewport_y = new_viewport_y;
             break;
         }

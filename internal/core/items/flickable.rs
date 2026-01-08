@@ -70,12 +70,12 @@ impl Item for Flickable {
                 let geo = Self::geometry_without_virtual_keyboard(&flick_rc);
 
                 let zero = LogicalLength::zero();
-                println!("Flickable::init(). Access Viewport X");
+                // println!("Flickable::init(). Access Viewport X");
                 let vpx = flick.viewport_x();
                 if vpx > zero || vpx < (geo.width_length() - flick.viewport_width()).min(zero) {
                     return true;
                 }
-                println!("Flickable::init(). Access Viewport Y");
+                // println!("Flickable::init(). Access Viewport Y");
                 let vpy = flick.viewport_y();
                 if vpy > zero || vpy < (geo.height_length() - flick.viewport_height()).min(zero) {
                     return true;

@@ -85,6 +85,7 @@ fn create_viewport_element(flickable: &ElementRc, native_empty: &Rc<NativeClass>
         }
     }
 
+    // Add new viewport element as child to the flickable
     let viewport = Element::make_rc(Element {
         id: format_smolstr!("{}-viewport", flickable.borrow().id),
         base_type: ElementType::Native(native_empty.clone()),
@@ -95,6 +96,7 @@ fn create_viewport_element(flickable: &ElementRc, native_empty: &Rc<NativeClass>
     });
     let element_type = flickable.borrow().base_type.clone();
     for prop in element_type.as_builtin().properties.keys() {
+        // println!("Properties: {prop}");
         // bind the viewport's property to the flickable property, such as:  `width <=> parent.viewport-width`
         if let Some(vp_prop) = prop.strip_prefix("viewport-") {
             if is_listview && matches!(vp_prop, "y" | "height") {

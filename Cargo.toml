@@ -44,7 +44,7 @@ members = [
   'tools/compiler',
   'tools/docsnapper',
   'tools/figma_import',
-  # 'tools/lsp',
+  'tools/lsp',
   'tools/updater',
   'tools/viewer',
   'tools/tr-extractor',
@@ -67,7 +67,7 @@ default-members = [
   'tests/screenshots',
   'tools/compiler',
   'tools/figma_import',
-  # 'tools/lsp',
+  'tools/lsp',
   'tools/viewer',
 ]
 
