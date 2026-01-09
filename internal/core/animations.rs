@@ -190,11 +190,7 @@ impl Kinematic {
         }
         let t = (self.initial_velocity - f32::signum(self.initial_velocity) * f32::sqrt(f))
             / self.deceleration;
-        if t >= 0. {
-            Some(t)
-        } else {
-            None
-        }
+        if t >= 0. { Some(t) } else { None }
     }
 
     /// Time when the velocity gets zero and no position change occurs
@@ -206,16 +202,12 @@ impl Kinematic {
     /// Calculate the position at time `t`
     pub fn calculate_value(&self, t: f32) -> f32 {
         let t = f32::min(t, self.time_velocity_zero());
-        let v =
-            self.initial_position + self.initial_velocity * t - 0.5 * self.deceleration * t.powi(2);
-        println!("Calculate. Time: {t}, result: {v}");
-        v
+        self.initial_position + self.initial_velocity * t - 0.5 * self.deceleration * t.powi(2)
     }
 
     /// Outputs a normalized value from a normalized input
     /// `t` is between 0 and 1
     pub fn calculate_value_normalized(&self, t: f32) -> f32 {
-        println!("Calculate new value. Time: {t}");
         let res = self.calculate_value(t * self.max_time);
         if self.max_value != self.initial_position {
             f32::signum(self.initial_velocity) * (res - self.initial_position)

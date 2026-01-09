@@ -1,6 +1,8 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
+use std::println;
+
 use super::*;
 use crate::{
     items::{AnimationDirection, PropertyAnimation},
@@ -264,6 +266,7 @@ impl<T: Clone + InterpolatedPropertyValue + 'static> Property<T> {
                     let (value, finished) = d.borrow_mut().compute_interpolated_value();
                     *val = value;
                     if finished {
+                        println!("Animation finished");
                         BindingResult::RemoveBinding
                     } else {
                         crate::animations::CURRENT_ANIMATION_DRIVER
