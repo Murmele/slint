@@ -31,7 +31,7 @@ pub(super) struct PropertyValueAnimationData<T> {
     state: AnimationState,
 }
 
-impl<T: InterpolatedPropertyValue + Clone> PropertyValueAnimationData<T> {
+impl<T: InterpolatedPropertyValue + Clone + Debug> PropertyValueAnimationData<T> {
     pub fn new(from_value: T, to_value: T, details: PropertyAnimation) -> Self {
         let start_time = crate::animations::current_tick();
 
@@ -269,6 +269,7 @@ impl<T: Clone + InterpolatedPropertyValue + 'static> Property<T> {
                         println!("Animation finished");
                         BindingResult::RemoveBinding
                     } else {
+                        println!("Continue animation");
                         crate::animations::CURRENT_ANIMATION_DRIVER
                             .with(|driver| driver.set_has_active_animations());
                         BindingResult::KeepBinding

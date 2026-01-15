@@ -611,7 +611,7 @@ impl FlickableData {
                     };
 
                 let final_pos = (
-                    set_kinematic_animation(&viewport_x, curr_pos.x, speed.x, min.x, max.x),
+                    viewport_x.get(), //set_kinematic_animation(&viewport_x, curr_pos.x, speed.x, min.x, max.x),
                     set_kinematic_animation(&viewport_y, curr_pos.y, speed.y, min.y, max.y),
                 );
 
