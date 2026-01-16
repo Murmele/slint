@@ -202,7 +202,10 @@ impl Kinematic {
     /// Calculate the position at time `t`
     pub fn calculate_value(&self, t: f32) -> f32 {
         let t = f32::min(t, self.time_velocity_zero());
-        self.initial_position + self.initial_velocity * t - 0.5 * self.deceleration * t.powi(2)
+        let v =
+            self.initial_position + self.initial_velocity * t - 0.5 * self.deceleration * t.powi(2);
+        println!("Kinemtic::calculate_value(). Time: {t}, Value: {v}");
+        v
     }
 
     /// Outputs a normalized value from a normalized input
