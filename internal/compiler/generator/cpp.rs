@@ -160,6 +160,7 @@ pub mod cpp_ast {
                                 array_size: var.array_size.clone(),
                                 init: std::mem::take(&mut var.init),
                                 is_extern: false,
+                                link_section: var.link_section.take(), // The linker section attribute must be only the in the definition and not in the header so take it out here
                                 ..Default::default()
                             }))
                         }
