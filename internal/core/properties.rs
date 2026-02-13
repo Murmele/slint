@@ -561,6 +561,8 @@ impl PropertyHandle {
         }
     }
 
+    /// Remove a binding of the current property to a binding
+    /// If the binding is not constant (animation) the binding object gets dropped as well
     fn remove_binding(&self) {
         assert!(!self.lock_flag(), "Recursion detected");
         let val = self.handle.get();

@@ -5,7 +5,7 @@ use std::println;
 
 use super::*;
 use crate::{
-    items::{AnimationDirection, PropertyAnimation},
+    items::{AnimationDirection, AnimationLimit, PropertyAnimation},
     lengths::LogicalLength,
 };
 #[cfg(not(feature = "std"))]
@@ -31,7 +31,7 @@ pub(super) struct PropertyValueAnimationData<T> {
     state: AnimationState,
 }
 
-impl<T: InterpolatedPropertyValue + Clone> PropertyValueAnimationData<T> {
+impl<T: InterpolatedPropertyValue + Clone + PartialOrd> PropertyValueAnimationData<T> {
     pub fn new(from_value: T, to_value: T, details: PropertyAnimation) -> Self {
         let start_time = crate::animations::current_tick();
 
@@ -76,38 +76,56 @@ impl<T: InterpolatedPropertyValue + Clone> PropertyValueAnimationData<T> {
                 }
             }
             AnimationState::Animating { mut current_iteration } => {
-                if self.details.duration <= 0 || self.details.iteration_count == 0. {
-                    self.state = AnimationState::Done { iteration_count: 0 };
-                    return self.compute_interpolated_value();
-                }
+                match self.details.limit {
+                    AnimationLimit::Duration(duration) => {
+                        if duration <= 0 || self.details.iteration_count == 0. {
+                            self.state = AnimationState::Done { iteration_count: 0 };
+                            return self.compute_interpolated_value();
+                        }
 
-                let duration = self.details.duration as u64;
-                if time_progress >= duration {
-                    // wrap around
-                    current_iteration += time_progress / duration;
-                    time_progress %= duration;
-                    self.start_time = new_tick - core::time::Duration::from_millis(time_progress);
-                }
+                        let duration = duration as u64;
+                        if time_progress >= duration {
+                            // wrap around
+                            current_iteration += time_progress / duration;
+                            time_progress %= duration;
+                            self.start_time =
+                                new_tick - core::time::Duration::from_millis(time_progress);
+                        }
 
-                if (self.details.iteration_count < 0.)
-                    || (((current_iteration * duration) + time_progress) as f64)
-                        < ((self.details.iteration_count as f64) * (duration as f64))
-                {
-                    self.state = AnimationState::Animating { current_iteration };
+                        if (self.details.iteration_count < 0.)
+                            || (((current_iteration * duration) + time_progress) as f64)
+                                < ((self.details.iteration_count as f64) * (duration as f64))
+                        {
+                            self.state = AnimationState::Animating { current_iteration };
 
-                    let progress = {
-                        let progress =
-                            (time_progress as f32 / self.details.duration as f32).clamp(0., 1.);
-                        if reversed(current_iteration) { 1. - progress } else { progress }
-                    };
-                    let t = crate::animations::easing_curve(&self.details.easing, progress);
-                    let val = self.from_value.interpolate(&self.to_value, t);
+                            let progress = {
+                                let progress =
+                                    (time_progress as f32 / duration as f32).clamp(0., 1.);
+                                if reversed(current_iteration) { 1. - progress } else { progress }
+                            };
+                            let t = crate::animations::easing_curve(&self.details.easing, progress);
+                            let val = self.from_value.interpolate(&self.to_value, t);
 
-                    (val, false)
-                } else {
-                    self.state =
-                        AnimationState::Done { iteration_count: current_iteration.max(1) - 1 };
-                    self.compute_interpolated_value()
+                            (val, false)
+                        } else {
+                            self.state = AnimationState::Done {
+                                iteration_count: current_iteration.max(1) - 1,
+                            };
+                            self.compute_interpolated_value()
+                        }
+                    }
+                    AnimationLimit::Value => {
+                        if let Some(value) = crate::animations::easing_curve_limit(
+                            &self.details.easing,
+                            time_progress,
+                            &self.to_value,
+                        ) {
+                            let val = self.from_value.interpolate(&self.to_value, value);
+                            (val, false)
+                        } else {
+                            (self.to_value, false)
+                        }
+                    }
                 }
             }
             AnimationState::Done { iteration_count } => {
@@ -559,12 +577,13 @@ mod animation_tests {
         assert_eq!(get_prop_value(&compo.width), 100);
         assert_eq!(get_prop_value(&compo.width_times_two), 200);
 
-        // In animation:
+        // Still in delay
         crate::animations::CURRENT_ANIMATION_DRIVER
             .with(|driver| driver.update_animations(start_time + DELAY));
         assert_eq!(get_prop_value(&compo.width), 100);
         assert_eq!(get_prop_value(&compo.width_times_two), 200);
 
+        // In animation:
         crate::animations::CURRENT_ANIMATION_DRIVER
             .with(|driver| driver.update_animations(start_time + DELAY + DURATION / 2));
         assert_eq!(get_prop_value(&compo.width), 150);

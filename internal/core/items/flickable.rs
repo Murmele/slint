@@ -606,6 +606,11 @@ impl FlickableData {
                             easing: EasingCurve::Kinetic(kinematic),
                             ..PropertyAnimation::default()
                         };
+                        // let anim = PropertyAnimation {
+                        //     duration: (max_duration.round() * 1000.) as i32,
+                        //     easing: EasingCurve::CubicBezier([0.0, 0.0, 0.58, 1.0]),
+                        //     ..PropertyAnimation::default()
+                        // };
                         viewport.set_animated_value(end, anim);
                         end
                     };

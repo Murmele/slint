@@ -204,7 +204,6 @@ impl Kinematic {
         let t = f32::min(t, self.time_velocity_zero());
         let v =
             self.initial_position + self.initial_velocity * t - 0.5 * self.deceleration * t.powi(2);
-        println!("Kinemtic::calculate_value(). Time: {t}, Value: {v}");
         v
     }
 
@@ -212,12 +211,14 @@ impl Kinematic {
     /// `t` is between 0 and 1
     pub fn calculate_value_normalized(&self, t: f32) -> f32 {
         let res = self.calculate_value(t * self.max_time);
-        if self.max_value != self.initial_position {
+        let v = if self.max_value != self.initial_position {
             f32::signum(self.initial_velocity) * (res - self.initial_position)
                 / (self.max_value - self.initial_position)
         } else {
             0.
-        }
+        };
+        println!("Kinemtic::calculate_value(). Time: {t}, Value: {v}");
+        v
     }
 }
 
@@ -429,6 +430,12 @@ fn ease_out_bounce_curve(value: f32) -> f32 {
     }
 }
 
+pub fn easing_curve_limit(curve: &EasingCurve, duration_millis: u64) -> f32 {
+    match curve {
+        EasingCurve::Kinetic(k) => k.calculate_value_normalized(value),
+    }
+}
+
 /// map a value between 0 and 1 to another value between 0 and 1 according to the curve
 pub fn easing_curve(curve: &EasingCurve, value: f32) -> f32 {
     match curve {
@@ -444,7 +451,9 @@ pub fn easing_curve(curve: &EasingCurve, value: f32) -> f32 {
                 ctrl2: (*c, *d).into(),
                 to: (1., 1.).into(),
             };
-            curve.y(curve.solve_t_for_x(value, 0.0..1.0, 0.01))
+            let o = curve.y(curve.solve_t_for_x(value, 0.0..1.0, 0.01));
+            println!("CubicBezier. Input: {value}, Output: {o}");
+            o
         }
         EasingCurve::EaseInElastic => {
             const C4: f32 = 2.0 * core::f32::consts::PI / 3.0;

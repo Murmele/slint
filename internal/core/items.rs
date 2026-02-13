@@ -1143,6 +1143,21 @@ declare_item_vtable! {
     fn slint_get_DropAreaVTable() -> DropAreaVTable for DropArea
 }
 
+#[repr(C, u32)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum AnimationLimit {
+    /// Duration in millisecond
+    Duration(i32),
+    /// Value limit
+    Value,
+}
+
+impl Default for AnimationLimit {
+    fn default() -> Self {
+        AnimationLimit::Duration(0)
+    }
+}
+
 /// The implementation of the `PropertyAnimation` element
 #[repr(C)]
 #[derive(FieldOffsets, SlintElement, Clone, Debug)]
@@ -1150,9 +1165,10 @@ declare_item_vtable! {
 pub struct PropertyAnimation {
     #[rtti_field]
     pub delay: i32,
-    /// duration in millisecond
     #[rtti_field]
-    pub duration: i32,
+    pub limit: AnimationLimit,
+    /// The number of times an animation should run
+    /// Negative number leads to run it indefinitely
     #[rtti_field]
     pub iteration_count: f32,
     #[rtti_field]
@@ -1167,7 +1183,7 @@ impl Default for PropertyAnimation {
         // as well as in `builtins.slint` (for generated C++ and Rust code)
         Self {
             delay: 0,
-            duration: 0,
+            limit: Default::default(),
             iteration_count: 1.,
             direction: Default::default(),
             easing: Default::default(),
