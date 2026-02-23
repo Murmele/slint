@@ -1,6 +1,7 @@
+use core::{f32::consts::PI, time::Duration};
+
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-
 use crate::{
     Coord,
     animations::{self, Instant},
@@ -79,12 +80,21 @@ impl<Unit> ConstantDeceleration<Unit> {
     fn new_internal(
         start_value: Length<Coord, Unit>,
         limit_value: Length<Coord, Unit>,
-        initial_velocity: Length<f32, Unit>,
-        data: ConstantDecelerationParameters<Unit>,
+        mut initial_velocity: Length<f32, Unit>,
+        mut data: ConstantDecelerationParameters<Unit>,
         start_time: Instant,
     ) -> Self {
-        let direction =
-            if start_value < limit_value { Direction::Increasing } else { Direction::Decreasing };
+        let direction = if start_value < limit_value {
+            data.deceleration = Scale::new(f32::abs(data.deceleration.0));
+            assert!(initial_velocity.0 >= 0.); // Makes no sense yet that the velocity goes into the other direction
+            initial_velocity = Length::new(f32::abs(initial_velocity.0));
+            Direction::Increasing
+        } else {
+            data.deceleration = Scale::new(-f32::abs(data.deceleration.0));
+            initial_velocity = Length::new(-f32::abs(initial_velocity.0));
+            assert!(initial_velocity.0 <= 0.);
+            Direction::Decreasing
+        };
 
         Self {
             limit_value,
@@ -105,18 +115,13 @@ impl<Unit> ConstantDeceleration<Unit> {
 
         self.start_time = new_tick;
 
-        let velocity_loss = f32::abs((duration * self.data.deceleration).0);
-        let new_velocity = if self.velocity.0 > 0. {
-            self.velocity.0 - velocity_loss
-        } else {
-            self.velocity.0 + velocity_loss
-        };
+        let new_velocity = self.velocity - duration * self.data.deceleration;
 
         self.curr_val += Length::new(
-            (duration * Scale::<f32, Seconds, Unit>::new((self.velocity.0 + new_velocity) / 2.)).0
+            (duration * Scale::<f32, Seconds, Unit>::new((self.velocity + new_velocity).0 / 2.)).0
                 as Coord,
         ); // Trapezoidal integration
-        self.velocity = Length::new(new_velocity);
+        self.velocity = new_velocity;
 
         match self.direction {
             Direction::Increasing => {
@@ -159,153 +164,165 @@ mod tests {
     use crate::lengths::LogicalPx;
     use core::time::Duration;
 
-    /// We don't reach the position limit. Before the velocity gets zero
+    /// The velocity becomes zero before we are reaching the limit
     /// start_value < limit_value
     #[test]
     fn constant_deceleration_increasing_limit_not_reached() {
-        let initial_velocity = 50.;
-        let deceleration = 20.;
+        const START_VALUE: f32 = 10.;
+        const LIMIT_VALUE: f32 = 2000.;
+        const INITIAL_VELOCITY: f32 = 50.;
+        const DECELERATION: f32 = 20.;
         let parameters = ConstantDecelerationParameters::<LogicalPx> {
-            initial_velocity: Length::new(initial_velocity),
-            deceleration: Scale::new(deceleration),
+            initial_velocity: Length::new(INITIAL_VELOCITY),
+            deceleration: Scale::new(DECELERATION),
         };
 
         let mut time = Instant::now();
         let mut simulation = ConstantDeceleration::new_internal(
-            Length::new(10.),
-            Length::new(2000.),
+            Length::new(START_VALUE),
+            Length::new(LIMIT_VALUE),
             parameters.initial_velocity,
             parameters,
             time.clone(),
         );
 
+        // Velocity does not become zero
         let mut duration = Duration::from_secs(1);
-        assert!(deceleration * duration.as_secs_f32() < initial_velocity);
+        assert!(DECELERATION * duration.as_secs_f32() < INITIAL_VELOCITY);
         time += duration;
         let (res, finished) = simulation.step_internal(time);
         assert_eq!(finished, false);
         assert_eq!(
             res.0,
-            10. + 50. * duration.as_secs_f32()
-                - 0.5 * deceleration * duration.as_secs_f32().powi(2)
+            START_VALUE + INITIAL_VELOCITY * duration.as_secs_f32()
+                - 0.5 * DECELERATION * duration.as_secs_f32().powi(2)
         );
 
+        // Now the velocity becomes zero and we don't do any further calculations
         duration = Duration::from_hours(10);
-        assert!(Duration::from_secs((initial_velocity / deceleration) as u64) < duration);
+        assert!(Duration::from_secs((INITIAL_VELOCITY / DECELERATION) as u64) < duration);
         time += duration;
         let (res, finished) = simulation.step_internal(time);
         assert_eq!(finished, true);
         assert_eq!(
             res.0,
-            10. + 50. * initial_velocity / deceleration
-                - 0.5 * deceleration * (initial_velocity / deceleration).powi(2)
+            START_VALUE + INITIAL_VELOCITY * INITIAL_VELOCITY / DECELERATION
+                - 0.5 * DECELERATION * (INITIAL_VELOCITY / DECELERATION).powi(2)
         );
 
-        assert!(res.0 < 2000.); // We reached velocity zero before we reached the position limit
+        assert!(res.0 < LIMIT_VALUE); // We reached velocity zero before we reached the position limit
     }
 
     /// We reach the position limit before the velocity got zero
     #[test]
     fn constant_deceleration_increasing_limit_reached() {
-        let initial_velocity = 50.;
-        let deceleration = 20.;
+        const START_VALUE: f32 = 10.;
+        const LIMIT_VALUE: f32 = 20.;
+        const INITIAL_VELOCITY: f32 = 50.;
+        const DECELERATION: f32 = 20.;
         let parameters = ConstantDecelerationParameters::<LogicalPx> {
-            initial_velocity: Length::new(initial_velocity),
-            deceleration: Scale::new(deceleration),
+            initial_velocity: Length::new(INITIAL_VELOCITY),
+            deceleration: Scale::new(DECELERATION),
         };
 
         let mut time = Instant::now();
         let mut simulation = ConstantDeceleration::new_internal(
-            Length::new(10.),
-            Length::new(20.),
+            Length::new(START_VALUE),
+            Length::new(LIMIT_VALUE),
             parameters.initial_velocity,
             parameters,
             time.clone(),
         );
 
-        let duration = Duration::from_secs(3);
-        assert!(deceleration * duration.as_secs_f32() > initial_velocity); // We don't reach the limit where the velocity gets zero
+        let duration = Duration::from_secs(1);
+        assert!(f32::abs(DECELERATION * duration.as_secs_f32()) < f32::abs(INITIAL_VELOCITY)); // We don't reach the limit where the velocity gets zero
         time += duration;
         let (res, finished) = simulation.step_internal(time);
         assert_eq!(finished, true);
-        assert_eq!(res.0, 20.); // Limit reached
+        assert_eq!(res.0, LIMIT_VALUE); // Limit reached
     }
 
     /// We don't reach the position limit. Before the velocity gets zero
     /// start_value > limit_value
     #[test]
     fn constant_deceleration_decreasing_limit_not_reached() {
-        let start_value = 2000.;
-        let limit_value = 10.;
-        let initial_velocity = -50.;
-        let deceleration = 20.;
+        const START_VALUE: f32 = 2000.;
+        const LIMIT_VALUE: f32 = 10.;
+        const INITIAL_VELOCITY: f32 = -50.;
+        const DECELERATION: f32 = 20.;
 
         let parameters = ConstantDecelerationParameters::<LogicalPx> {
-            initial_velocity: Length::new(initial_velocity),
-            deceleration: Scale::new(deceleration),
+            initial_velocity: Length::new(INITIAL_VELOCITY),
+            deceleration: Scale::new(DECELERATION),
         };
 
         let mut time = Instant::now();
         let mut simulation = ConstantDeceleration::new_internal(
-            Length::new(start_value),
-            Length::new(limit_value),
+            Length::new(START_VALUE),
+            Length::new(LIMIT_VALUE),
             parameters.initial_velocity,
             parameters,
             time.clone(),
         );
 
         let mut duration = Duration::from_secs(1);
-        assert!(f32::abs(deceleration * duration.as_secs_f32()) < f32::abs(initial_velocity));
+        assert!(f32::abs(DECELERATION * duration.as_secs_f32()) < f32::abs(INITIAL_VELOCITY));
         time += duration;
         let (res, finished) = simulation.step_internal(time);
         assert_eq!(finished, false);
         assert_eq!(
             res.0,
-            start_value + initial_velocity * duration.as_secs_f32()
-                - initial_velocity.signum() * 0.5 * deceleration * duration.as_secs_f32().powi(2)
+            START_VALUE + INITIAL_VELOCITY * duration.as_secs_f32()
+                - INITIAL_VELOCITY.signum() * 0.5 * DECELERATION * duration.as_secs_f32().powi(2)
         );
 
         duration = Duration::from_hours(10);
-        assert!(Duration::from_secs((initial_velocity / deceleration) as u64) < duration);
+        assert!(Duration::from_secs((INITIAL_VELOCITY / DECELERATION) as u64) < duration);
         time += duration;
         let (res, finished) = simulation.step_internal(time);
         assert_eq!(finished, true);
         assert_eq!(
             res.0,
-            start_value + initial_velocity * f32::abs(initial_velocity / deceleration)
+            START_VALUE + INITIAL_VELOCITY * f32::abs(INITIAL_VELOCITY / DECELERATION)
                 - 0.5
-                    * initial_velocity.signum()
-                    * deceleration
-                    * (initial_velocity / deceleration).powi(2)
+                    * INITIAL_VELOCITY.signum()
+                    * DECELERATION
+                    * (INITIAL_VELOCITY / DECELERATION).powi(2)
         );
 
-        assert!(res.0 > limit_value); // We reached velocity zero before we reached the position limit
+        assert!(res.0 > LIMIT_VALUE); // We reached velocity zero before we reached the position limit
     }
 
     /// We reach the position limit before the velocity got zero
     /// start_value > limit_value
     #[test]
     fn constant_deceleration_decreasing_limit_reached() {
-        let start_value = 20.;
-        let limit_value = 10.;
-        let initial_velocity = -50.;
-        let deceleration = 20.;
+        const START_VALUE: f32 = 20.;
+        const LIMIT_VALUE: f32 = 10.;
+        const INITIAL_VELOCITY: f32 = -50.;
+        const DECELERATION: f32 = 20.;
         let parameters = ConstantDecelerationParameters::<LogicalPx> {
-            initial_velocity: Length::new(initial_velocity),
-            deceleration: Scale::new(deceleration),
+            initial_velocity: Length::new(INITIAL_VELOCITY),
+            deceleration: Scale::new(DECELERATION),
         };
 
         let mut time = Instant::now();
         let mut simulation = ConstantDeceleration::new_internal(
-            Length::new(start_value),
-            Length::new(limit_value),
+            Length::new(START_VALUE),
+            Length::new(LIMIT_VALUE),
             parameters.initial_velocity,
             parameters,
             time.clone(),
         );
 
         let duration = Duration::from_secs(3);
-        assert!(f32::abs(deceleration * duration.as_secs_f32()) > f32::abs(initial_velocity)); // We don't reach the limit where the velocity gets zero
+        assert!(f32::abs(DECELERATION * duration.as_secs_f32()) > f32::abs(INITIAL_VELOCITY)); // We don't reach the limit where the velocity gets zero
+        time += duration;
+        let (res, finished) = simulation.step_internal(time);
+        assert_eq!(finished, true);
+        assert_eq!(res.0, LIMIT_VALUE); // Limit reached
+    }
+}
         time += duration;
         let (res, finished) = simulation.step_internal(time);
         assert_eq!(finished, true);
