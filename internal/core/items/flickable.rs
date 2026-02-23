@@ -38,6 +38,7 @@ use i_slint_core_macros::*;
 use num_traits::Float;
 
 const DECELERATION: f32 = 2000.;
+const HALF_PERIOD_TIME: f32 = 1.;
 
 /// The implementation of the `Flickable` element
 #[repr(C)]
@@ -655,12 +656,12 @@ impl FlickableData {
                 let viewport_x = (Flickable::FIELD_OFFSETS.viewport_x).apply_pin(flick);
                 let viewport_y = (Flickable::FIELD_OFFSETS.viewport_y).apply_pin(flick);
                 {
-                    let simulation = physics_simulation::ConstantDecelerationParameters {
-                        initial_velocity: euclid::Length::new(
-                            dist.x as f32 / (millis as f32 / 1000.),
-                        ),
-                        deceleration: euclid::Scale::new(DECELERATION),
-                    };
+                    let simulation =
+                        physics_simulation::ConstantDecelerationSpringDamperParameters::new(
+                            euclid::Length::new(dist.x as f32 / (millis as f32 / 1000.)),
+                            euclid::Scale::new(DECELERATION),
+                            HALF_PERIOD_TIME,
+                        );
                     let vw = (Flickable::FIELD_OFFSETS.viewport_width).apply_pin(flick).get();
                     let limit =
                         if dist.x < 0. { vw } else { euclid::Length::new(Coord::default()) };
@@ -668,12 +669,12 @@ impl FlickableData {
                 }
 
                 {
-                    let animation_y = physics_simulation::ConstantDecelerationParameters {
-                        initial_velocity: euclid::Length::new(
-                            dist.y as f32 / (millis as f32 / 1000.),
-                        ),
-                        deceleration: euclid::Scale::new(DECELERATION),
-                    };
+                    let animation_y =
+                        physics_simulation::ConstantDecelerationSpringDamperParameters::new(
+                            euclid::Length::new(dist.y as f32 / (millis as f32 / 1000.)),
+                            euclid::Scale::new(DECELERATION),
+                            HALF_PERIOD_TIME,
+                        );
                     let vh = (Flickable::FIELD_OFFSETS.viewport_height).apply_pin(flick).get();
                     let limit =
                         if dist.y < 0. { -vh } else { euclid::Length::new(Coord::default()) };
