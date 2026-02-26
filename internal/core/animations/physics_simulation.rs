@@ -32,19 +32,19 @@ pub trait Parameter<Unit> {
     ) -> Self::Output;
 }
 
+pub type Velocity<DestUnit> = Scale<f32, Seconds, DestUnit>;
+pub type Acceleration<DestUnit> = Scale<f32, Seconds, Velocity<DestUnit>>;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ConstantDecelerationParameters<DestUnit> {
-    pub initial_velocity: Length<f32, DestUnit>,
-    pub deceleration: Scale<f32, Seconds, DestUnit>,
+    pub initial_velocity: Velocity<DestUnit>,
+    pub deceleration: Acceleration<DestUnit>,
 }
 
 #[allow(dead_code)]
 impl<DestUnit> ConstantDecelerationParameters<DestUnit> {
-    pub fn new(
-        initial_velocity: Length<f32, DestUnit>,
-        deceleration: Scale<f32, Seconds, DestUnit>,
-    ) -> Self {
+    pub fn new(initial_velocity: Velocity<DestUnit>, deceleration: Acceleration<DestUnit>) -> Self {
         Self { initial_velocity, deceleration }
     }
 }
@@ -69,7 +69,7 @@ pub struct ConstantDeceleration<Unit> {
     /// but at the end of the animation the limit shall not be exceeded
     limit_value: Length<Coord, Unit>,
     curr_val: Length<Coord, Unit>,
-    velocity: Length<f32, Unit>,
+    velocity: Velocity<Unit>,
     data: ConstantDecelerationParameters<Unit>,
     direction: Direction,
     start_time: Instant,
@@ -80,7 +80,7 @@ impl<Unit> ConstantDeceleration<Unit> {
     pub fn new(
         start_value: Length<Coord, Unit>,
         limit_value: Length<Coord, Unit>,
-        initial_velocity: Length<f32, Unit>,
+        initial_velocity: Velocity<Unit>,
         data: ConstantDecelerationParameters<Unit>,
     ) -> Self {
         Self::new_internal(
@@ -95,7 +95,7 @@ impl<Unit> ConstantDeceleration<Unit> {
     fn new_internal(
         start_value: Length<Coord, Unit>,
         limit_value: Length<Coord, Unit>,
-        mut initial_velocity: Length<f32, Unit>,
+        mut initial_velocity: Velocity<Unit>,
         mut data: ConstantDecelerationParameters<Unit>,
         start_time: Instant,
     ) -> Self {
@@ -110,11 +110,11 @@ impl<Unit> ConstantDeceleration<Unit> {
         } else if start_value < limit_value {
             data.deceleration = Scale::new(f32::abs(data.deceleration.0));
             assert!(initial_velocity.0 >= 0.); // Makes no sense yet that the velocity goes into the other direction
-            initial_velocity = Length::new(f32::abs(initial_velocity.0));
+            initial_velocity = Scale::new(f32::abs(initial_velocity.0));
             Direction::Increasing
         } else {
             data.deceleration = Scale::new(-f32::abs(data.deceleration.0));
-            initial_velocity = Length::new(-f32::abs(initial_velocity.0));
+            initial_velocity = Scale::new(-f32::abs(initial_velocity.0));
             assert!(initial_velocity.0 <= 0.);
             Direction::Decreasing
         };
@@ -150,7 +150,7 @@ impl<Unit> ConstantDeceleration<Unit> {
             Direction::Increasing => {
                 if self.curr_val >= self.limit_value {
                     self.curr_val = self.limit_value;
-                    self.velocity = Length::new(0.);
+                    self.velocity = Scale::new(0.);
                     return (self.curr_val, true);
                 } else if self.velocity.0 <= 0. {
                     return (self.curr_val, true);
