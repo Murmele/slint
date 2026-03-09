@@ -8,8 +8,8 @@ use core::{f32::consts::PI, marker::PhantomData, time::Duration};
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
 use num_traits::Zero;
-use uom::si::f32::*;
 use uom::si;
+use uom::si::f32::*;
 
 #[derive(Debug)]
 enum Direction {
@@ -102,7 +102,7 @@ impl ConstantDeceleration {
             Direction::Increasing
         } else {
             data.deceleration = -data.deceleration.abs();
-            initial_velocity = -initial_velocity.abs()
+            initial_velocity = -initial_velocity.abs();
             assert!(initial_velocity.is_sign_negative() || initial_velocity.is_zero());
             Direction::Decreasing
         };
@@ -119,7 +119,8 @@ impl ConstantDeceleration {
 
     fn step_internal(&mut self, new_tick: Instant) -> (Length, bool) {
         // We have to prevent go go beyond the limit where velocity gets zero
-        let duration = Time::new::<si::time::second>(new_tick.duration_since(self.start_time).as_secs_f32());
+        let duration =
+            Time::new::<si::time::second>(new_tick.duration_since(self.start_time).as_secs_f32());
         let duration = duration.min((self.velocity / self.data.deceleration).abs());
 
         self.start_time = new_tick;
@@ -178,14 +179,16 @@ mod tests {
         const INITIAL_VELOCITY: f32 = 50.;
         const DECELERATION: f32 = 20.;
         let parameters = ConstantDecelerationParameters::<LogicalPx> {
-            initial_velocity: Length::new::<LogicalPx>(INITIAL_VELOCITY),
-            deceleration: Acceleration::new::<>(DECELERATION),
+            initial_velocity: Length::new::<si::velocity::meter_per_second>(INITIAL_VELOCITY),
+            deceleration: Acceleration::new::<si::acceleration::meter_per_second_squared>(
+                DECELERATION,
+            ),
         };
 
         let time = Instant::now();
         let mut simulation = ConstantDeceleration::new_internal(
-            Length::new(START_VALUE),
-            Length::new(LIMIT_VALUE),
+            Length::new::<si::length::meter>(START_VALUE),
+            Length::new::<si::length::meter>(LIMIT_VALUE),
             parameters.initial_velocity,
             parameters,
             time.clone(),

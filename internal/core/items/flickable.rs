@@ -665,27 +665,27 @@ impl FlickableData {
             {
                 let viewport_x = (Flickable::FIELD_OFFSETS.viewport_x).apply_pin(flick);
                 let viewport_y = (Flickable::FIELD_OFFSETS.viewport_y).apply_pin(flick);
-                {
-                    let simulation = physics_simulation::ConstantDecelerationParameters::new(
-                        euclid::Length::new(dist.x as f32 / (millis as f32 / 1000.)),
-                        euclid::Scale::new(DECELERATION),
-                    );
-                    let vw = (Flickable::FIELD_OFFSETS.viewport_width).apply_pin(flick).get();
-                    let limit =
-                        if dist.x < 0. { euclid::Length::new(Coord::default()) } else { vw };
-                    viewport_x.set_physic_animation_value(limit, simulation);
-                }
+                // {
+                //     let simulation = physics_simulation::ConstantDecelerationParameters::new(
+                //         euclid::Length::new(dist.x as f32 / (millis as f32 / 1000.)),
+                //         euclid::Scale::new(DECELERATION),
+                //     );
+                //     let vw = (Flickable::FIELD_OFFSETS.viewport_width).apply_pin(flick).get();
+                //     let limit =
+                //         if dist.x < 0. { euclid::Length::new(Coord::default()) } else { vw };
+                //     viewport_x.set_physic_animation_value(limit, simulation);
+                // }
 
-                {
-                    let animation_y = physics_simulation::ConstantDecelerationParameters::new(
-                        euclid::Length::new(dist.y as f32 / (millis as f32 / 1000.)),
-                        euclid::Scale::new(DECELERATION),
-                    );
-                    let vh = (Flickable::FIELD_OFFSETS.viewport_height).apply_pin(flick).get();
-                    let limit =
-                        if dist.y < 0. { -vh } else { euclid::Length::new(Coord::default()) };
-                    viewport_y.set_physic_animation_value(limit, animation_y);
-                }
+                // {
+                //     let animation_y = physics_simulation::ConstantDecelerationParameters::new(
+                //         euclid::Length::new(dist.y as f32 / (millis as f32 / 1000.)),
+                //         euclid::Scale::new(DECELERATION),
+                //     );
+                //     let vh = (Flickable::FIELD_OFFSETS.viewport_height).apply_pin(flick).get();
+                //     let limit =
+                //         if dist.y < 0. { -vh } else { euclid::Length::new(Coord::default()) };
+                //     viewport_y.set_physic_animation_value(limit, animation_y);
+                // }
 
                 if dist.x != 0. || dist.y != 0. {
                     (Flickable::FIELD_OFFSETS.flicked).apply_pin(flick).call(&());
