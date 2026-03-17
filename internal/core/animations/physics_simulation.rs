@@ -138,7 +138,8 @@ impl<Unit> ConstantDeceleration<Unit> {
 
         self.start_time = new_tick;
 
-        let new_velocity = self.velocity - duration * self.data.deceleration;
+        let v = duration * self.data.deceleration;
+        let new_velocity = self.velocity - v;
 
         self.curr_val += Length::new(
             (duration * Scale::<f32, Seconds, Unit>::new((self.velocity + new_velocity).0 / 2.)).0
