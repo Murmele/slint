@@ -1,7 +1,7 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
-use crate::key_generated;
+use crate::enum_generated;
 use i_slint_core::{
     input::{FocusEventResult, FocusReason, InternalKeyEvent, KeyEventType},
     items::TextHorizontalAlignment,
@@ -326,10 +326,10 @@ impl Item for NativeSpinBox {
         let read_only = this.read_only();
 
         let horizontal_alignment = match this.horizontal_alignment() {
-            TextHorizontalAlignment::Left => key_generated::Qt_AlignmentFlag_AlignLeft,
-            TextHorizontalAlignment::Center => key_generated::Qt_AlignmentFlag_AlignHCenter,
-            TextHorizontalAlignment::Right => key_generated::Qt_AlignmentFlag_AlignRight,
-            _ => key_generated::Qt_AlignmentFlag_AlignLeft,
+            TextHorizontalAlignment::Left => enum_generated::Qt_AlignmentFlag_AlignLeft,
+            TextHorizontalAlignment::Center => enum_generated::Qt_AlignmentFlag_AlignHCenter,
+            TextHorizontalAlignment::Right => enum_generated::Qt_AlignmentFlag_AlignRight,
+            _ => enum_generated::Qt_AlignmentFlag_AlignLeft,
         };
 
         cpp!(unsafe [

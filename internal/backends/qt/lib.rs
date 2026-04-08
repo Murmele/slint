@@ -26,7 +26,7 @@ mod qt_widgets;
 mod qt_window;
 
 mod accessible_generated;
-mod key_generated;
+mod enum_generated;
 
 #[cfg(no_qt)]
 mod ffi {

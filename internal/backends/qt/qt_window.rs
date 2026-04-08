@@ -40,7 +40,7 @@ use std::pin::Pin;
 use std::ptr::NonNull;
 use std::rc::{Rc, Weak};
 
-use crate::key_generated;
+use crate::enum_generated;
 use i_slint_core::renderer::Renderer;
 use std::cell::OnceCell;
 
@@ -231,11 +231,11 @@ cpp! {{
             rust!(Slint_mouseWheelEvent [rust_window: &QtWindow as "void*", pos: qttypes::QPointF as "QPointF", delta: qttypes::QPoint as "QPoint", phase: usize as "int"] {
                 let position = LogicalPoint::new(pos.x as _, pos.y as _);
                 let phase = match phase as _ {
-                    key_generated::Qt_ScrollPhase_NoScrollPhase => TouchPhase::Cancelled,
-                    key_generated::Qt_ScrollPhase_ScrollBegin => TouchPhase::Started,
-                    key_generated::Qt_ScrollPhase_ScrollUpdate => TouchPhase::Moved,
-                    key_generated::Qt_ScrollPhase_ScrollEnd => TouchPhase::Ended,
-                    key_generated::Qt_ScrollPhase_ScrollMomentum => return,
+                    enum_generated::Qt_ScrollPhase_NoScrollPhase => TouchPhase::Cancelled,
+                    enum_generated::Qt_ScrollPhase_ScrollBegin => TouchPhase::Started,
+                    enum_generated::Qt_ScrollPhase_ScrollUpdate => TouchPhase::Moved,
+                    enum_generated::Qt_ScrollPhase_ScrollEnd => TouchPhase::Ended,
+                    enum_generated::Qt_ScrollPhase_ScrollMomentum => return,
                     _ => {
                         println!("Unhandled phase: {}", phase);
                         TouchPhase::Cancelled
@@ -572,7 +572,7 @@ impl QPainterPath {
         }}
     }
 
-    pub fn set_fill_rule(&mut self, rule: key_generated::Qt_FillRule) {
+    pub fn set_fill_rule(&mut self, rule: enum_generated::Qt_FillRule) {
         cpp! { unsafe [self as "QPainterPath*", rule as "Qt::FillRule" ] {
             self->setFillRule(rule);
         }}
@@ -826,8 +826,8 @@ impl ItemRenderer for QtItemRenderer<'_> {
         let mut painter_path = QPainterPath::default();
 
         painter_path.set_fill_rule(match path.fill_rule() {
-            FillRule::Evenodd => key_generated::Qt_FillRule_OddEvenFill,
-            FillRule::Nonzero | _ => key_generated::Qt_FillRule_WindingFill,
+            FillRule::Evenodd => enum_generated::Qt_FillRule_OddEvenFill,
+            FillRule::Nonzero | _ => enum_generated::Qt_FillRule_WindingFill,
         });
 
         for x in path_events.iter() {
@@ -1920,7 +1920,7 @@ impl QtWindow {
         i_slint_core::animations::update_animations();
         let text: String = text.into();
 
-        let text = qt_key_to_string(key as key_generated::Qt_Key, text);
+        let text = qt_key_to_string(key as enum_generated::Qt_Key, text);
 
         let event = if released {
             WindowEvent::KeyReleased { text }
@@ -2247,36 +2247,36 @@ impl WindowAdapterInternal for QtWindow {
         let widget_ptr = self.widget_ptr();
         //unidirectional resize cursors are replaced with bidirectional ones
         let cursor_shape = match cursor {
-            MouseCursor::Default => key_generated::Qt_CursorShape_ArrowCursor,
-            MouseCursor::None => key_generated::Qt_CursorShape_BlankCursor,
-            MouseCursor::Help => key_generated::Qt_CursorShape_WhatsThisCursor,
-            MouseCursor::Pointer => key_generated::Qt_CursorShape_PointingHandCursor,
-            MouseCursor::Progress => key_generated::Qt_CursorShape_BusyCursor,
-            MouseCursor::Wait => key_generated::Qt_CursorShape_WaitCursor,
-            MouseCursor::Crosshair => key_generated::Qt_CursorShape_CrossCursor,
-            MouseCursor::Text => key_generated::Qt_CursorShape_IBeamCursor,
-            MouseCursor::Alias => key_generated::Qt_CursorShape_DragLinkCursor,
-            MouseCursor::Copy => key_generated::Qt_CursorShape_DragCopyCursor,
-            MouseCursor::Move => key_generated::Qt_CursorShape_DragMoveCursor,
-            MouseCursor::NoDrop => key_generated::Qt_CursorShape_ForbiddenCursor,
-            MouseCursor::NotAllowed => key_generated::Qt_CursorShape_ForbiddenCursor,
-            MouseCursor::Grab => key_generated::Qt_CursorShape_OpenHandCursor,
-            MouseCursor::Grabbing => key_generated::Qt_CursorShape_ClosedHandCursor,
-            MouseCursor::ColResize => key_generated::Qt_CursorShape_SplitHCursor,
-            MouseCursor::RowResize => key_generated::Qt_CursorShape_SplitVCursor,
-            MouseCursor::NResize => key_generated::Qt_CursorShape_SizeVerCursor,
-            MouseCursor::EResize => key_generated::Qt_CursorShape_SizeHorCursor,
-            MouseCursor::SResize => key_generated::Qt_CursorShape_SizeVerCursor,
-            MouseCursor::WResize => key_generated::Qt_CursorShape_SizeHorCursor,
-            MouseCursor::NeResize => key_generated::Qt_CursorShape_SizeBDiagCursor,
-            MouseCursor::NwResize => key_generated::Qt_CursorShape_SizeFDiagCursor,
-            MouseCursor::SeResize => key_generated::Qt_CursorShape_SizeFDiagCursor,
-            MouseCursor::SwResize => key_generated::Qt_CursorShape_SizeBDiagCursor,
-            MouseCursor::EwResize => key_generated::Qt_CursorShape_SizeHorCursor,
-            MouseCursor::NsResize => key_generated::Qt_CursorShape_SizeVerCursor,
-            MouseCursor::NeswResize => key_generated::Qt_CursorShape_SizeBDiagCursor,
-            MouseCursor::NwseResize => key_generated::Qt_CursorShape_SizeFDiagCursor,
-            _ => key_generated::Qt_CursorShape_ArrowCursor,
+            MouseCursor::Default => enum_generated::Qt_CursorShape_ArrowCursor,
+            MouseCursor::None => enum_generated::Qt_CursorShape_BlankCursor,
+            MouseCursor::Help => enum_generated::Qt_CursorShape_WhatsThisCursor,
+            MouseCursor::Pointer => enum_generated::Qt_CursorShape_PointingHandCursor,
+            MouseCursor::Progress => enum_generated::Qt_CursorShape_BusyCursor,
+            MouseCursor::Wait => enum_generated::Qt_CursorShape_WaitCursor,
+            MouseCursor::Crosshair => enum_generated::Qt_CursorShape_CrossCursor,
+            MouseCursor::Text => enum_generated::Qt_CursorShape_IBeamCursor,
+            MouseCursor::Alias => enum_generated::Qt_CursorShape_DragLinkCursor,
+            MouseCursor::Copy => enum_generated::Qt_CursorShape_DragCopyCursor,
+            MouseCursor::Move => enum_generated::Qt_CursorShape_DragMoveCursor,
+            MouseCursor::NoDrop => enum_generated::Qt_CursorShape_ForbiddenCursor,
+            MouseCursor::NotAllowed => enum_generated::Qt_CursorShape_ForbiddenCursor,
+            MouseCursor::Grab => enum_generated::Qt_CursorShape_OpenHandCursor,
+            MouseCursor::Grabbing => enum_generated::Qt_CursorShape_ClosedHandCursor,
+            MouseCursor::ColResize => enum_generated::Qt_CursorShape_SplitHCursor,
+            MouseCursor::RowResize => enum_generated::Qt_CursorShape_SplitVCursor,
+            MouseCursor::NResize => enum_generated::Qt_CursorShape_SizeVerCursor,
+            MouseCursor::EResize => enum_generated::Qt_CursorShape_SizeHorCursor,
+            MouseCursor::SResize => enum_generated::Qt_CursorShape_SizeVerCursor,
+            MouseCursor::WResize => enum_generated::Qt_CursorShape_SizeHorCursor,
+            MouseCursor::NeResize => enum_generated::Qt_CursorShape_SizeBDiagCursor,
+            MouseCursor::NwResize => enum_generated::Qt_CursorShape_SizeFDiagCursor,
+            MouseCursor::SeResize => enum_generated::Qt_CursorShape_SizeFDiagCursor,
+            MouseCursor::SwResize => enum_generated::Qt_CursorShape_SizeBDiagCursor,
+            MouseCursor::EwResize => enum_generated::Qt_CursorShape_SizeHorCursor,
+            MouseCursor::NsResize => enum_generated::Qt_CursorShape_SizeVerCursor,
+            MouseCursor::NeswResize => enum_generated::Qt_CursorShape_SizeBDiagCursor,
+            MouseCursor::NwseResize => enum_generated::Qt_CursorShape_SizeFDiagCursor,
+            _ => enum_generated::Qt_CursorShape_ArrowCursor,
         };
         cpp! {unsafe [widget_ptr as "QWidget*", cursor_shape as "Qt::CursorShape"] {
             widget_ptr->setCursor(QCursor{cursor_shape});
@@ -2568,7 +2568,7 @@ mod key_codes {
     i_slint_common::for_each_keys!(define_qt_key_to_string_fn);
 }
 
-fn qt_key_to_string(key: key_generated::Qt_Key, event_text: String) -> SharedString {
+fn qt_key_to_string(key: enum_generated::Qt_Key, event_text: String) -> SharedString {
     // First try to see if we received one of the non-ascii keys that we have
     // a special representation for. If that fails, try to use the provided
     // text. If that's empty, then try to see if the provided key has an ascii
@@ -2586,75 +2586,75 @@ fn qt_key_to_string(key: key_generated::Qt_Key, event_text: String) -> SharedStr
     }
 
     match key {
-        key_generated::Qt_Key_Key_Space => " ",
-        key_generated::Qt_Key_Key_Exclam => "!",
-        key_generated::Qt_Key_Key_QuoteDbl => "\"",
-        key_generated::Qt_Key_Key_NumberSign => "#",
-        key_generated::Qt_Key_Key_Dollar => "$",
-        key_generated::Qt_Key_Key_Percent => "%",
-        key_generated::Qt_Key_Key_Ampersand => "&",
-        key_generated::Qt_Key_Key_Apostrophe => "'",
-        key_generated::Qt_Key_Key_ParenLeft => "(",
-        key_generated::Qt_Key_Key_ParenRight => ")",
-        key_generated::Qt_Key_Key_Asterisk => "*",
-        key_generated::Qt_Key_Key_Plus => "+",
-        key_generated::Qt_Key_Key_Comma => ",",
-        key_generated::Qt_Key_Key_Minus => "-",
-        key_generated::Qt_Key_Key_Period => ".",
-        key_generated::Qt_Key_Key_Slash => "/",
-        key_generated::Qt_Key_Key_0 => "0",
-        key_generated::Qt_Key_Key_1 => "1",
-        key_generated::Qt_Key_Key_2 => "2",
-        key_generated::Qt_Key_Key_3 => "3",
-        key_generated::Qt_Key_Key_4 => "4",
-        key_generated::Qt_Key_Key_5 => "5",
-        key_generated::Qt_Key_Key_6 => "6",
-        key_generated::Qt_Key_Key_7 => "7",
-        key_generated::Qt_Key_Key_8 => "8",
-        key_generated::Qt_Key_Key_9 => "9",
-        key_generated::Qt_Key_Key_Colon => ":",
-        key_generated::Qt_Key_Key_Semicolon => ";",
-        key_generated::Qt_Key_Key_Less => "<",
-        key_generated::Qt_Key_Key_Equal => "=",
-        key_generated::Qt_Key_Key_Greater => ">",
-        key_generated::Qt_Key_Key_Question => "?",
-        key_generated::Qt_Key_Key_At => "@",
-        key_generated::Qt_Key_Key_A => "a",
-        key_generated::Qt_Key_Key_B => "b",
-        key_generated::Qt_Key_Key_C => "c",
-        key_generated::Qt_Key_Key_D => "d",
-        key_generated::Qt_Key_Key_E => "e",
-        key_generated::Qt_Key_Key_F => "f",
-        key_generated::Qt_Key_Key_G => "g",
-        key_generated::Qt_Key_Key_H => "h",
-        key_generated::Qt_Key_Key_I => "i",
-        key_generated::Qt_Key_Key_J => "j",
-        key_generated::Qt_Key_Key_K => "k",
-        key_generated::Qt_Key_Key_L => "l",
-        key_generated::Qt_Key_Key_M => "m",
-        key_generated::Qt_Key_Key_N => "n",
-        key_generated::Qt_Key_Key_O => "o",
-        key_generated::Qt_Key_Key_P => "p",
-        key_generated::Qt_Key_Key_Q => "q",
-        key_generated::Qt_Key_Key_R => "r",
-        key_generated::Qt_Key_Key_S => "s",
-        key_generated::Qt_Key_Key_T => "t",
-        key_generated::Qt_Key_Key_U => "u",
-        key_generated::Qt_Key_Key_V => "v",
-        key_generated::Qt_Key_Key_W => "w",
-        key_generated::Qt_Key_Key_X => "x",
-        key_generated::Qt_Key_Key_Y => "y",
-        key_generated::Qt_Key_Key_Z => "z",
-        key_generated::Qt_Key_Key_BracketLeft => "[",
-        key_generated::Qt_Key_Key_Backslash => "\\",
-        key_generated::Qt_Key_Key_BracketRight => "]",
-        key_generated::Qt_Key_Key_AsciiCircum => "^",
-        key_generated::Qt_Key_Key_Underscore => "_",
-        key_generated::Qt_Key_Key_QuoteLeft => "`",
-        key_generated::Qt_Key_Key_BraceLeft => "{",
-        key_generated::Qt_Key_Key_Bar => "|",
-        key_generated::Qt_Key_Key_BraceRight => "}",
-        key_generated::Qt_Key_Key_AsciiTilde => "~",
+        enum_generated::Qt_Key_Key_Space => " ",
+        enum_generated::Qt_Key_Key_Exclam => "!",
+        enum_generated::Qt_Key_Key_QuoteDbl => "\"",
+        enum_generated::Qt_Key_Key_NumberSign => "#",
+        enum_generated::Qt_Key_Key_Dollar => "$",
+        enum_generated::Qt_Key_Key_Percent => "%",
+        enum_generated::Qt_Key_Key_Ampersand => "&",
+        enum_generated::Qt_Key_Key_Apostrophe => "'",
+        enum_generated::Qt_Key_Key_ParenLeft => "(",
+        enum_generated::Qt_Key_Key_ParenRight => ")",
+        enum_generated::Qt_Key_Key_Asterisk => "*",
+        enum_generated::Qt_Key_Key_Plus => "+",
+        enum_generated::Qt_Key_Key_Comma => ",",
+        enum_generated::Qt_Key_Key_Minus => "-",
+        enum_generated::Qt_Key_Key_Period => ".",
+        enum_generated::Qt_Key_Key_Slash => "/",
+        enum_generated::Qt_Key_Key_0 => "0",
+        enum_generated::Qt_Key_Key_1 => "1",
+        enum_generated::Qt_Key_Key_2 => "2",
+        enum_generated::Qt_Key_Key_3 => "3",
+        enum_generated::Qt_Key_Key_4 => "4",
+        enum_generated::Qt_Key_Key_5 => "5",
+        enum_generated::Qt_Key_Key_6 => "6",
+        enum_generated::Qt_Key_Key_7 => "7",
+        enum_generated::Qt_Key_Key_8 => "8",
+        enum_generated::Qt_Key_Key_9 => "9",
+        enum_generated::Qt_Key_Key_Colon => ":",
+        enum_generated::Qt_Key_Key_Semicolon => ";",
+        enum_generated::Qt_Key_Key_Less => "<",
+        enum_generated::Qt_Key_Key_Equal => "=",
+        enum_generated::Qt_Key_Key_Greater => ">",
+        enum_generated::Qt_Key_Key_Question => "?",
+        enum_generated::Qt_Key_Key_At => "@",
+        enum_generated::Qt_Key_Key_A => "a",
+        enum_generated::Qt_Key_Key_B => "b",
+        enum_generated::Qt_Key_Key_C => "c",
+        enum_generated::Qt_Key_Key_D => "d",
+        enum_generated::Qt_Key_Key_E => "e",
+        enum_generated::Qt_Key_Key_F => "f",
+        enum_generated::Qt_Key_Key_G => "g",
+        enum_generated::Qt_Key_Key_H => "h",
+        enum_generated::Qt_Key_Key_I => "i",
+        enum_generated::Qt_Key_Key_J => "j",
+        enum_generated::Qt_Key_Key_K => "k",
+        enum_generated::Qt_Key_Key_L => "l",
+        enum_generated::Qt_Key_Key_M => "m",
+        enum_generated::Qt_Key_Key_N => "n",
+        enum_generated::Qt_Key_Key_O => "o",
+        enum_generated::Qt_Key_Key_P => "p",
+        enum_generated::Qt_Key_Key_Q => "q",
+        enum_generated::Qt_Key_Key_R => "r",
+        enum_generated::Qt_Key_Key_S => "s",
+        enum_generated::Qt_Key_Key_T => "t",
+        enum_generated::Qt_Key_Key_U => "u",
+        enum_generated::Qt_Key_Key_V => "v",
+        enum_generated::Qt_Key_Key_W => "w",
+        enum_generated::Qt_Key_Key_X => "x",
+        enum_generated::Qt_Key_Key_Y => "y",
+        enum_generated::Qt_Key_Key_Z => "z",
+        enum_generated::Qt_Key_Key_BracketLeft => "[",
+        enum_generated::Qt_Key_Key_Backslash => "\\",
+        enum_generated::Qt_Key_Key_BracketRight => "]",
+        enum_generated::Qt_Key_Key_AsciiCircum => "^",
+        enum_generated::Qt_Key_Key_Underscore => "_",
+        enum_generated::Qt_Key_Key_QuoteLeft => "`",
+        enum_generated::Qt_Key_Key_BraceLeft => "{",
+        enum_generated::Qt_Key_Key_Bar => "|",
+        enum_generated::Qt_Key_Key_BraceRight => "}",
+        enum_generated::Qt_Key_Key_AsciiTilde => "~",
         _ => "",
     }
     .into()
