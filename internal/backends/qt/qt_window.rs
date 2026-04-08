@@ -2553,11 +2553,11 @@ pub(crate) fn restart_timer() {
 mod key_codes {
     macro_rules! define_qt_key_to_string_fn {
         ($($char:literal # $name:ident # $($shifted:ident)? # $($_muda:ident)? $(=> $($qt:ident)|* # $($winit:ident $(($_pos:ident))?)|* # $($_xkb:ident)|* )? ;)*) => {
-            use crate::key_generated;
-            pub fn qt_key_to_string(key: key_generated::Qt_Key) -> Option<i_slint_core::SharedString> {
+            use crate::enum_generated;
+            pub fn qt_key_to_string(key: enum_generated::Qt_Key) -> Option<i_slint_core::SharedString> {
 
                 let char = match(key) {
-                    $($($(key_generated::$qt => $char,)*)?)*
+                    $($($(enum_generated::$qt => $char,)*)?)*
                     _ => return None,
                 };
                 Some(char.into())
