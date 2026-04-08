@@ -548,21 +548,21 @@ fn recurse_expression(
             g.rect = Default::default(); // already visited;
             g.visit_named_references(&mut |nr| vis(&nr.clone().into(), P))
         }
-        Expression::SolveFlexBoxLayout(layout)
-        | Expression::ComputeFlexBoxLayoutInfo(layout, _) => {
+        Expression::SolveFlexboxLayout(layout)
+        | Expression::ComputeFlexboxLayoutInfo(layout, _) => {
             if let Some(nr) = layout.direction.as_ref() {
                 vis(&nr.clone().into(), P);
             }
             // Visit all layout geometry dependencies
-            if matches!(expr, Expression::SolveFlexBoxLayout(..)) {
-                // FlexBoxLayout needs both width and height
+            if matches!(expr, Expression::SolveFlexboxLayout(..)) {
+                // FlexboxLayout needs both width and height
                 if let Some(nr) = layout.geometry.rect.width_reference.as_ref() {
                     vis(&nr.clone().into(), P);
                 }
                 if let Some(nr) = layout.geometry.rect.height_reference.as_ref() {
                     vis(&nr.clone().into(), P);
                 }
-            } else if let Expression::ComputeFlexBoxLayoutInfo(_, _orientation) = expr {
+            } else if let Expression::ComputeFlexboxLayoutInfo(_, _orientation) = expr {
                 // Technically, due to wrapping, there's a dependency on width for the vertical orientation (for Rows/RowsReverse)
                 // or a dependency on height for the horizontal orientation (for Columns/ColumnsReverse).
                 // But since the flex direction, which can be changed at runtime, we don't know which one will apply.

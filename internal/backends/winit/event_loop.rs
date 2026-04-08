@@ -272,7 +272,7 @@ impl winit::application::ApplicationHandler for EventLoopState {
                 };
 
                 macro_rules! winit_key_to_char {
-                ($($char:literal # $name:ident # $($shifted:expr)? $(=> $($_qt:ident)|* # $($winit:ident $(($pos:ident))?)|* # $($_xkb:ident)|* )? ;)*) => {
+                ($($char:literal # $name:ident # $($shifted:ident)? # $($_muda:ident)? $(=> $($_qt:ident)|* # $($winit:ident $(($pos:ident))?)|* # $($_xkb:ident)|* )? ;)*) => {
                     match &key_code {
                         $( $( $(
                                     winit::keyboard::Key::Named(winit::keyboard::NamedKey::$winit)
@@ -443,10 +443,13 @@ impl winit::application::ApplicationHandler for EventLoopState {
                     //window.resize_event(inner_size_writer.???)?;
                 }
             }
-            WindowEvent::ThemeChanged(theme) => window.set_color_scheme(match theme {
-                winit::window::Theme::Dark => ColorScheme::Dark,
-                winit::window::Theme::Light => ColorScheme::Light,
-            }),
+            WindowEvent::ThemeChanged(theme) => {
+                window.set_color_scheme(match theme {
+                    winit::window::Theme::Dark => ColorScheme::Dark,
+                    winit::window::Theme::Light => ColorScheme::Light,
+                });
+                window.update_accent_color();
+            }
             WindowEvent::Occluded(x) => {
                 window.renderer.occluded(x);
 
