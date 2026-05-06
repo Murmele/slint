@@ -8,6 +8,8 @@
 //! - `ConstantDeceleration`
 //! - `ConstantDecelerationSpringDamper` with spring damper simulation when reaching the limit
 
+use std::println;
+
 use crate::animations::Instant;
 #[cfg(all(test, not(feature = "std")))]
 use num_traits::Float;
@@ -161,7 +163,9 @@ impl Simulation for ConstantDeceleration {
     }
 
     fn step(&mut self, new_tick: Instant) -> (f32, bool) {
-        self.step_internal(new_tick)
+        let res = self.step_internal(new_tick);
+        println!("ConstantDeceleration step. Finished: {}. Value: {}", res.1, res.0);
+        res
     }
 }
 

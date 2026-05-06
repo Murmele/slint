@@ -37,6 +37,7 @@ use euclid::num::Zero;
 use i_slint_core_macros::*;
 #[allow(unused)]
 use num_traits::Float;
+use std::borrow::ToOwned;
 mod data_ringbuffer;
 use data_ringbuffer::PositionTimeRingBuffer;
 
@@ -546,11 +547,11 @@ impl FlickableDataInner {
                 let limit =
                     ensure_in_bound(flick, LogicalPoint::from_lengths(limit_x, limit_y), flick_rc);
                 {
-                    let simulation = physics_simulation::ConstantDecelerationParameters::new(
-                        dist.x as f32 / (millis as f32 / 1000.),
-                        DECELERATION,
-                    );
-                    viewport_x.set_physic_animation_value(limit.x_length(), simulation);
+                    // let simulation = physics_simulation::ConstantDecelerationParameters::new(
+                    //     dist.x as f32 / (millis as f32 / 1000.),
+                    //     DECELERATION,
+                    // );
+                    // viewport_x.set_physic_animation_value(limit.x_length(), simulation);
                 }
 
                 {
@@ -558,6 +559,7 @@ impl FlickableDataInner {
                         dist.y as f32 / (millis as f32 / 1000.),
                         DECELERATION,
                     );
+                    *viewport_y.as_ref().debug_name.borrow_mut() = "Viewport_y".to_owned();
                     viewport_y.set_physic_animation_value(limit.y_length(), animation_y);
                 }
 

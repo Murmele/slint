@@ -190,10 +190,6 @@ fn update_visible_instances(
     }
 
     let mut vp_y = viewport_y.get().get();
-    if !viewport_y.has_binding() {
-        vp_y = vp_y.min(0 as Coord);
-    }
-
     let mut indices_to_init = Vec::new();
 
     // Estimate element height from cached value or by measuring existing instances.
@@ -222,144 +218,162 @@ fn update_visible_instances(
         }
     };
 
-    if state.offset >= row_count {
-        state.offset = row_count - 1;
+    // Scrolling with the finger up means items with a higher index will appear
+    let scroll_diff = vp_y - state.previous_viewport_y;
+    let scroll_up = scroll_diff < 0.;
+
+    if scroll_up {
+        let mut index = state.offset;
+        loop {
+            
+            index += 1;
+        }
     }
 
-    let one_and_a_half_screen = listview_height * 3 as Coord / 2 as Coord;
-    let first_item_y = state.anchor_y;
-    let last_item_bottom = first_item_y + element_height * ops.len() as Coord;
+    let first_index = state.offset;
+    let first_item_start = state.anchor_y;
 
-    let (mut new_offset, mut new_offset_y) = if first_item_y > -vp_y + one_and_a_half_screen
-        || last_item_bottom + element_height < -vp_y
-    {
-        // Jumping more than 1.5 screens: random seek.
-        ops.splice(0, ops.len(), 0);
-        state.offset = ((-vp_y / element_height).floor() as usize).min(row_count - 1);
-        (state.offset, 0 as Coord)
-    } else if vp_y < state.previous_viewport_y {
-        // Scrolled down: find the new offset by walking existing instances.
-        let mut it_y = first_item_y + vp_y;
-        let mut new_off = state.offset;
-        for i in 0..ops.len() {
-            if ops.ensure_updated(i, new_off) {
-                indices_to_init.push(i);
-            }
-            let h = ops.height(i).unwrap_or(0 as Coord);
-            if it_y + h > 0 as Coord || new_off + 1 >= row_count {
-                break;
-            }
-            it_y += h;
-            new_off += 1;
-        }
-        (new_off, it_y)
-    } else {
-        // Scrolled up: will instantiate items before offset in the loop below.
-        (state.offset, first_item_y + vp_y)
-    };
+    let mut y = first_item_start;
+    while y 
 
-    let mut loop_count = 0;
-    loop {
-        // Fill gap before new_offset using already-instantiated items.
-        while new_offset > state.offset && new_offset_y > 0 as Coord {
-            new_offset -= 1;
-            new_offset_y -= ops.height(new_offset - state.offset).unwrap_or(0 as Coord);
-        }
-        // If there is still a gap, create new instances before the current ones.
-        let mut prepend_count = 0;
-        while new_offset > 0 && new_offset_y > 0 as Coord {
-            new_offset -= 1;
-            ops.splice(0, 0, 1);
-            ops.ensure_updated(0, new_offset);
-            new_offset_y -= ops.height(0).unwrap_or(0 as Coord);
-            prepend_count += 1;
-        }
-        if prepend_count > 0 {
-            for x in &mut indices_to_init {
-                *x += prepend_count;
-            }
-            indices_to_init.extend(0..prepend_count);
-            state.offset = new_offset;
-        }
-        debug_assert!(new_offset >= state.offset && new_offset <= state.offset + ops.len());
+    // if state.offset >= row_count {
+    //     state.offset = row_count - 1;
+    // }
 
-        // Layout items until we fill the view, starting with already-instantiated ones.
-        let mut y = new_offset_y;
-        let mut idx = new_offset;
-        let instances_begin = new_offset - state.offset;
-        for i in instances_begin..ops.len() {
-            if idx >= row_count {
-                break;
-            }
-            if ops.ensure_updated(i, idx) {
-                indices_to_init.push(i);
-            }
-            vp_width = vp_width.max(ops.listview_layout(i, &mut y));
-            idx += 1;
-            if y >= listview_height {
-                break;
-            }
-        }
+    // let one_and_a_half_screen = listview_height * 3 as Coord / 2 as Coord;
+    // let first_item_y = state.anchor_y;
+    // let last_item_bottom = first_item_y + element_height * ops.len() as Coord;
 
-        // Create more items until there is no more room.
-        while y < listview_height && idx < row_count {
-            let i = ops.len();
-            ops.splice(i, 0, 1);
-            ops.ensure_updated(i, idx);
-            indices_to_init.push(i);
-            vp_width = vp_width.max(ops.listview_layout(i, &mut y));
-            idx += 1;
-        }
+    // let (mut new_offset, mut new_offset_y) = if first_item_y > -vp_y + one_and_a_half_screen
+    //     || last_item_bottom + element_height < -vp_y
+    // {
+    //     // Jumping more than 1.5 screens: random seek.
+    //     ops.splice(0, ops.len(), 0);
+    //     state.offset = ((-vp_y / element_height).floor() as usize).min(row_count - 1);
+    //     (state.offset, 0 as Coord)
+    // } else if vp_y < state.previous_viewport_y {
+    //     // Scrolled down: find the new offset by walking existing instances.
+    //     let mut it_y = first_item_y + vp_y;
+    //     let mut new_off = state.offset;
+    //     for i in 0..ops.len() {
+    //         if ops.ensure_updated(i, new_off) {
+    //             indices_to_init.push(i);
+    //         }
+    //         let h = ops.height(i).unwrap_or(0 as Coord);
+    //         if it_y + h > 0 as Coord || new_off + 1 >= row_count {
+    //             break;
+    //         }
+    //         it_y += h;
+    //         new_off += 1;
+    //     }
+    //     (new_off, it_y)
+    // } else {
+    //     // Scrolled up: will instantiate items before offset in the loop below.
+    //     (state.offset, first_item_y + vp_y)
+    // };
 
-        if y < listview_height && vp_y < 0 as Coord && loop_count < 3 {
-            debug_assert!(idx >= row_count);
-            // Reached end of model with room to spare. Scroll up.
-            vp_y += listview_height - y;
-            loop_count += 1;
-            continue;
-        }
+    // let mut loop_count = 0;
+    // loop {
+    //     // Fill gap before new_offset using already-instantiated items.
+    //     while new_offset > state.offset && new_offset_y > 0 as Coord {
+    //         new_offset -= 1;
+    //         new_offset_y -= ops.height(new_offset - state.offset).unwrap_or(0 as Coord);
+    //     }
+    //     // If there is still a gap, create new instances before the current ones.
+    //     let mut prepend_count = 0;
+    //     while new_offset > 0 && new_offset_y > 0 as Coord {
+    //         new_offset -= 1;
+    //         ops.splice(0, 0, 1);
+    //         ops.ensure_updated(0, new_offset);
+    //         new_offset_y -= ops.height(0).unwrap_or(0 as Coord);
+    //         prepend_count += 1;
+    //     }
+    //     if prepend_count > 0 {
+    //         for x in &mut indices_to_init {
+    //             *x += prepend_count;
+    //         }
+    //         indices_to_init.extend(0..prepend_count);
+    //         state.offset = new_offset;
+    //     }
+    //     debug_assert!(new_offset >= state.offset && new_offset <= state.offset + ops.len());
 
-        // Clean up instances that are not shown.
-        if new_offset != state.offset {
-            let remove_count = new_offset - state.offset;
-            ops.splice(0, remove_count, 0);
-            indices_to_init.retain_mut(|i| {
-                if *i < remove_count {
-                    false
-                } else {
-                    *i -= remove_count;
-                    true
-                }
-            });
-            state.offset = new_offset;
-        }
-        let keep = idx - new_offset;
-        if ops.len() > keep {
-            ops.splice(keep, ops.len() - keep, 0);
-            indices_to_init.retain(|x| *x < keep);
-        }
+    //     // Layout items until we fill the view, starting with already-instantiated ones.
+    //     let mut y = new_offset_y;
+    //     let mut idx = new_offset;
+    //     let instances_begin = new_offset - state.offset;
+    //     for i in instances_begin..ops.len() {
+    //         if idx >= row_count {
+    //             break;
+    //         }
+    //         if ops.ensure_updated(i, idx) {
+    //             indices_to_init.push(i);
+    //         }
+    //         vp_width = vp_width.max(ops.listview_layout(i, &mut y));
+    //         idx += 1;
+    //         if y >= listview_height {
+    //             break;
+    //         }
+    //     }
 
-        if ops.len() == 0 {
-            break;
-        }
+    //     // Create more items until there is no more room.
+    //     while y < listview_height && idx < row_count {
+    //         let i = ops.len();
+    //         ops.splice(i, 0, 1);
+    //         ops.ensure_updated(i, idx);
+    //         indices_to_init.push(i);
+    //         vp_width = vp_width.max(ops.listview_layout(i, &mut y));
+    //         idx += 1;
+    //     }
 
-        // Recompute coordinates for the scrollbar.
-        state.cached_item_height = (y - new_offset_y) / ops.len() as Coord;
-        state.anchor_y = state.cached_item_height * state.offset as Coord;
-        viewport_height.set(LogicalLength::new(state.cached_item_height * row_count as Coord));
-        viewport_width.set(LogicalLength::new(vp_width));
-        // If an animation is ongoing we should not interrupt it
-        if !viewport_y.has_binding() {
-            let new_viewport_y = -state.anchor_y + new_offset_y;
-            if new_viewport_y != viewport_y.get().get() {
-                viewport_y.set(LogicalLength::new(new_viewport_y));
-            }
-            state.previous_viewport_y = new_viewport_y;
-        } else {
-            state.previous_viewport_y = viewport_y.get().0;
-        }
-        break;
-    }
+    //     if y < listview_height && vp_y < 0 as Coord && loop_count < 3 {
+    //         debug_assert!(idx >= row_count);
+    //         // Reached end of model with room to spare. Scroll up.
+    //         vp_y += listview_height - y;
+    //         loop_count += 1;
+    //         continue;
+    //     }
+
+    //     // Clean up instances that are not shown.
+    //     if new_offset != state.offset {
+    //         let remove_count = new_offset - state.offset;
+    //         ops.splice(0, remove_count, 0);
+    //         indices_to_init.retain_mut(|i| {
+    //             if *i < remove_count {
+    //                 false
+    //             } else {
+    //                 *i -= remove_count;
+    //                 true
+    //             }
+    //         });
+    //         state.offset = new_offset;
+    //     }
+    //     let keep = idx - new_offset;
+    //     if ops.len() > keep {
+    //         ops.splice(keep, ops.len() - keep, 0);
+    //         indices_to_init.retain(|x| *x < keep);
+    //     }
+
+    //     if ops.len() == 0 {
+    //         break;
+    //     }
+
+    //     // Recompute coordinates for the scrollbar.
+    //     state.cached_item_height = (y - new_offset_y) / ops.len() as Coord;
+    //     state.anchor_y = state.cached_item_height * state.offset as Coord;
+    //     viewport_height.set(LogicalLength::new(state.cached_item_height * row_count as Coord));
+    //     viewport_width.set(LogicalLength::new(vp_width));
+    //     // If an animation is ongoing we should not interrupt it
+    //     if !viewport_y.has_binding() {
+    //         let new_viewport_y = -state.anchor_y + new_offset_y;
+    //         if new_viewport_y != viewport_y.get().get() {
+    //             viewport_y.set(LogicalLength::new(new_viewport_y));
+    //         }
+    //         state.previous_viewport_y = new_viewport_y;
+    //     } else {
+    //         state.previous_viewport_y = viewport_y.get().0;
+    //     }
+    //     break;
+    // }
 
     indices_to_init
 }

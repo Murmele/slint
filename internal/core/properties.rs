@@ -339,6 +339,7 @@ unsafe impl<T, F: Fn(&mut T) -> BindingResult> BindingCallable<T> for F {
     }
 }
 
+use std::println;
 #[cfg(feature = "std")]
 use std::thread_local;
 #[cfg(feature = "std")]
@@ -965,6 +966,9 @@ impl<T: Clone> Property<T> {
     where
         T: PartialEq,
     {
+        if self.debug_name.borrow().contains("Viewport_y") {
+            println!("Property::set for Viewport_y");
+        }
         let previous_binding_intercepted = self.handle.access(|b| {
             b.is_some_and(|b| unsafe {
                 // Safety: b is a BindingHolder<T>
