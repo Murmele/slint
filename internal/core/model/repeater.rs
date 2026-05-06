@@ -222,13 +222,24 @@ fn update_visible_instances(
     let scroll_diff = vp_y - state.previous_viewport_y;
     let scroll_up = scroll_diff < 0.;
 
-    if scroll_up {
-        let mut index = state.offset;
-        loop {
-            
-            index += 1;
+    if scroll_diff > 3 as Coord * listview_height {
+        // Random jump eighter by changing viewport_y or the scrollbar was changed so fast
+        // that for the next update step we reached this limit
+        panic!("Not yet implemented");
+    } else {
+        // Normal scrolling
+        if scroll_up {
+            let mut row = state.offset;
+            loop {
+                if ops.ensure_updated(0, row) {
+                    indices_to_init.push(value);
+                }
+                row += 1;
+            }
         }
     }
+
+    
 
     let first_index = state.offset;
     let first_item_start = state.anchor_y;
