@@ -130,6 +130,13 @@ trait RepeaterInstanceOps {
 
     /// If dirty, ensure the instance is created and updated for `row`.
     /// Returns `true` if freshly created (needs init later).
+    /// 
+    /// `instance_idx` - the index of the item in the instance list
+    /// `row` - the index of the item in the model
+    /// 
+    /// The number of instances might differ from the number of rows in the model
+    /// for performance reasons. The idea is allocate only a number of
+    /// instances of a model
     fn ensure_updated(&mut self, instance_idx: usize, row: usize) -> bool;
 
     /// Height of the instance, or `None` if not yet created.
