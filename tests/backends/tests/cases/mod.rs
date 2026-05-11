@@ -7,6 +7,7 @@ use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
+mod popup_close;
 
 #[satchel::test]
 fn multiple_quit_event_loop_calls() {
