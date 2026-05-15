@@ -3550,7 +3550,7 @@ fn compile_builtin_function_call(
                             parent_item,
                             #is_tooltip,
                             false,
-                        ), sp::Rc::downgrade(&window_adapter)))
+                        ))
                     );
                     #popup_window_id::user_init(popup_instance_vrc.clone());
                 }))
