@@ -1516,7 +1516,7 @@ fn generate_sub_component(
         struct #inner_component_id {
             #(#item_names : sp::#item_types,)*
             #(#sub_component_names : #sub_component_types,)*
-            #(#popup_id_names : ::core::cell::Cell<sp::Option<::core::num::NonZeroU32>>,)*
+            #(#popup_id_names : ::core::cell::Cell<sp::Option<(::core::num::NonZeroU32, sp::Weak<dyn sp::WindowAdapter>)>>,)*
             #(#declared_property_vars : sp::Property<#declared_property_types>,)*
             #(#declared_callbacks : sp::Callback<(#(#declared_callbacks_types,)*), #declared_callbacks_ret>,)*
             #(#repeated_element_components,)*
@@ -3538,8 +3538,8 @@ fn compile_builtin_function_call(
 
                     let popup_instance = #popup_window_id::new(#component_access_tokens.self_weak.get().unwrap().clone(), globals).unwrap();
                     let popup_instance_vrc = sp::VRc::map(popup_instance.clone(), |x| x);
-                    if let Some(current_id) = #component_access_tokens.#popup_id_name.take() {
-                        window.close_popup(current_id);
+                    if let Some((current_id, popup_parent_adapter)) = #component_access_tokens.#popup_id_name.take().and_then(|(id, adapter)| if let Some(adapter) = adapter.upgrade() {Some((id, adapter))} else { None }) {
+                        sp::WindowInner::from_pub(popup_parent_adapter.window()).close_popup(current_id);
                     }
 
                     let popup_instance_vrc_for_position = popup_instance_vrc.clone();
@@ -3547,7 +3547,7 @@ fn compile_builtin_function_call(
                         let _self = popup_instance_vrc_for_position.as_pin_ref(); #position
                     });
 
-                    #component_access_tokens.#popup_id_name.set(Some(
+                    #component_access_tokens.#popup_id_name.set(Some((
                         window.show_popup(
                             &sp::VRc::into_dyn(popup_instance.into()),
                             access_position,
@@ -3584,7 +3584,6 @@ fn compile_builtin_function_call(
                         _ => unreachable!(),
                     };
                 }
-                let window_adapter_tokens = access_window_adapter_field(ctx);
                 let popup_id_name = internal_popup_id(*popup_index as usize);
                 let current_id_tokens = match component_access_tokens {
                     MemberAccess::Option(token_stream) => quote!(
@@ -3596,8 +3595,8 @@ fn compile_builtin_function_call(
                     _ => unreachable!(),
                 };
                 quote!(
-                    if let Some(current_id) = #current_id_tokens {
-                        sp::WindowInner::from_pub(#window_adapter_tokens.window()).close_popup(current_id);
+                    if let Some((current_id, adapter)) = #current_id_tokens.and_then(|(id, adapter)| if let Some(adapter) = adapter.upgrade() {Some((id, adapter))} else { None })  {
+                        sp::WindowInner::from_pub(adapter.window()).close_popup(current_id);
                     }
                 )
             } else {
