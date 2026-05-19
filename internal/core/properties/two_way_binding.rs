@@ -239,7 +239,10 @@ impl<T: PartialEq + Clone + 'static> Property<T> {
                 let mut sub_value = (self.map_to)(value);
                 // Safety: `self.b` is a BindingHolder that expects a `T2`
                 unsafe {
-                    ((*self.b).vtable.evaluate)(self.b, &mut sub_value as *mut T2 as *mut ());
+                    ((*self.b).vtable.evaluate)(
+                        self.b,
+                        (&mut sub_value as *mut T2).cast::<c_void>(),
+                    );
                 }
                 (self.map_from)(value, &sub_value);
                 BindingResult::KeepBinding
@@ -249,7 +252,10 @@ impl<T: PartialEq + Clone + 'static> Property<T> {
                 let sub_value = (self.map_to)(value);
                 // Safety: `self.b` is a BindingHolder that expects a `T2`
                 unsafe {
-                    ((*self.b).vtable.intercept_set)(self.b, &sub_value as *const T2 as *const ())
+                    ((*self.b).vtable.intercept_set)(
+                        self.b,
+                        (&sub_value as *const T2).cast::<c_void>(),
+                    )
                 }
             }
         }
@@ -622,7 +628,7 @@ fn test_two_way_with_map() {
 
 /// Regression test for use-after-free in `link_two_way_with_map_to_common_property`.
 ///
-/// When a property already has a binding with dependants and is then linked
+/// When a property already has a binding with dependant properties and is then linked
 /// via `link_two_way_with_map`, the old binding's dependency list must be
 /// transferred to the new `TwoWayBindingWithMap` binding. Without this
 /// transfer, dependency nodes would point into freed memory, causing

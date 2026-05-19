@@ -3,6 +3,7 @@
 
 use crate::api::{SetPropertyError, Struct, Value};
 use crate::dynamic_item_tree::{CallbackHandler, InstanceRef};
+use core::ffi::c_void;
 use core::pin::Pin;
 use corelib::graphics::{
     ConicGradientBrush, GradientStop, LinearGradientBrush, PathElement, RadialGradientBrush,
@@ -48,7 +49,7 @@ pub trait ErasedPropertyInfo {
 
     /// Safety: Property2 must be a (pinned) pointer to a `Property<T>`
     /// where T is the same T as the one represented by this property.
-    unsafe fn link_two_ways(&self, item: Pin<ItemRef>, property2: *const ());
+    unsafe fn link_two_ways(&self, item: Pin<ItemRef>, property2: *const c_void);
 
     fn prepare_for_two_way_binding(&self, item: Pin<ItemRef>) -> Pin<Rc<corelib::Property<Value>>>;
 
@@ -96,7 +97,7 @@ impl<Item: vtable::HasStaticVTable<corelib::items::ItemVTable>> ErasedPropertyIn
     fn set_debug_name(&self, item: Pin<ItemRef>, name: String) {
         (*self).set_debug_name(ItemRef::downcast_pin(item).unwrap(), name);
     }
-    unsafe fn link_two_ways(&self, item: Pin<ItemRef>, property2: *const ()) {
+    unsafe fn link_two_ways(&self, item: Pin<ItemRef>, property2: *const c_void) {
         // Safety: ErasedPropertyInfo::link_two_ways and PropertyInfo::link_two_ways have the same safety requirement
         unsafe { (*self).link_two_ways(ItemRef::downcast_pin(item).unwrap(), property2) }
     }
@@ -1047,7 +1048,7 @@ fn call_builtin_function(
             compiled
                 .set_callback_handler(
                     inst_ref.borrow(),
-                    "close",
+                    "close-popup",
                     Box::new(move |_args: &[Value]| -> Value {
                         let Some(item_rc) = item_weak.upgrade() else { return Value::Void };
                         if let Some(id) = item_rc
@@ -1724,6 +1725,10 @@ fn call_builtin_function(
             let window_adapter = local_context.component_instance.window_adapter();
             Value::Bool(corelib::open_url(&url, window_adapter.window()).is_ok())
         }
+        BuiltinFunction::BringAllToFront => {
+            corelib::bring_all_to_front();
+            Value::Void
+        }
         BuiltinFunction::ParseMarkdown => {
             let format_string: SharedString =
                 eval_expression(&arguments[0], local_context).try_into().unwrap();
@@ -1738,6 +1743,11 @@ fn call_builtin_function(
             let string: SharedString =
                 eval_expression(&arguments[0], local_context).try_into().unwrap();
             Value::StyledText(corelib::styled_text::string_to_styled_text(string.to_string()))
+        }
+        BuiltinFunction::ColorToStyledText => {
+            let color: corelib::Color =
+                eval_expression(&arguments[0], local_context).try_into().unwrap();
+            Value::StyledText(corelib::styled_text::color_to_styled_text(color))
         }
     }
 }
@@ -1783,7 +1793,8 @@ fn call_item_member_function(nr: &NamedReference, local_context: &mut EvalLocalC
         }
     } else if let Some(s) = ItemRef::downcast_pin::<corelib::items::WindowItem>(item_ref) {
         match name {
-            "hide" => s.hide(&window_adapter),
+            "hide" => s.hide(&window_adapter, &item_rc),
+            "close" => return Value::Bool(s.close(&window_adapter, &item_rc)),
             _ => {
                 panic!("internal: Unknown member function {name} called on WindowItem")
             }

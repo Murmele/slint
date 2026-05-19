@@ -1,7 +1,7 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
-// cSpell: ignore conv gdata powf punct vref
+// cSpell: ignore conv gdata powf punct vref rescope updt
 
 /*! module for the Rust code generator
 
@@ -566,7 +566,7 @@ fn generate_shared_globals(
             let shared_globals_type_name = if let Some(module) = library_info.module {
                 let package = ident(&library_info.package);
                 let module = ident(&module);
-                //(quote!(#shared_gloabls_var_name),quote!(let #shared_globals_var_name = #package::#module::#shared_globals_type_name::new(root_item_tree_weak.clone());))
+                //(quote!(#shared_globals_var_name),quote!(let #shared_globals_var_name = #package::#module::#shared_globals_type_name::new(root_item_tree_weak.clone());))
                 quote!(#package::#module::#struct_name)
             } else {
                 let package = ident(&library_info.package);
@@ -3517,19 +3517,24 @@ fn compile_builtin_function_call(
                 let is_tooltip = popup.is_tooltip;
                 let close_policy = compile_expression(close_policy, ctx);
                 let popup_id_name = internal_popup_id(*popup_index as usize);
+                let globals_init = if !is_tooltip {
+                    quote! {
+                        if let Some(popup_window_adapter) = window.create_popup_window_adapter() {
+                            shared_global.clone_with_window_adapter(popup_window_adapter)
+                        } else {
+                            shared_global.clone()
+                        }
+                    }
+                } else {
+                    quote! { shared_global.clone() }
+                };
                 component_access_tokens.then(|component_access_tokens| quote!({
                     let parent_item = #parent_item;
                     // Use the newly created window adapter if we are able to create one. Otherwise use the parent's one
                     let shared_global = #component_access_tokens.globals.get().unwrap();
                     let window_adapter = shared_global.window_adapter_impl();
                     let window = sp::WindowInner::from_pub(window_adapter.window());
-                    let globals = if !#is_tooltip
-                        && let Some(popup_window_adapter) = window.create_popup_window_adapter()
-                    {
-                        shared_global.clone_with_window_adapter(popup_window_adapter)
-                    } else {
-                        shared_global.clone()
-                    };
+                    let globals = #globals_init;
 
                     let popup_instance = #popup_window_id::new(#component_access_tokens.self_weak.get().unwrap().clone(), globals).unwrap();
                     let popup_instance_vrc = sp::VRc::map(popup_instance.clone(), |x| x);
@@ -4164,6 +4169,9 @@ fn compile_builtin_function_call(
             let window_adapter_tokens = access_window_adapter_field(ctx);
             quote!(sp::open_url(&#url, #window_adapter_tokens.window()).is_ok())
         }
+        BuiltinFunction::BringAllToFront => {
+            quote!(sp::bring_all_to_front())
+        }
         BuiltinFunction::ParseMarkdown => {
             let format_string = a.next().unwrap();
             let args = a.next().unwrap();
@@ -4172,6 +4180,10 @@ fn compile_builtin_function_call(
         BuiltinFunction::StringToStyledText => {
             let string = a.next().unwrap();
             quote!(sp::string_to_styled_text(#string.to_string()))
+        }
+        BuiltinFunction::ColorToStyledText => {
+            let color = a.next().unwrap();
+            quote!(sp::color_to_styled_text(#color))
         }
     }
 }

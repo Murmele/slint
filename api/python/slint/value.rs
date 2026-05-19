@@ -1,6 +1,7 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
+// cSpell: ignore asdict hasattr pybrush pycolor pyimg pymodel pyval rustmodel slintval strongrefs
 use i_slint_compiler::generator::python::ident;
 use pyo3::types::PyDict;
 use pyo3::{IntoPyObjectExt, PyTraverseError};
@@ -67,6 +68,9 @@ impl<'py> IntoPyObject<'py> for SlintToPyValue {
                 type_collection.enum_to_py(&enum_name, &enum_value, py)?.into_bound_py_any(py)
             }
             Value::Keys(keys) => crate::keys::PyKeys::from(keys).into_bound_py_any(py),
+            Value::DataTransfer(data) => {
+                crate::data_transfer::PyDataTransfer::from(data).into_bound_py_any(py)
+            }
             v @ _ => {
                 eprintln!(
                     "Python: conversion from slint to python needed for {v:#?} and not implemented yet"
@@ -274,8 +278,7 @@ impl TypeCollection {
             }
         }
 
-        let enum_classes = Rc::new(enum_classes);
-        Self { enum_classes }
+        Self { enum_classes: Rc::new(enum_classes) }
     }
 
     pub fn to_py_value(
@@ -300,12 +303,12 @@ impl TypeCollection {
         enum_value: &str,
         py: Python<'_>,
     ) -> Result<Py<PyAny>, PyErr> {
-        let enum_cls = self.enum_classes.get(ident(enum_name).as_str()).ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
-                "Slint provided enum {enum_name} is unknown"
-            ))
-        })?;
-        enum_cls.getattr(py, enum_value)
+        let key = ident(enum_name);
+        if let Some(cls) = self.enum_classes.get(key.as_str()) {
+            return cls.getattr(py, enum_value);
+        }
+        // Built-in language enums live on the `slint.language` module.
+        py.import("slint.language")?.getattr(key.as_str())?.getattr(enum_value).map(|v| v.unbind())
     }
 
     pub fn model_to_py(
@@ -365,6 +368,10 @@ impl TypeCollection {
             .or_else(|_| {
                 ob.extract::<PyRef<'_, PyKeys>>()
                     .map(|keys| slint_interpreter::Value::Keys(keys.keys.clone()))
+            })
+            .or_else(|_| {
+                ob.extract::<PyRef<'_, crate::data_transfer::PyDataTransfer>>()
+                    .map(|data| slint_interpreter::Value::DataTransfer(data.data_transfer.clone()))
             })
             .or_else(|_| {
                 ob.extract::<PyRef<'_, crate::brush::PyColor>>()

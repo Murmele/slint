@@ -7,6 +7,7 @@ use super::{
 };
 use alloc::boxed::Box;
 use core::cell::{Cell, UnsafeCell};
+use core::ffi::c_void;
 use core::marker::PhantomPinned;
 use core::pin::Pin;
 use core::ptr::addr_of;
@@ -72,7 +73,7 @@ impl ChangeTracker {
     ///
     /// Same as [`Self::init`], but the first eval function is called in a future evaluation of the event loop.
     /// This means that the change tracker will consider the value as default initialized, and the eval function will
-    /// be called the firs ttime if the initial value is not equal to the default constructed value.
+    /// be called the first time if the initial value is not equal to the default constructed value.
     pub fn init_delayed<
         Data: 'static,
         T: Default + PartialEq,
@@ -115,7 +116,7 @@ impl ChangeTracker {
             Data: 'static,
         >(
             _self: *const BindingHolder,
-            _value: *mut (),
+            _value: *mut c_void,
         ) -> BindingResult {
             unsafe {
                 let pinned_holder = Pin::new_unchecked(&*_self);
@@ -328,7 +329,7 @@ fn delete_from_eval_fn() {
     let xyz = RefCell::new(String::from("*"));
     let result = Rc::new(RefCell::new(String::new()));
     let result2 = result.clone();
-    // The change event are run in reverse order as they are created, so this one shouldn't be ever called as it is being detroyed from `change`
+    // The change event are run in reverse order as they are created, so this one shouldn't be ever called as it is being destroyed from `change`
     let another = Rc::<RefCell<Option<ChangeTracker>>>::new(Some(ChangeTracker::default()).into());
     another.borrow().as_ref().unwrap().init_delayed(
         (),
@@ -359,7 +360,7 @@ fn delete_from_eval_fn() {
 }
 
 #[test]
-fn change_mutliple_dependencies() {
+fn change_multiple_dependencies() {
     use super::Property;
     use std::cell::RefCell;
     use std::rc::Rc;

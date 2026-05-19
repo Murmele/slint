@@ -5,11 +5,11 @@
 import * as slint from "slint-ui";
 
 const ui = slint.loadFile(new URL("kanban.slint", import.meta.url));
-const window = new ui.MainWindow();
+const appWindow = new ui.MainWindow();
 
 // What we attach to each `DataTransfer` via the `userData` property. A copy of
-// the `TaskData` plus where it came from, so the drop handler can move the row
-// without searching the source column by id.
+// the `TaskData` plus the row it came from, so `source-column-of` can answer
+// the .slint side and `move-task` knows what to remove on a move.
 class DragPayload {
     constructor(task, sourceColumn, sourceIndex) {
         this.task = task;
@@ -31,31 +31,52 @@ const done = new slint.ArrayModel([
     { id: 6, title: "Set up project skeleton" },
 ]);
 
-window.todo = todo;
-window.doing = doing;
-window.done = done;
+appWindow.todo = todo;
+appWindow.doing = doing;
+appWindow.done = done;
 
 const columns = [todo, doing, done];
 
-window.Api.make_data = (task, sourceColumn, sourceIndex) => {
+appWindow.Api.make_data = (task, sourceColumn, sourceIndex) => {
     const transfer = new slint.DataTransfer();
     transfer.userData = new DragPayload(task, sourceColumn, sourceIndex);
     return transfer;
 };
 
-window.Api.can_drop = (data, targetColumn) => {
+appWindow.Api.source_column_of = (data) => {
     const payload = data.userData;
-    return payload instanceof DragPayload && payload.sourceColumn !== targetColumn;
+    return payload instanceof DragPayload ? payload.sourceColumn : -1;
 };
 
-window.Api.drop_task = (data, targetColumn) => {
+appWindow.Api.add_task = (data, targetColumn, targetIndex) => {
     const payload = data.userData;
     if (!(payload instanceof DragPayload)) return;
     if (targetColumn < 0 || targetColumn >= columns.length) return;
-    if (payload.sourceColumn === targetColumn) return;
-    // The copy we put in `userData` is what we move; we just delete the source row.
-    columns[payload.sourceColumn].remove(payload.sourceIndex, 1);
-    columns[targetColumn].push(payload.task);
+    columns[targetColumn].insert(targetIndex, payload.task);
 };
 
-await window.run();
+appWindow.Api.move_task = (data, targetColumn, targetIndex) => {
+    const payload = data.userData;
+    if (!(payload instanceof DragPayload)) return;
+    if (targetColumn < 0 || targetColumn >= columns.length) return;
+    const source = payload.sourceColumn;
+    const sourceIndex = payload.sourceIndex;
+
+    if (source === targetColumn) {
+        // Same-column reorder. Drops at the source slot or immediately after
+        // it are no-ops; otherwise remove the source first, adjusting the
+        // target index for the shift that the removal causes.
+        if (targetIndex === sourceIndex || targetIndex === sourceIndex + 1) return;
+        const task = payload.task;
+        columns[source].remove(sourceIndex, 1);
+        const adjusted = targetIndex > sourceIndex ? targetIndex - 1 : targetIndex;
+        columns[targetColumn].insert(adjusted, task);
+    } else {
+        // Cross-column move. Source and target are independent models, so the
+        // order of operations doesn't affect index stability.
+        columns[source].remove(sourceIndex, 1);
+        columns[targetColumn].insert(targetIndex, payload.task);
+    }
+};
+
+await appWindow.run();

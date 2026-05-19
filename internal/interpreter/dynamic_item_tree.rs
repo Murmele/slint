@@ -4,6 +4,7 @@
 use crate::api::{CompilationResult, ComponentDefinition, Value};
 use crate::global_component::CompiledGlobalCollection;
 use crate::{dynamic_type, eval};
+use core::ffi::c_void;
 use core::ptr::NonNull;
 use dynamic_type::{Instance, InstanceBox};
 use i_slint_compiler::expression_tree::{Expression, NamedReference, TwoWayBinding};
@@ -1286,7 +1287,7 @@ pub(crate) fn generate_item_tree<'id>(
             Type::Percent => animated_property_info::<f32>(),
             Type::Enumeration(e) => {
                 macro_rules! match_enum_type {
-                    ($( $(#[$enum_doc:meta])* enum $Name:ident { $($body:tt)* })*) => {
+                    ($( $(#[$enum_doc:meta])* $vis:vis enum $Name:ident { $($body:tt)* })*) => {
                         match e.name.as_str() {
                             $(
                                 stringify!($Name) => property_info::<i_slint_core::items::$Name>(),
@@ -1295,6 +1296,7 @@ pub(crate) fn generate_item_tree<'id>(
                         }
                     }
                 }
+
                 if e.node.is_some() {
                     property_info::<Value>()
                 } else {
@@ -2020,7 +2022,7 @@ fn walk_struct_field_path_mut<'a>(
     Some(value)
 }
 
-pub(crate) fn get_property_ptr(nr: &NamedReference, instance: InstanceRef) -> *const () {
+pub(crate) fn get_property_ptr(nr: &NamedReference, instance: InstanceRef) -> *const c_void {
     let element = nr.element();
     generativity::make_guard!(guard);
     let enclosing_component = eval::enclosing_component_instance_for_element(
