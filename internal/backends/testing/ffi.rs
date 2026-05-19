@@ -4,8 +4,8 @@
 use crate::{ElementHandle, ElementRoot, LayoutKind};
 use i_slint_core::item_tree::ItemTreeRc;
 use i_slint_core::slice::Slice;
-use i_slint_core::window::WindowInner;
 use i_slint_core::window::WindowAdapterRc;
+use i_slint_core::window::WindowInner;
 use i_slint_core::{SharedString, SharedVector};
 use std::os::raw::c_void;
 
@@ -75,7 +75,9 @@ pub extern "C" fn slint_send_keyboard_string_sequence(
 pub extern "C" fn slint_testing_use_native_popup(window_adapter: &WindowAdapterRc, native: bool) {
     window_adapter
         .internal(i_slint_core::InternalToken)
-        .and_then(|wa| (wa as &dyn core::any::Any).downcast_ref::<crate::testing_backend::TestingWindow>())
+        .and_then(|wa| {
+            (wa as &dyn core::any::Any).downcast_ref::<crate::testing_backend::TestingWindow>()
+        })
         .map(|testing_window| testing_window.use_native_popup(native))
         .expect("slint_testing_use_native_popup called without testing backend/adapter");
 }
