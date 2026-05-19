@@ -938,7 +938,6 @@ fn call_builtin_function(
                 crate::dynamic_item_tree::close_popup(
                     popup_window,
                     enclosing_component,
-                    enclosing_component.window_adapter(),
                 );
 
                 Value::Void

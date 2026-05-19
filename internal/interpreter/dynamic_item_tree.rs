@@ -483,7 +483,7 @@ pub struct ItemTreeDescription<'id> {
     )>,
     timers: Vec<FieldOffset<Instance<'id>, Timer>>,
     /// Map of element IDs to their active popup's ID
-    popup_ids: std::cell::RefCell<HashMap<SmolStr, NonZeroU32>>,
+    popup_ids: std::cell::RefCell<HashMap<SmolStr, (NonZeroU32, WindowAdapterRc)>>,
 
     pub(crate) popup_menu_description: PopupMenuDescription,
 
@@ -2813,17 +2813,17 @@ pub fn show_popup(
         let instance_ref = compo_box.borrow_instance();
         pos_getter(instance_ref)
     });
-    close_popup(element.clone(), instance, parent_window_adapter.clone());
+    close_popup(element.clone(), instance);
     instance.description.popup_ids.borrow_mut().insert(
         element.borrow().id.clone(),
-        WindowInner::from_pub(parent_window_adapter.window()).show_popup(
+        (WindowInner::from_pub(parent_window_adapter.window()).show_popup(
             &vtable::VRc::into_dyn(inst.clone()),
             access_position,
             close_policy,
             parent_item,
             popup.is_tooltip,
             false,
-        ),
+        ),parent_window_adapter)
     );
     inst.run_setup_code();
 }
@@ -2831,12 +2831,11 @@ pub fn show_popup(
 pub fn close_popup(
     element: ElementRc,
     instance: InstanceRef,
-    parent_window_adapter: WindowAdapterRc,
 ) {
-    if let Some(current_id) =
+    if let Some((current_id, window_adapter)) =
         instance.description.popup_ids.borrow_mut().remove(&element.borrow().id)
     {
-        WindowInner::from_pub(parent_window_adapter.window()).close_popup(current_id);
+        WindowInner::from_pub(window_adapter.window()).close_popup(current_id);
     }
 }
 
