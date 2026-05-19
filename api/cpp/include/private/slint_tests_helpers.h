@@ -3,6 +3,7 @@
 
 #pragma once
 #include "slint-testing.h"
+#include <cstddef>
 #include <iostream>
 
 // this file contains function useful for internal testing
@@ -23,6 +24,18 @@ template<typename Component>
 inline void send_mouse_click(const Component *component, float x, float y)
 {
     cbindgen_private::slint_send_mouse_click(x, y, &component->window().window_handle());
+}
+
+template<typename Component>
+inline void set_use_native_popup(const Component *component, bool native)
+{
+    cbindgen_private::slint_testing_use_native_popup(&component->window().window_handle(), native);
+}
+
+template<typename Component>
+inline size_t active_popup_count(const Component *component)
+{
+    return cbindgen_private::slint_testing_active_popup_count(&component->window().window_handle());
 }
 
 template<typename Component>
