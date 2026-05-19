@@ -4,6 +4,7 @@
 #pragma once
 
 #include "private/slint_internal.h"
+#include <utility>
 
 #if (!defined(__APPLE__) && !defined(_WIN32) && !defined(_WIN64)                                   \
      && !defined(SLINT_FEATURE_FREESTANDING))                                                      \
@@ -190,6 +191,14 @@ public:
     {
         if (popup_id > 0) {
             cbindgen_private::slint_windowrc_close_popup(&inner, popup_id);
+        }
+    }
+
+    void close_popup(std::optional<std::pair<uint32_t, WindowAdapterRc>> &popup) const
+    {
+        if (popup && popup->first > 0) {
+            cbindgen_private::slint_windowrc_close_popup(&popup->second.handle(), popup->first);
+            popup.reset();
         }
     }
 

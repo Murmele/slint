@@ -4,7 +4,7 @@
 /*! module for the C++ code generator
 */
 
-// cSpell:ignore cmath constexpr cstdlib decltype intptr itertools nullptr prepended struc subcomponent uintptr vals compl consteval constinit glyphset glyphsets reflexpr
+// cSpell:ignore cmath constexpr cstdlib decltype intptr itertools nullptr prepended struc subcomponent uintptr vals
 
 use crate::fileaccess;
 use std::collections::HashSet;
@@ -759,7 +759,7 @@ fn handle_property_init(
                     Some(llr::Animation::Static(anim)) => {
                         let anim = compile_expression(anim, ctx);
                         // Note: The start_time defaults to the current tick, so doesn't need to be
-                        // updated here.
+                        // udpated here.
                         format!("{prop_access}.set_animated_binding({binding_code},
                                 [this](uint64_t **start_time) -> slint::cbindgen_private::PropertyAnimation {{
                                     [[maybe_unused]] auto self = this;
@@ -2345,7 +2345,9 @@ fn generate_sub_component(
         target_struct.members.push((
             field_access,
             Declaration::Var(Var {
-                ty: ident("mutable uint32_t"),
+                ty: ident(
+                    "mutable std::optional<std::pair<uint32_t, slint::private_api::WindowAdapterRc>>",
+                ),
                 name: format_smolstr!("popup_id_{}", i),
                 ..Default::default()
             }),
@@ -3603,7 +3605,7 @@ enum MemberAccess {
     /// The string is a an expression to an `std::optional`
     Option(String),
     /// The first string is an expression to an `std::optional`,
-    /// the second is a string to be appended after dereferencing the optional
+    /// the second is a string to be appended after dereferncing the optional
     /// like so: `<1>.transform([](auto &&x) { return x<2>; })`
     OptionWithMember(String, String),
 }
@@ -4720,12 +4722,13 @@ fn compile_builtin_function_call(
                 component_access.then(|component_access| format!(
                     // Use a block statement to create own globals and popup instance
                     "{window}.close_popup({component_access}->popup_id_{popup_index}); \
+                    auto id = {window}.template show_popup<{popup_window_id}>(&*({component_access}),  \
+                                                                            [=](auto self) {{ return {position}; }},  \
+                                                                            {close_policy},  \
+                                                                            {{ {parent_component} }},  \
+                                                                            {is_tooltip}); \
                     {component_access}->popup_id_{popup_index} =  \
-                        {window}.template show_popup<{popup_window_id}>(&*({component_access}),  \
-                                                                        [=](auto self) {{ return {position}; }},  \
-                                                                        {close_policy},  \
-                                                                        {{ {parent_component} }},  \
-                                                                        {is_tooltip})"
+                        std::make_optional(std::pair<uint32_t, slint::private_api::WindowAdapterRc>{{ id, {window} }})"
                 ))
             } else {
                 panic!("internal error: invalid args to ShowPopupWindow {arguments:?}")
