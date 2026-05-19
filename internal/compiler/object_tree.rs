@@ -445,7 +445,7 @@ pub struct Component {
 
     /// When creating this component and inserting "children", append them to the children of
     /// the element pointer to by this field.
-    pub child_insertion_points: RefCell<BTreeMap<String, ChildrenInsertionPoint>>,
+    pub child_insertion_points: RefCell<BTreeMap<SmolStr, ChildrenInsertionPoint>>,
 
     /// Slots declared in this component, in source order.
     pub declared_slots: RefCell<Vec<DeclaredSlot>>,
@@ -1147,7 +1147,7 @@ impl Element {
         node: syntax_nodes::Element,
         id: SmolStr,
         parent_type: ElementType,
-        component_child_insertion_points: &mut BTreeMap<String, ChildrenInsertionPoint>,
+        component_child_insertion_points: &mut BTreeMap<SmolStr, ChildrenInsertionPoint>,
         declared_slots: &mut Vec<DeclaredSlot>,
         is_legacy_syntax: bool,
         diag: &mut BuildDiagnostics,
@@ -1866,7 +1866,7 @@ impl Element {
                 continue;
             }
             component_child_insertion_points.insert(
-                source.to_string(),
+                source,
                 ChildrenInsertionPoint {
                     parent: r.clone(),
                     insertion_index: 0,
@@ -2131,7 +2131,7 @@ impl Element {
     fn from_sub_element_node(
         node: syntax_nodes::SubElement,
         parent_type: ElementType,
-        component_child_insertion_points: &mut BTreeMap<String, ChildrenInsertionPoint>,
+        component_child_insertion_points: &mut BTreeMap<SmolStr, ChildrenInsertionPoint>,
         declared_slots: &mut Vec<DeclaredSlot>,
         is_in_legacy_component: bool,
         diag: &mut BuildDiagnostics,
@@ -2160,7 +2160,7 @@ impl Element {
     fn from_repeated_node(
         node: syntax_nodes::RepeatedElement,
         parent: &ElementRc,
-        component_child_insertion_points: &mut BTreeMap<String, ChildrenInsertionPoint>,
+        component_child_insertion_points: &mut BTreeMap<SmolStr, ChildrenInsertionPoint>,
         declared_slots: &mut Vec<DeclaredSlot>,
         is_in_legacy_component: bool,
         diag: &mut BuildDiagnostics,
@@ -2218,7 +2218,7 @@ impl Element {
     fn from_conditional_node(
         node: syntax_nodes::ConditionalElement,
         parent_type: ElementType,
-        component_child_insertion_points: &mut BTreeMap<String, ChildrenInsertionPoint>,
+        component_child_insertion_points: &mut BTreeMap<SmolStr, ChildrenInsertionPoint>,
         declared_slots: &mut Vec<DeclaredSlot>,
         is_in_legacy_component: bool,
         diag: &mut BuildDiagnostics,
