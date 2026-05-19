@@ -3605,7 +3605,7 @@ enum MemberAccess {
     /// The string is a an expression to an `std::optional`
     Option(String),
     /// The first string is an expression to an `std::optional`,
-    /// the second is a string to be appended after dereferncing the optional
+    /// the second is a string to be appended after dereferencing the optional
     /// like so: `<1>.transform([](auto &&x) { return x<2>; })`
     OptionWithMember(String, String),
 }
