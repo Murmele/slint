@@ -2816,22 +2816,22 @@ pub fn show_popup(
     close_popup(element.clone(), instance);
     instance.description.popup_ids.borrow_mut().insert(
         element.borrow().id.clone(),
-        (WindowInner::from_pub(parent_window_adapter.window()).show_popup(
-            &vtable::VRc::into_dyn(inst.clone()),
-            access_position,
-            close_policy,
-            parent_item,
-            popup.is_tooltip,
-            false,
-        ),parent_window_adapter)
+        (
+            WindowInner::from_pub(parent_window_adapter.window()).show_popup(
+                &vtable::VRc::into_dyn(inst.clone()),
+                access_position,
+                close_policy,
+                parent_item,
+                popup.is_tooltip,
+                false,
+            ),
+            parent_window_adapter,
+        ),
     );
     inst.run_setup_code();
 }
 
-pub fn close_popup(
-    element: ElementRc,
-    instance: InstanceRef,
-) {
+pub fn close_popup(element: ElementRc, instance: InstanceRef) {
     if let Some((current_id, window_adapter)) =
         instance.description.popup_ids.borrow_mut().remove(&element.borrow().id)
     {
