@@ -21,16 +21,15 @@ fn main() -> Result<(), slint::PlatformError> {
     let window = MainWindow::new()?;
 
     let todo = Rc::new(VecModel::from(vec![
-        TaskData { id: 1, title: "Write release notes".into() },
-        TaskData { id: 2, title: "Reply to mailing list".into() },
-        TaskData { id: 3, title: "Triage open issues".into() },
+        TaskData { title: "Write release notes".into() },
+        TaskData { title: "Reply to mailing list".into() },
+        TaskData { title: "Triage open issues".into() },
     ]));
     let doing = Rc::new(VecModel::from(vec![
-        TaskData { id: 4, title: "Polish drag-and-drop example".into() },
-        TaskData { id: 5, title: "Review kanban PR".into() },
+        TaskData { title: "Polish drag-and-drop example".into() },
+        TaskData { title: "Review kanban PR".into() },
     ]));
-    let done =
-        Rc::new(VecModel::from(vec![TaskData { id: 6, title: "Set up project skeleton".into() }]));
+    let done = Rc::new(VecModel::from(vec![TaskData { title: "Set up project skeleton".into() }]));
 
     window.set_todo(todo.clone().into());
     window.set_doing(doing.clone().into());
@@ -55,17 +54,25 @@ fn main() -> Result<(), slint::PlatformError> {
             .map_or(-1, |p| p.source_column as i32)
     });
 
+    api.on_has_plaintext(|data| data.fetch_plaintext().is_ok());
+
     api.on_add_task({
         let columns = columns.clone();
         move |data, target, target_index| {
             let target = target as usize;
-            let Some(payload) = data.user_data().and_then(|rc| rc.downcast::<DragPayload>().ok())
-            else {
+            if target >= columns.len() {
+                return;
+            }
+            let task = if let Some(payload) =
+                data.user_data().and_then(|rc| rc.downcast::<DragPayload>().ok())
+            {
+                payload.task.clone()
+            } else if let Ok(text) = data.fetch_plaintext() {
+                TaskData { title: text }
+            } else {
                 return;
             };
-            if target < columns.len() {
-                columns[target].insert(target_index as usize, payload.task.clone());
-            }
+            columns[target].insert(target_index as usize, task);
         }
     });
 

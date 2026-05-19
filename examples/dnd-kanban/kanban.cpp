@@ -23,16 +23,16 @@ int main()
     auto window = MainWindow::create();
 
     auto todo = std::make_shared<slint::VectorModel<TaskData>>(std::vector<TaskData> {
-            { 1, "Write release notes" },
-            { 2, "Reply to mailing list" },
-            { 3, "Triage open issues" },
+            { "Write release notes" },
+            { "Reply to mailing list" },
+            { "Triage open issues" },
     });
     auto doing = std::make_shared<slint::VectorModel<TaskData>>(std::vector<TaskData> {
-            { 4, "Polish drag-and-drop example" },
-            { 5, "Review kanban PR" },
+            { "Polish drag-and-drop example" },
+            { "Review kanban PR" },
     });
     auto done = std::make_shared<slint::VectorModel<TaskData>>(std::vector<TaskData> {
-            { 6, "Set up project skeleton" },
+            { "Set up project skeleton" },
     });
 
     window->set_todo(todo);
@@ -55,16 +55,20 @@ int main()
         return payload ? payload->source_column : -1;
     });
 
+    api.on_has_plaintext([](slint::DataTransfer data) { return data.has_plaintext(); });
+
     api.on_add_task([columns](slint::DataTransfer data, int target, int target_index) {
-        auto user_data = data.user_data();
-        auto *payload = std::any_cast<DragPayload>(&user_data);
-        if (!payload) {
-            return;
-        }
         if (target < 0 || target >= static_cast<int>(columns.size())) {
             return;
         }
-        columns[target]->insert(static_cast<size_t>(target_index), payload->task);
+        auto user_data = data.user_data();
+        if (auto *payload = std::any_cast<DragPayload>(&user_data)) {
+            columns[target]->insert(static_cast<size_t>(target_index), payload->task);
+            return;
+        }
+        if (auto text = data.fetch_plaintext()) {
+            columns[target]->insert(static_cast<size_t>(target_index), TaskData { *text });
+        }
     });
 
     api.on_move_task([columns](slint::DataTransfer data, int target, int target_index) {

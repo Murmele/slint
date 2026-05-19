@@ -24,20 +24,20 @@ class MainWindow(slint.loader.kanban.MainWindow):
         super().__init__()
         self.todo = ListModel(
             [
-                TaskData(id=1, title="Write release notes"),
-                TaskData(id=2, title="Reply to mailing list"),
-                TaskData(id=3, title="Triage open issues"),
+                TaskData(title="Write release notes"),
+                TaskData(title="Reply to mailing list"),
+                TaskData(title="Triage open issues"),
             ]
         )
         self.doing = ListModel(
             [
-                TaskData(id=4, title="Polish drag-and-drop example"),
-                TaskData(id=5, title="Review kanban PR"),
+                TaskData(title="Polish drag-and-drop example"),
+                TaskData(title="Review kanban PR"),
             ]
         )
         self.done = ListModel(
             [
-                TaskData(id=6, title="Set up project skeleton"),
+                TaskData(title="Set up project skeleton"),
             ]
         )
         self._columns = [self.todo, self.doing, self.done]
@@ -55,16 +55,23 @@ class MainWindow(slint.loader.kanban.MainWindow):
         payload = data.user_data
         return payload.source_column if isinstance(payload, DragPayload) else -1
 
+    @slint.callback(global_name="Api", name="has-plaintext")
+    def has_plaintext(self, data: DataTransfer) -> bool:
+        return data.has_plaintext
+
     @slint.callback(global_name="Api", name="add-task")
     def add_task(
         self, data: DataTransfer, target_column: int, target_index: int
     ) -> None:
-        payload = data.user_data
-        if not isinstance(payload, DragPayload):
-            return
         if not 0 <= target_column < len(self._columns):
             return
-        self._columns[target_column].insert(target_index, payload.task)
+        payload = data.user_data
+        if isinstance(payload, DragPayload):
+            self._columns[target_column].insert(target_index, payload.task)
+            return
+        text = data.fetch_plaintext()
+        if text is not None:
+            self._columns[target_column].insert(target_index, TaskData(title=text))
 
     @slint.callback(global_name="Api", name="move-task")
     def move_task(
