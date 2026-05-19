@@ -935,10 +935,7 @@ fn call_builtin_function(
                 generativity::make_guard!(guard);
                 let enclosing_component =
                     enclosing_component_for_element(&popup.parent_element, component, guard);
-                crate::dynamic_item_tree::close_popup(
-                    popup_window,
-                    enclosing_component,
-                );
+                crate::dynamic_item_tree::close_popup(popup_window, enclosing_component);
 
                 Value::Void
             } else {
