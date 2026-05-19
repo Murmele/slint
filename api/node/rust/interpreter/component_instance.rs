@@ -424,6 +424,32 @@ impl JsComponentInstance {
     }
 
     #[napi]
+    pub fn active_popup_count(&self) -> u32 {
+        #[cfg(feature = "testing")]
+        {
+            WindowInner::from_pub(self.inner.window()).active_popups.borrow().len() as u32
+        }
+        #[cfg(not(feature = "testing"))]
+        0
+    }
+
+    #[napi]
+    pub fn set_use_native_popup(&self, _native: bool) {
+        #[cfg(feature = "testing")]
+        {
+            let window_adapter = WindowInner::from_pub(self.inner.window()).window_adapter();
+            window_adapter
+                .internal(i_slint_core::InternalToken)
+                .and_then(|wa| {
+                    (wa as &dyn std::any::Any)
+                        .downcast_ref::<i_slint_backend_testing::TestingWindow>()
+                })
+                .map(|testing_window| testing_window.use_native_popup(_native))
+                .expect("set_use_native_popup called without testing backend");
+        }
+    }
+
+    #[napi]
     pub fn window(&self) -> Result<JsWindow> {
         Ok(JsWindow { inner: WindowInner::from_pub(self.inner.window()).window_adapter() })
     }

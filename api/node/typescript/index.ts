@@ -1051,5 +1051,13 @@ export namespace private_api {
         component.component_instance.sendKeyCombo(keys);
     }
 
+    export function active_popup_count(component: Component): number {
+        return component.component_instance.activePopupCount();
+    }
+
+    export function set_use_native_popup(component: Component, native: boolean): void {
+        component.component_instance.setUseNativePopup(native);
+    }
+
     export import initTesting = napi.initTesting;
 }
