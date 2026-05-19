@@ -2171,8 +2171,8 @@ impl Element {
         let e = Element::from_sub_element_node(
             node.SubElement(),
             parent.borrow().base_type.clone(),
-            component_child_insertion_point,
-			declared_slots,
+            component_child_insertion_points,
+            declared_slots,
             is_in_legacy_component,
             diag,
             tr,

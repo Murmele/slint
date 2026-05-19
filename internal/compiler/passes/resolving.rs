@@ -400,19 +400,15 @@ impl Expression {
                         Some(Self::from_at_keys_node(node.into(), ctx))
                     }
                     SyntaxKind::SlotReference => {
-						#[cfg(feature = "slint-sc")]
+                        #[cfg(feature = "slint-sc")]
                         ctx.diag.slint_sc_error("slots are", &node);
                         Some(Self::from_slot_reference_node(node.into(), ctx))
                     }
                     SyntaxKind::QualifiedName => {
-						#[cfg(feature = "slint-sc")]
+                        #[cfg(feature = "slint-sc")]
                         ctx.diag.slint_sc_error("Identifier references are", &node);
-						Some(Self::from_qualified_name_node(
-							node.clone().into(),
-							ctx,
-							LookupPhase::default(),
-						))
-					},
+                        Some(Self::from_qualified_name_node(node.clone().into(), ctx))
+                    }
                     SyntaxKind::FunctionCallExpression => {
                         #[cfg(feature = "slint-sc")]
                         ctx.diag.slint_sc_error("Function calls are", &node);
