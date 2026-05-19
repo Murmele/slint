@@ -232,7 +232,7 @@ instance.set_result("".into());
 
 instance.invoke_close_popup2();
 
-slint_testing::mock_elapsed_time(500); // Give the changetracker time to execute
+slint_testing::mock_elapsed_time(500); // Give the change tracker time to execute
 
 assert_eq!(inner.active_popups.borrow().len(), 0, "We don't have any open popup anymore");
 ```
@@ -256,7 +256,7 @@ instance.set_result("");
 
 instance.invoke_close_popup2();
 
-slint_testing::mock_elapsed_time(500); // Give the changetracker time to execute
+slint_testing::mock_elapsed_time(500); // Give the change tracker time to execute
 
 assert_eq(slint_testing::active_popup_count(&instance), 0);
 ```
