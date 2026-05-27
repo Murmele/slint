@@ -549,6 +549,16 @@ cbindgen_private::Flickable::~Flickable()
     slint_flickable_data_free(&data);
 }
 
+cbindgen_private::TooltipArea::TooltipArea()
+{
+    delay_hide.set(100);
+    slint_tooltip_area_data_init(&data);
+}
+cbindgen_private::TooltipArea::~TooltipArea()
+{
+    slint_tooltip_area_data_free(&data);
+}
+
 cbindgen_private::SystemTrayIcon::SystemTrayIcon()
 {
     slint_system_tray_icon_data_init(&data);

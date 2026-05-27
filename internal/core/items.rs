@@ -40,6 +40,7 @@ pub use crate::menus::MenuItem;
 use crate::rtti::*;
 use crate::window::{WindowAdapter, WindowAdapterRc, WindowInner};
 use crate::{Callback, Coord, Property, SharedString};
+use alloc::boxed::Box;
 use alloc::rc::Rc;
 use const_field_offset::FieldOffsets;
 use core::cell::Cell;
@@ -1940,9 +1941,20 @@ macro_rules! declare_enums {
 
 i_slint_common::for_each_enums!(declare_enums);
 
+enum Timer {
+    ShowingPopup(crate::timers::Timer),
+    HidingPopup(crate::timers::Timer),
+}
+
+impl Default for Timer {
+    fn default() -> Self {
+        Timer::HidingPopup(Default::default())
+    }
+}
+
 /// Internal transparent hover tracker synthesized by tooltip lowering.
 #[repr(C)]
-#[derive(FieldOffsets, Default, SlintElement)]
+#[derive(FieldOffsets, SlintElement)]
 #[pin]
 pub struct TooltipArea {
     pub has_hover: Property<bool>,
@@ -1950,13 +1962,62 @@ pub struct TooltipArea {
     pub mouse_y: Property<LogicalLength>,
     pub text: Property<SharedString>,
     pub placement: Property<ToolTipPlacement>,
+    /// Delay show public property (see builtins.slint)
     pub delay: Property<i64>,
+    pub delay_hide: Property<i64>,
     pub offset: Property<LogicalLength>,
     pub show: Callback<VoidArg>,
     pub hide: Callback<VoidArg>,
     pub cached_rendering_data: CachedRenderingData,
-    popup_visible: Cell<bool>,
-    timer: crate::timers::Timer,
+    data: TooltipAreaDataBox,
+}
+
+#[derive(Default)]
+pub struct TooltipAreaData {
+    timer: core::cell::RefCell<Timer>,
+}
+
+#[repr(C)]
+pub struct TooltipAreaDataBox(core::ptr::NonNull<TooltipAreaData>);
+
+impl Default for TooltipAreaDataBox {
+    fn default() -> Self {
+        TooltipAreaDataBox(Box::leak(Box::<TooltipAreaData>::default()).into())
+    }
+}
+
+impl Drop for TooltipAreaDataBox {
+    fn drop(&mut self) {
+        // Safety: the self.0 was constructed from a Box::leak in TooltipAreaDataBox::default
+        drop(unsafe { Box::from_raw(self.0.as_ptr()) })
+    }
+}
+
+impl core::ops::Deref for TooltipAreaDataBox {
+    type Target = TooltipAreaData;
+    fn deref(&self) -> &Self::Target {
+        // Safety: initialized in TooltipAreaDataBox::default
+        unsafe { self.0.as_ref() }
+    }
+}
+
+impl Default for TooltipArea {
+    fn default() -> Self {
+        Self {
+            has_hover: Default::default(),
+            mouse_x: Default::default(),
+            mouse_y: Default::default(),
+            text: Default::default(),
+            placement: Default::default(),
+            delay: Default::default(),
+            delay_hide: Property::new(100),
+            offset: Default::default(),
+            show: Default::default(),
+            hide: Default::default(),
+            cached_rendering_data: Default::default(),
+            data: Default::default(),
+        }
+    }
 }
 
 impl Item for TooltipArea {
@@ -1996,7 +2057,11 @@ impl Item for TooltipArea {
         let next_hover = !matches!(event, MouseEvent::Exit);
         self.set_hover_state(next_hover, self_rc);
 
-        if next_hover && !self.popup_visible.get() && matches!(event, MouseEvent::Moved { .. }) {
+        let popup_visible = match &*self.data.timer.borrow() {
+            Timer::HidingPopup(..) => false,
+            Timer::ShowingPopup(timer) => !timer.running(),
+        };
+        if next_hover && !popup_visible && matches!(event, MouseEvent::Moved { .. }) {
             self.schedule_show(self_rc);
         }
 
@@ -2007,7 +2072,7 @@ impl Item for TooltipArea {
         self: Pin<&Self>,
         event: &MouseEvent,
         _window_adapter: &Rc<dyn WindowAdapter>,
-        _self_rc: &ItemRc,
+        self_rc: &ItemRc,
         _: &mut MouseCursor,
     ) -> InputEventResult {
         match event {
@@ -2015,7 +2080,7 @@ impl Item for TooltipArea {
             // continues receiving leave transitions, but ignore other interaction semantics.
             MouseEvent::Moved { .. } => InputEventResult::EventAccepted,
             MouseEvent::Exit => {
-                self.set_hover_state(false, _self_rc);
+                self.set_hover_state(false, self_rc);
                 InputEventResult::EventAccepted
             }
             _ => InputEventResult::EventIgnored,
@@ -2075,35 +2140,74 @@ impl Item for TooltipArea {
 impl TooltipArea {
     fn schedule_show(self: Pin<&Self>, self_rc: &ItemRc) {
         let delay_ms = self.delay().max(0) as u64;
-        if delay_ms == 0 {
-            if self.has_hover() {
-                self.show.call(&());
-                self.popup_visible.set(true);
-            }
-            return;
-        }
-
         let self_weak = self_rc.downgrade();
-        self.timer.start(
-            crate::timers::TimerMode::SingleShot,
-            Duration::from_millis(delay_ms),
-            move || {
-                let Some(self_rc) = self_weak.upgrade() else { return };
-                let Some(tooltip_area) = self_rc.downcast::<TooltipArea>() else { return };
-                let tooltip_area = tooltip_area.as_pin_ref();
-                if tooltip_area.has_hover() {
-                    tooltip_area.show.call(&());
-                    tooltip_area.popup_visible.set(true);
+
+        let mut start_timer = false;
+        match &mut *self.data.timer.borrow_mut() {
+            Timer::HidingPopup(timer) => {
+                if timer.running() {
+                    timer.stop();
+                } else {
+                    // Already closed
+                    start_timer = true;
                 }
-            },
-        );
+            }
+            Timer::ShowingPopup(..) => return,
+        };
+
+        let timer = crate::timers::Timer::default();
+        if start_timer {
+            timer.start(
+                crate::timers::TimerMode::SingleShot,
+                Duration::from_millis(delay_ms),
+                move || {
+                    let Some(self_rc) = self_weak.upgrade() else { return };
+                    let Some(tooltip_area) = self_rc.downcast::<TooltipArea>() else { return };
+                    let tooltip_area = tooltip_area.as_pin_ref();
+                    if tooltip_area.has_hover() {
+                        tooltip_area.show.call(&());
+                    }
+                },
+            );
+        }
+        *self.data.timer.borrow_mut() = Timer::ShowingPopup(timer);
     }
 
-    fn hide_now(self: Pin<&Self>) {
-        self.timer.stop();
-        if self.popup_visible.replace(false) {
-            self.hide.call(&());
+    fn hide(self: Pin<&Self>, self_rc: &ItemRc) {
+        let mut start_hiding = false;
+        match &*self.data.timer.borrow() {
+            Timer::ShowingPopup(timer) => {
+                if timer.running() {
+                    timer.stop();
+                } else {
+                    start_hiding = true;
+                }
+            }
+            Timer::HidingPopup(..) => {
+                return;
+            }
         }
+
+        let timer = crate::timers::Timer::default();
+        if start_hiding {
+            // Tooltip is already open. So we have to hide it
+            let delay_ms = self.delay_hide().max(0) as u64;
+            let self_weak = self_rc.downgrade();
+
+            timer.start(
+                crate::timers::TimerMode::SingleShot,
+                Duration::from_millis(delay_ms),
+                move || {
+                    let Some(self_rc) = self_weak.upgrade() else { return };
+                    let Some(tooltip_area) = self_rc.downcast::<TooltipArea>() else {
+                        return;
+                    };
+                    let tooltip_area = tooltip_area.as_pin_ref();
+                    tooltip_area.hide.call(&());
+                },
+            );
+        }
+        *self.data.timer.borrow_mut() = Timer::HidingPopup(timer);
     }
 
     fn set_hover_state(self: Pin<&Self>, new_hover: bool, self_rc: &ItemRc) {
@@ -2116,7 +2220,7 @@ impl TooltipArea {
         if new_hover {
             self.schedule_show(self_rc);
         } else {
-            self.hide_now();
+            self.hide(self_rc);
         }
     }
 }
@@ -2163,4 +2267,23 @@ pub unsafe extern "C" fn slint_item_absolute_position(
 ) -> crate::lengths::LogicalPoint {
     let self_rc = ItemRc::new(self_component.clone(), self_index);
     self_rc.map_to_window(Default::default())
+}
+
+/// # Safety
+/// This must be called using a non-null pointer pointing to a chunk of memory big enough to
+/// hold a TooltipAreaDataBox
+#[cfg(feature = "ffi")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn slint_tooltip_area_data_init(data: *mut TooltipAreaDataBox) {
+    unsafe { core::ptr::write(data, TooltipAreaDataBox::default()) };
+}
+
+/// # Safety
+/// This must be called using a non-null pointer pointing to an initialized TooltipAreaDataBox
+#[cfg(feature = "ffi")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn slint_tooltip_area_data_free(data: *mut TooltipAreaDataBox) {
+    unsafe {
+        core::ptr::drop_in_place(data);
+    }
 }
