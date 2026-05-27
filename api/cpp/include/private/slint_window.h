@@ -148,15 +148,16 @@ public:
     }
 
     template<typename Component, typename Parent, typename PosGetter>
+    uint32_t
+    show_popup(const Parent *parent_component, PosGetter pos,
                cbindgen_private::PopupClosePolicy close_policy,
+               cbindgen_private::ItemRc parent_item,
+               cbindgen_private::WindowKind window_kind = cbindgen_private::WindowKind::Popup) const
     {
         using SharedGlobals = decltype(parent_component->globals);
         SharedGlobals _own_globals = nullptr;
-        if (!is_tooltip) {
-            if (auto _popup_adapter = create_popup_window_adapter()) {
-                _own_globals =
-                        parent_component->globals->clone_with_window_adapter(*_popup_adapter);
-            }
+        if (auto _popup_adapter = create_child_window_adapter(window_kind)) {
+            _own_globals = parent_component->globals->clone_with_window_adapter(*_popup_adapter);
         }
         if (!_own_globals) {
             _own_globals = parent_component->globals;
