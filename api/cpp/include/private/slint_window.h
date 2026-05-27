@@ -148,9 +148,7 @@ public:
     }
 
     template<typename Component, typename Parent, typename PosGetter>
-    uint32_t show_popup(const Parent *parent_component, PosGetter pos,
-                        cbindgen_private::PopupClosePolicy close_policy,
-                        cbindgen_private::ItemRc parent_item, bool is_tooltip = false) const
+               cbindgen_private::PopupClosePolicy close_policy,
     {
         using SharedGlobals = decltype(parent_component->globals);
         SharedGlobals _own_globals = nullptr;
@@ -181,7 +179,7 @@ public:
                     *pos = data->pos(data->popup_component);
                 },
                 [](void *user_data) { delete reinterpret_cast<PopupPositionData *>(user_data); },
-                position_data, close_policy, &parent_item, is_tooltip, false);
+                position_data, close_policy, &parent_item, window_kind);
         popup->user_init();
         return id;
     }
@@ -195,10 +193,12 @@ public:
 
     /// Try to create a window adapter for a popup window.
     /// Returns std::nullopt if the backend renders popups as child windows.
-    std::optional<WindowAdapterRc> create_popup_window_adapter() const
+    std::optional<WindowAdapterRc>
+    create_child_window_adapter(cbindgen_private::WindowKind window_kind) const
     {
         cbindgen_private::WindowAdapterRcOpaque raw_result;
-        if (cbindgen_private::slint_windowrc_create_popup_window_adapter(&inner, &raw_result)) {
+        if (cbindgen_private::slint_windowrc_create_child_window_adapter(&inner, window_kind,
+                                                                         &raw_result)) {
             std::optional<WindowAdapterRc> result;
             result.emplace(raw_result); // clone: refcount = 2
             cbindgen_private::slint_windowrc_drop(&raw_result); // drop original: refcount = 1
@@ -231,7 +231,7 @@ public:
                 },
                 [](void *user_data) { delete reinterpret_cast<LogicalPosition *>(user_data); },
                 position_data, cbindgen_private::PopupClosePolicy::CloseOnClickOutside,
-                &context_menu_rc, false, true);
+                &context_menu_rc, cbindgen_private::WindowKind::Menu);
         popup->user_init();
         return id;
     }
