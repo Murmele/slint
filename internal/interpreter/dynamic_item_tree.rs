@@ -36,7 +36,7 @@ use i_slint_core::rtti::{self, AnimatedBindingKind, FieldOffset, PropertyInfo};
 use i_slint_core::slice::Slice;
 use i_slint_core::styled_text::StyledText;
 use i_slint_core::timers::Timer;
-use i_slint_core::window::{WindowAdapterRc, WindowInner};
+use i_slint_core::window::{WindowAdapterRc, WindowInner, WindowKind};
 use i_slint_core::{Brush, Color, DataTransfer, Property, SharedString, SharedVector};
 #[cfg(feature = "internal")]
 use itertools::Either;
