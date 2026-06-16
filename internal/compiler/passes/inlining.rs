@@ -586,6 +586,27 @@ fn fixup_reference(nr: &mut NamedReference, mapping: &Mapping) {
     }
 }
 
+/// Remap all the element references stored in a grid layout (the cell items and
+/// the repeated-row child templates) through the inlining `mapping`.
+fn fixup_grid_layout(layout: &mut crate::layout::GridLayout, fxe: &impl Fn(&mut ElementRc)) {
+    for e in &mut layout.elems {
+        fxe(&mut e.item.element);
+    }
+    // Break the cell Rc sharing with the original before remapping the elements
+    // stored inside the repeated-row cells.
+    layout.clone_cells();
+    for elem in &mut layout.elems {
+        let mut cell = elem.cell.borrow_mut();
+        let Some(child_items) = &mut cell.child_items else { continue };
+        for child in child_items.iter_mut() {
+            fxe(&mut child.layout_item_mut().element);
+            if let crate::layout::RowChildTemplate::Repeated { repeated_element, .. } = child {
+                fxe(repeated_element);
+            }
+        }
+    }
+}
+
 fn fixup_element_references(expr: &mut Expression, mapping: &Mapping) {
     let fx = |element: &mut std::rc::Weak<RefCell<Element>>| {
         if let Some(e) = element.upgrade().and_then(|e| mapping.get(&element_key(e))) {
@@ -604,16 +625,18 @@ fn fixup_element_references(expr: &mut Expression, mapping: &Mapping) {
                 fxe(&mut e.element);
             }
         }
-        Expression::SolveGridLayout { layout, .. }
-        | Expression::OrganizeGridLayout(layout)
-        | Expression::ComputeGridLayoutInfo { layout, .. } => {
+        Expression::SolveGridLayout { layout, .. } | Expression::OrganizeGridLayout(layout) => {
+            fixup_grid_layout(layout, &fxe);
+        }
+        Expression::ComputeGridLayoutInfo { layout, .. } => {
+            fixup_grid_layout(layout, &fxe);
+        }
+        Expression::SolveFlexboxLayout(layout) => {
             for e in &mut layout.elems {
                 fxe(&mut e.item.element);
             }
-            layout.clone_cells();
         }
-        Expression::SolveFlexboxLayout(layout)
-        | Expression::ComputeFlexboxLayoutInfo(layout, _) => {
+        Expression::ComputeFlexboxLayoutInfo(layout, ..) => {
             for e in &mut layout.elems {
                 fxe(&mut e.item.element);
             }
