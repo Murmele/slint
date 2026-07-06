@@ -144,7 +144,7 @@ fn builtin_function_cost(function: &BuiltinFunction) -> isize {
         BuiltinFunction::Hsv => 50,
         BuiltinFunction::Oklch => 50,
         BuiltinFunction::ImplicitLayoutInfo(_) => isize::MAX,
-        BuiltinFunction::ItemAbsolutePosition => isize::MAX,
+        BuiltinFunction::ItemAbsolutePosition | BuiltinFunction::ItemAbsoluteNativePosition | BuiltinFunction::MapPointToNativeWindow => isize::MAX,
         BuiltinFunction::RegisterCustomFontByPath => isize::MAX,
         BuiltinFunction::RegisterCustomFontByMemory => isize::MAX,
         BuiltinFunction::RegisterBitmapFont => isize::MAX,

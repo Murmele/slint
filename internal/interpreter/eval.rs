@@ -1731,9 +1731,9 @@ fn call_builtin_function(
                 panic!("internal error: incorrect arguments to ImplicitLayoutInfo {arguments:?}");
             }
         }
-        BuiltinFunction::ItemAbsolutePosition => {
+        BuiltinFunction::ItemAbsolutePosition | BuiltinFunction::ItemAbsoluteNativePosition => {
             if arguments.len() != 1 {
-                panic!("internal error: incorrect argument count to ItemAbsolutePosition")
+                panic!("internal error: incorrect argument count to ItemAbsolutePosition/ItemAbsoluteNativePosition")
             }
 
             let component = local_context.component_instance;
@@ -1754,9 +1754,40 @@ fn call_builtin_function(
                     item_info.item_index(),
                 );
 
-                item_rc.map_to_window(Default::default()).to_untyped().into()
+                if matches!(function, BuiltinFunction::ItemAbsoluteNativePosition) {
+                    item_rc.map_to_native_window(Default::default()).to_untyped().into()
+                } else {
+                    item_rc.map_to_window(Default::default()).to_untyped().into()
+                }
             } else {
-                panic!("internal error: argument to SetFocusItem must be an element")
+                panic!("internal error: argument to ItemAbsolutePosition/ItemAbsoluteNativePosition must be an element")
+            }
+        }
+        BuiltinFunction::MapPointToNativeWindow => {
+            if arguments.len() != 2 {
+                panic!("internal error: incorrect argument count to MapPointToNativeWindow")
+            }
+            let component = local_context.component_instance;
+            if let Expression::ElementReference(item) = &arguments[0] {
+                generativity::make_guard!(guard);
+                let item = item.upgrade().unwrap();
+                let enclosing_component = enclosing_component_for_element(&item, component, guard);
+                let description = enclosing_component.description;
+                let item_info = &description.items[item.borrow().id.as_str()];
+                let item_comp = enclosing_component.self_weak().get().unwrap().upgrade().unwrap();
+                let item_rc = corelib::items::ItemRc::new(
+                    vtable::VRc::into_dyn(item_comp),
+                    item_info.item_index(),
+                );
+                let point = eval_expression(&arguments[1], local_context);
+                let Value::Struct(point_struct) = point else {
+                    panic!("internal error: second argument to MapPointToNativeWindow must be a struct")
+                };
+                let x = point_struct.get_field("x").and_then(|v| if let Value::Number(n) = v { Some(*n as corelib::Coord) } else { None }).unwrap_or_default();
+                let y = point_struct.get_field("y").and_then(|v| if let Value::Number(n) = v { Some(*n as corelib::Coord) } else { None }).unwrap_or_default();
+                item_rc.map_to_native_window(corelib::lengths::LogicalPoint::new(x, y)).to_untyped().into()
+            } else {
+                panic!("internal error: first argument to MapPointToNativeWindow must be an element")
             }
         }
         BuiltinFunction::RegisterCustomFontByPath => {

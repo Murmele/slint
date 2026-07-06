@@ -491,7 +491,7 @@ pub enum PopupWindowLocation {
     /// The popup is rendered in its own top-level window that is know to the windowing system.
     TopLevel(Rc<dyn WindowAdapter>),
     /// The popup is rendered as an embedded child window at the given position.
-    ChildWindow(LogicalPoint),
+    ChildWindow,
 }
 
 /// This structure defines a graphical element that is designed to pop up from the surrounding
@@ -1569,80 +1569,7 @@ impl WindowInner {
         let mut active_popups = self.active_popups.borrow_mut();
         let Some(popup) = active_popups.iter_mut().find(|p| p.popup_id == popup_id) else { return };
         match &mut popup.location {
-            PopupWindowLocation::ChildWindow(old_location) => {
-                let (old_popup_region, new_popup_region) =
-                    popup.properties_tracker.as_ref().evaluate_as_dependency_root(|| {
-                        let component = ItemTreeRc::borrow_pin(&popup.component);
-                        let root_item = component.as_ref().get_item_ref(0);
-                        let window_item =
-                            ItemRef::downcast_pin::<crate::items::WindowItem>(root_item)
-                                .expect("Popup component is a Window item");
-
-                        window_item.x().get(); // Dummy access to track position changes
-                        window_item.y().get(); // Dummy access to track position changes
-
-                        // Access the properties to set them as dependencies
-                        let old_popup_region = LogicalRect::new(
-                            *old_location,
-                            crate::lengths::LogicalSize::new(
-                                window_item.width().0,
-                                window_item.height().0,
-                            ),
-                        );
-
-                        let width = {
-                            let layout_info_h = component
-                                .as_ref()
-                                .layout_info(crate::layout::Orientation::Horizontal);
-                            let w = layout_info_h.min.min(layout_info_h.max);
-                            window_item.width.set(LogicalLength::new(w));
-                            w
-                        };
-
-                        let height = {
-                            let layout_info_v = component
-                                .as_ref()
-                                .layout_info(crate::layout::Orientation::Vertical);
-                            let h = layout_info_v.min.min(layout_info_v.max);
-                            window_item.height.set(LogicalLength::new(h));
-                            h
-                        };
-
-                        let clip_region = Some(LogicalRect::new(
-                            LogicalPoint::new(0.0 as crate::Coord, 0.0 as crate::Coord),
-                            self.window_adapter()
-                                .size()
-                                .to_logical(self.scale_factor())
-                                .to_euclid(),
-                        ));
-
-                        let new_region_clipped = popup::place_popup(
-                            popup::Placement::Fixed(LogicalRect::new(
-                                offset,
-                                crate::lengths::LogicalSize::new(width, height),
-                            )),
-                            &clip_region,
-                        );
-
-                        (old_popup_region, new_region_clipped)
-                    });
-
-                self.window_adapter().request_redraw();
-
-                // Set new location
-                *old_location = new_popup_region.origin;
-
-                if let Some(adapter) = self.window_adapter_weak.upgrade() {
-                    if !old_popup_region.is_empty() {
-                        adapter.renderer().mark_dirty_region(old_popup_region.into());
-                    }
-
-                    if !new_popup_region.is_empty() {
-                        adapter.renderer().mark_dirty_region(new_popup_region.into());
-                    }
-                    adapter.request_redraw();
-                }
-            }
+            PopupWindowLocation::ChildWindow => {}
             PopupWindowLocation::TopLevel(adapter) => {
                 // The size is already tracked in the windowadapter
                 let mut new_position: Option<LogicalPosition> = None;
@@ -1972,7 +1899,7 @@ impl WindowInner {
             // Popup in a popup
             match &parent_popup.location {
                 PopupWindowLocation::TopLevel(wa) => wa.clone(),
-                PopupWindowLocation::ChildWindow(_) => self.window_adapter(),
+                PopupWindowLocation::ChildWindow => self.window_adapter(),
             }
         } else {
             self.window_adapter()
@@ -2001,7 +1928,7 @@ impl WindowInner {
                 );
                 self.window_adapter().request_redraw();
                 (
-                    PopupWindowLocation::ChildWindow(rect.origin),
+                    PopupWindowLocation::ChildWindow,
                     Box::pin(PropertyTracker::new_with_dirty_handler(
                         PopupWindowPropertiesTracker {
                             parent_window_adapter_weak: parent_window_adapter_weak.clone(),

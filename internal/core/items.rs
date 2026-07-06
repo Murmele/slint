@@ -2200,3 +2200,24 @@ pub unsafe extern "C" fn slint_item_absolute_position(
     let self_rc = ItemRc::new(self_component.clone(), self_index);
     self_rc.map_to_window(Default::default())
 }
+
+#[cfg(feature = "ffi")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn slint_item_absolute_native_position(
+    self_component: &vtable::VRc<crate::item_tree::ItemTreeVTable>,
+    self_index: u32,
+) -> crate::lengths::LogicalPoint {
+    let self_rc = ItemRc::new(self_component.clone(), self_index);
+    self_rc.map_to_native_window(Default::default())
+}
+
+#[cfg(feature = "ffi")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn slint_item_map_point_to_native_window(
+    self_component: &vtable::VRc<crate::item_tree::ItemTreeVTable>,
+    self_index: u32,
+    point: crate::lengths::LogicalPoint,
+) -> crate::lengths::LogicalPoint {
+    let self_rc = ItemRc::new(self_component.clone(), self_index);
+    self_rc.map_to_native_window(point)
+}

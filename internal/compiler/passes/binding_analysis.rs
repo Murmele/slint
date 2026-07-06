@@ -725,7 +725,7 @@ fn recurse_expression(
                     );
                 }
             }
-            BuiltinFunction::ItemAbsolutePosition => {
+            BuiltinFunction::ItemAbsolutePosition | BuiltinFunction::ItemAbsoluteNativePosition | BuiltinFunction::MapPointToNativeWindow => {
                 if let Some(Expression::ElementReference(item)) = arguments.first() {
                     let mut item = item.upgrade().unwrap();
                     while let Some(parent) = find_parent_element(&item) {

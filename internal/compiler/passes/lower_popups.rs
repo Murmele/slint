@@ -294,59 +294,26 @@ fn lower_popup_window(
         // must carry the x/y offset that the partial renderer diffs to compute the dirty region.
 
         let geometry_binding = || {
-            let mut position = BTreeMap::default();
-            position.insert(
-                POSITION_X_PROP_NAME.clone(),
-                Expression::PropertyReference(coord_x.clone()),
-            );
-            position.insert(
-                POSITION_Y_PROP_NAME.clone(),
-                Expression::PropertyReference(coord_y.clone()),
-            );
-            // For a child-window popup, compute the absolute position of the popup in the window:
-            //   geometry_position = ItemAbsolutePosition(parent_element) + {x: coord_x, y: coord_y}
-            let child_window_position = Expression::CodeBlock(vec![
-                Expression::StoreLocalVariable {
-                    name: "parent".into(),
-                    value: Box::new(Expression::ElementReference(Rc::downgrade(parent_element))),
-                },
-                Expression::StoreLocalVariable {
-                    name: "popup_pos".into(),
-                    value: Box::new(Expression::Struct {
-                        ty: typeregister::logical_point_type().into(),
-                        values: position,
-                    }),
-                },
-                Expression::StoreLocalVariable {
-                    name: "parent_position".into(),
-                    value: Box::new(Expression::FunctionCall {
-                        function: parent.geometry().origin,
-                        arguments: vec![],
-                    }),
-                },
-                Expression::StoreLocalVariable {
-                    name: "total_pos".into(),
-                    value: Box::new(Expression::BinaryExpression {
-                        lhs: Box::new(Expression::ReadLocalVariable {
-                            name: "parent_pos".into(),
-                            ty: typeregister::logical_point_type().into(),
-                        }),
-                        rhs: Box::new(Expression::ReadLocalVariable {
-                            name: "popup_pos".into(),
-                            ty: typeregister::logical_point_type().into(),
-                        }),
-                        op: '+',
-                    }),
-                },
-                Expression::FunctionCall {
-                    function: parent.map_to_native_window,
-                    arguments: vec![Expression::ReadLocalVariable {
-                        name: "total_pos".into(),
-                        ty: typeregister::logical_point_type().into(),
-                    }],
-                    source_location: (),
-                },
-            ]);
+            let popup_pos_struct = Expression::Struct {
+                ty: typeregister::logical_point_type().into(),
+                values: [
+                    (POSITION_X_PROP_NAME.clone(), Expression::PropertyReference(coord_x.clone())),
+                    (POSITION_Y_PROP_NAME.clone(), Expression::PropertyReference(coord_y.clone())),
+                ]
+                .into_iter()
+                .collect(),
+            };
+            // For a child-window popup, map the popup's {x, y} through the parent element's full
+            // coordinate transform (including scaling) to get native window coordinates.
+            // This mirrors what show_popup() does: parent_item.map_to_native_window(popup.x, popup.y)
+            let child_window_position = Expression::FunctionCall {
+                function: BuiltinFunction::MapPointToNativeWindow.into(),
+                arguments: vec![
+                    Expression::ElementReference(Rc::downgrade(parent_element)),
+                    popup_pos_struct,
+                ],
+                source_location: None,
+            };
 
             RefCell::new(BindingExpression::from(Expression::Condition {
                 condition: Box::new(Expression::PropertyReference(is_toplevel.clone())),

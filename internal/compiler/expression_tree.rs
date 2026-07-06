@@ -117,6 +117,10 @@ pub enum BuiltinFunction {
     SetTextInputFocused,
     ImplicitLayoutInfo(Orientation),
     ItemAbsolutePosition,
+    ItemAbsoluteNativePosition,
+    /// map_to_native_window(point): Maps a point in the element's local coordinate space
+    /// to native window coordinates (accounting for transforms and child-window popup offsets).
+    MapPointToNativeWindow,
     RegisterCustomFontByPath,
     RegisterCustomFontByMemory,
     RegisterBitmapFont,
@@ -301,6 +305,8 @@ declare_builtin_function_types!(
     ParseDate: (Type::String, Type::String) -> Type::Array(Rc::new(Type::Int32)),
     SetTextInputFocused: (Type::Bool) -> Type::Void,
     ItemAbsolutePosition: (Type::ElementReference) -> typeregister::logical_point_type().into(),
+    ItemAbsoluteNativePosition: (Type::ElementReference) -> typeregister::logical_point_type().into(),
+    MapPointToNativeWindow: (Type::ElementReference, typeregister::logical_point_type().into()) -> typeregister::logical_point_type().into(),
     RegisterCustomFontByPath: (Type::String) -> Type::Void,
     RegisterCustomFontByMemory: (Type::Int32) -> Type::Void,
     RegisterBitmapFont: (Type::Int32) -> Type::Void,
@@ -421,7 +427,7 @@ impl BuiltinFunction {
             BuiltinFunction::SetTextInputFocused => false,
             BuiltinFunction::TextInputFocused => false,
             BuiltinFunction::ImplicitLayoutInfo(_) => false,
-            BuiltinFunction::ItemAbsolutePosition => true,
+            BuiltinFunction::ItemAbsolutePosition | BuiltinFunction::ItemAbsoluteNativePosition | BuiltinFunction::MapPointToNativeWindow => true,
             BuiltinFunction::RegisterCustomFontByPath
             | BuiltinFunction::RegisterCustomFontByMemory
             | BuiltinFunction::RegisterBitmapFont => false,
@@ -510,7 +516,7 @@ impl BuiltinFunction {
             BuiltinFunction::Hsv => true,
             BuiltinFunction::Oklch => true,
             BuiltinFunction::ImplicitLayoutInfo(_) => true,
-            BuiltinFunction::ItemAbsolutePosition => true,
+            BuiltinFunction::ItemAbsolutePosition | BuiltinFunction::ItemAbsoluteNativePosition | BuiltinFunction::MapPointToNativeWindow => true,
             BuiltinFunction::SetTextInputFocused => false,
             BuiltinFunction::TextInputFocused => true,
             BuiltinFunction::RegisterCustomFontByPath

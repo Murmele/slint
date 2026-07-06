@@ -5117,12 +5117,26 @@ fn compile_builtin_function_call(
                 panic!("internal error: invalid args to ItemFontMetrics {arguments:?}")
             }
         }
-        BuiltinFunction::ItemAbsolutePosition => {
+        BuiltinFunction::ItemAbsolutePosition | BuiltinFunction::ItemAbsoluteNativePosition => {
             if let [llr::Expression::PropertyReference(pr)] = arguments {
                 let item_rc = access_item_rc(pr, ctx);
-                format!("slint::LogicalPosition(slint::cbindgen_private::slint_item_absolute_position(&{item_rc}))")
+                let fn_name = if matches!(function, BuiltinFunction::ItemAbsoluteNativePosition) {
+                    "slint_item_absolute_native_position"
+                } else {
+                    "slint_item_absolute_position"
+                };
+                format!("slint::LogicalPosition(slint::cbindgen_private::{fn_name}(&{item_rc}))")
             } else {
-                panic!("internal error: invalid args to ItemAbsolutePosition {arguments:?}")
+                panic!("internal error: invalid args to ItemAbsolutePosition/ItemAbsoluteNativePosition {arguments:?}")
+            }
+        }
+        BuiltinFunction::MapPointToNativeWindow => {
+            if let [llr::Expression::PropertyReference(pr), point] = arguments {
+                let item_rc = access_item_rc(pr, ctx);
+                let point = compile_expression(point, ctx);
+                format!("slint::LogicalPosition(slint::cbindgen_private::slint_item_map_point_to_native_window(&{item_rc}, {point}))")
+            } else {
+                panic!("internal error: invalid args to MapPointToNativeWindow {arguments:?}")
             }
         }
         BuiltinFunction::RegisterCustomFontByPath => {
