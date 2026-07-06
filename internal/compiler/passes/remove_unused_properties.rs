@@ -41,7 +41,7 @@ pub fn remove_unused_properties(doc: &Document) {
                 // Remove changed callbacks over properties that are not materialized as they are not used
                 let mut change_callbacks = std::mem::take(&mut elem.change_callbacks);
                 change_callbacks.retain(|prop, _| {
-                    super::materialize_fake_properties::has_declared_property(&elem, elem_rc, prop)
+                    super::materialize_fake_properties::has_declared_property(&elem, prop)
                 });
                 elem.change_callbacks = change_callbacks;
             },

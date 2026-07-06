@@ -1508,6 +1508,8 @@ export component ContextMenuArea inherits Empty {
 }
 
 component WindowItem {
+    in-out property <length> x;
+    in-out property <length> y;
     in-out property <length> width;
     in-out property <length> height;
     /// Whether the window should be placed above all other windows on window managers supporting it.

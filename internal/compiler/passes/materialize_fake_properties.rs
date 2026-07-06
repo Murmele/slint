@@ -93,7 +93,7 @@ fn must_initialize(elem: &Element, prop: &str) -> bool {
 fn should_materialize(element_rc: &Rc<RefCell<Element>>, prop: &str) -> Option<Type> {
     let element = element_rc.borrow();
 
-    if has_declared_property(&element, element_rc, prop) {
+    if has_declared_property(&element, prop) {
         return None;
     }
 
@@ -116,14 +116,12 @@ fn should_materialize(element_rc: &Rc<RefCell<Element>>, prop: &str) -> Option<T
 
 /// Returns true if the property is declared in this element or parent
 /// (as opposed to being implicitly declared)
-pub fn has_declared_property(elem: &Element, elem_rc: &Rc<RefCell<Element>>, prop: &str) -> bool {
+pub fn has_declared_property(elem: &Element, prop: &str) -> bool {
     if elem.property_declarations.contains_key(prop) {
         return true;
     }
     match &elem.base_type {
-        ElementType::Component(c) => {
-            has_declared_property(&c.root_element.borrow(), &c.root_element, prop)
-        }
+        ElementType::Component(c) => has_declared_property(&c.root_element.borrow(), prop),
         ElementType::Builtin(b) => b.native_class.lookup_property(prop).is_some(),
         ElementType::Native(n) => n.lookup_property(prop).is_some(),
         ElementType::Global | ElementType::Interface | ElementType::Error => false,
