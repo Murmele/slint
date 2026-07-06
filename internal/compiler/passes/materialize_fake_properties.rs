@@ -117,6 +117,18 @@ fn should_materialize(element_rc: &Rc<RefCell<Element>>, prop: &str) -> Option<T
 /// Returns true if the property is declared in this element or parent
 /// (as opposed to being implicitly declared)
 pub fn has_declared_property(elem: &Element, elem_rc: &Rc<RefCell<Element>>, prop: &str) -> bool {
+    // `x`/`y` on a `PopupWindow`'s root element must bind to the native `WindowItem` item fields
+    // But the builtins.slint does not contain those properties because a slint WindowItem
+    // does not have those properties. They exist only for a popup
+    if (prop == "x" || prop == "y")
+        && elem
+            .enclosing_component
+            .upgrade()
+            .is_some_and(|c| c.inherits_popup_window.get() && Rc::ptr_eq(&c.root_element, elem_rc))
+    {
+        return true;
+    }
+
     if elem.property_declarations.contains_key(prop) {
         return true;
     }
