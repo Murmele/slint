@@ -12,8 +12,8 @@ pub fn remove_unused_properties(doc: &Document) {
         crate::object_tree::recurse_elem_including_sub_components_no_borrow(
             component,
             &(),
-            &mut |elem, _| {
-                let mut elem = elem.borrow_mut();
+            &mut |elem_rc, _| {
+                let mut elem = elem_rc.borrow_mut();
                 let mut to_remove = HashSet::new();
                 for (prop, decl) in &elem.property_declarations {
                     if !decl.expose_in_public_api
@@ -41,7 +41,7 @@ pub fn remove_unused_properties(doc: &Document) {
                 // Remove changed callbacks over properties that are not materialized as they are not used
                 let mut change_callbacks = std::mem::take(&mut elem.change_callbacks);
                 change_callbacks.retain(|prop, _| {
-                    super::materialize_fake_properties::has_declared_property(&elem, prop)
+                    super::materialize_fake_properties::has_declared_property(&elem, elem_rc, prop)
                 });
                 elem.change_callbacks = change_callbacks;
             },
