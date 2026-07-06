@@ -4,10 +4,12 @@
 //! This pass transforms the PopupWindow element into a component
 
 use crate::diagnostics::{BuildDiagnostics, SourceLocation};
-use crate::expression_tree::{BindingExpression, Expression, NamedReference};
+use crate::expression_tree::{
+    BindingExpression, BuiltinFunction, Expression, NamedReference, Unit,
+};
 use crate::langtype::{ElementType, EnumerationValue, Type};
-use crate::object_tree::*;
 use crate::typeregister::TypeRegister;
+use crate::{object_tree::*, typeregister};
 use smol_str::{SmolStr, format_smolstr};
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
@@ -230,17 +232,142 @@ fn lower_popup_window(
         }
     };
 
+    const GEOMETRY_X_PROP_NAME: &str = "geometry_x";
+    const GEOMETRY_Y_PROP_NAME: &str = "geometry_y";
+    const POSITION_X_PROP_NAME: SmolStr = SmolStr::new_static("x");
+    const POSITION_Y_PROP_NAME: SmolStr = SmolStr::new_static("y");
+
     // Take a reference to the x/y coordinates, to be read when calling show_popup(), and
     // converted to absolute coordinates in the run-time library.
-    let coord_x = NamedReference::new(&popup_comp.root_element, SmolStr::new_static("x"));
-    let coord_y = NamedReference::new(&popup_comp.root_element, SmolStr::new_static("y"));
+    let coord_x = NamedReference::new(&popup_comp.root_element, POSITION_X_PROP_NAME.clone());
+    let coord_y = NamedReference::new(&popup_comp.root_element, POSITION_Y_PROP_NAME.clone());
+    let geometry_x =
+        NamedReference::new(&popup_comp.root_element, SmolStr::new_static(GEOMETRY_X_PROP_NAME));
+    let geometry_y =
+        NamedReference::new(&popup_comp.root_element, SmolStr::new_static(GEOMETRY_Y_PROP_NAME));
 
-    // Meanwhile, set the geometry x/y to zero, because we'll be shown as a top-level and
-    // children should be rendered starting with a (0, 0) offset.
-    detach_window_geometry_from_position(&popup_comp.root_element);
+    // Add geometry-x and geometry-y properties which cache the property offset if it is
+    // not a TopLevel popup but a ChildWindow
+    // If a TopLevel, geometry x/y return zero
+    {
+        let mut popup_mut = popup_comp.root_element.borrow_mut();
+        let geometry_position_name = format_smolstr!("{}-geometry-position", popup_mut.id);
+        popup_mut.property_declarations.insert(
+            geometry_position_name.clone(),
+            Type::Struct(typeregister::logical_point_type()).into(),
+        );
+        popup_mut
+            .property_declarations
+            .insert(GEOMETRY_X_PROP_NAME.into(), Type::LogicalLength.into());
+        popup_mut
+            .property_declarations
+            .insert(GEOMETRY_Y_PROP_NAME.into(), Type::LogicalLength.into());
+        const IS_TOPLEVEL_PROPERTY_NAME: &str = "is-toplevel";
+        popup_mut.property_declarations.insert(
+            IS_TOPLEVEL_PROPERTY_NAME.into(),
+            PropertyDeclaration {
+                property_type: Type::Bool,
+                node: None,
+                expose_in_public_api: false,
+                is_alias: None,
+                visibility: PropertyVisibility::Fake,
+                pure: None,
+                shadows_builtin: false,
+            },
+        );
+        drop(popup_mut);
+
+        // `NamedReference::new` borrows the element, so create the references outside the borrow.
+        let geometry_position =
+            NamedReference::new(&popup_comp.root_element, geometry_position_name.clone());
+        let is_toplevel =
+            NamedReference::new(&popup_comp.root_element, IS_TOPLEVEL_PROPERTY_NAME.into());
+        // The runtime assigns `popup-is-toplevel` when the popup is shown, through a setter the LLR
+        // optimizer cannot see. Mark it as set so the condition below is not constant-folded to its
+        // default of `false` (same reason as `popup-<id>-is-open`).
+        is_toplevel.mark_as_set();
+
+        // `geometry-x`/`geometry-y` back the popup root's `item_geometry` (via `geometry_props`).
+        // For a top-level popup the root lives in its own native window, so its origin is (0, 0) like
+        // any window root. For a child-window popup it is composited into the parent, so its geometry
+        // must carry the x/y offset that the partial renderer diffs to compute the dirty region.
+
+        let geometry_binding = || {
+            // For a child-window popup, compute the absolute position of the popup in the window:
+            //   geometry_position = ItemAbsolutePosition(parent_element) + {x: coord_x, y: coord_y}
+            let child_window_position = Expression::CodeBlock(vec![
+                Expression::StoreLocalVariable {
+                    name: "parent_pos".into(),
+                    value: Box::new(Expression::FunctionCall {
+                        function: BuiltinFunction::ItemAbsolutePosition.into(),
+                        arguments: vec![Expression::ElementReference(Rc::downgrade(
+                            parent_element,
+                        ))],
+                        source_location: None,
+                    }),
+                },
+                Expression::Struct {
+                    ty: typeregister::logical_point_type().into(),
+                    values: [
+                        (POSITION_X_PROP_NAME.clone(), coord_x.clone()),
+                        (POSITION_Y_PROP_NAME.clone(), coord_y.clone()),
+                    ]
+                    .into_iter()
+                    .map(|(field, coord)| {
+                        (
+                            field.clone(),
+                            Expression::BinaryExpression {
+                                lhs: Box::new(Expression::StructFieldAccess {
+                                    base: Box::new(Expression::ReadLocalVariable {
+                                        name: "parent_pos".into(),
+                                        ty: typeregister::logical_point_type().into(),
+                                    }),
+                                    name: field,
+                                }),
+                                rhs: Box::new(Expression::PropertyReference(coord)),
+                                op: '+',
+                            },
+                        )
+                    })
+                    .collect(),
+                },
+            ]);
+
+            RefCell::new(BindingExpression::from(Expression::Condition {
+                condition: Box::new(Expression::PropertyReference(is_toplevel.clone())),
+                true_expr: Box::new(Expression::Struct {
+                    ty: typeregister::logical_point_type().into(),
+                    values: [
+                        (POSITION_X_PROP_NAME.clone(), Expression::NumberLiteral(0., Unit::Px)),
+                        (POSITION_Y_PROP_NAME.clone(), Expression::NumberLiteral(0., Unit::Px)),
+                    ]
+                    .into_iter()
+                    .collect(),
+                }),
+                false_expr: Box::new(child_window_position),
+            }))
+        };
+
+        let geometry_extract = |field: &str| {
+            RefCell::new(BindingExpression::from(Expression::StructFieldAccess {
+                base: Box::new(Expression::PropertyReference(geometry_position.clone())),
+                name: field.into(),
+            }))
+        };
+
+        let mut popup_mut = popup_comp.root_element.borrow_mut();
+        // Overwrite x and y, otherwise x and y properties are used for the geometry
+        popup_mut.geometry_props.as_mut().unwrap().x = geometry_x;
+        popup_mut.geometry_props.as_mut().unwrap().y = geometry_y;
+        popup_mut.bindings.insert(geometry_position_name, geometry_binding());
+        popup_mut.bindings.insert(GEOMETRY_X_PROP_NAME.into(), geometry_extract("x"));
+        popup_mut.bindings.insert(GEOMETRY_Y_PROP_NAME.into(), geometry_extract("y"));
+    }
 
     check_no_reference_to_popup(popup_window_element, &parent_component, &weak, &coord_x, diag);
 
+    // Change the base_type from PopupWindow to WindowItem because PopupWindow does not
+    // exist in the core and all PopupWindows are handled as WindowItem
     if matches!(popup_window_element.borrow().base_type, ElementType::Builtin(_)) {
         popup_window_element.borrow_mut().base_type = window_type.clone();
     }

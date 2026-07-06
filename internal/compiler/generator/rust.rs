@@ -215,7 +215,7 @@ pub fn generate(
     let sub_compos = llr
         .used_sub_components
         .iter()
-        .map(|sub_compo| generate_sub_component(*sub_compo, &llr, None, None, false))
+        .map(|sub_compo| generate_sub_component(*sub_compo, &llr, None, None, false, false))
         .collect::<Vec<_>>();
     let public_components =
         llr.public_components.iter().map(|p| generate_public_component(p, &llr, compiler_config));
@@ -1117,6 +1117,7 @@ fn generate_sub_component(
     parent_ctx: Option<&ParentScope>,
     index_property: Option<llr::PropertyIdx>,
     pinned_drop: bool,
+    is_popup: bool,
 ) -> TokenStream {
     let component = &root.sub_components[component_idx];
     let inner_component_id = inner_component_id(component);
@@ -1515,6 +1516,19 @@ fn generate_sub_component(
         init.push(quote!(#rust_property.set_constant();))
     }
 
+    // A popup component is instantiated with a runtime `top_level` flag (computed in `new` from
+    // whether the backend could give it a dedicated window). Copy that flag into the synthesized
+    // `is-toplevel` property so the popup root's `geometry-x/y` bindings can resolve the origin to
+    // (0, 0) for a top-level popup and to the placement x/y for a child-window popup.
+    if is_popup {
+        if let Some((idx, _)) =
+            component.properties.iter_enumerated().find(|(_, p)| p.name.contains("is-toplevel"))
+        {
+            let is_toplevel_property = access_local_member(&idx.into(), &ctx);
+            init.push(quote!(#is_toplevel_property.set(_self.top_level);));
+        }
+    }
+
     let parent_component_type = parent_ctx.iter().map(|parent| {
         let parent_component_id =
             self::inner_component_id(&ctx.compilation_unit.sub_components[parent.sub_component]);
@@ -1627,6 +1641,14 @@ fn generate_sub_component(
 
     let pin_macro = if pinned_drop { quote!(#[pin_drop]) } else { quote!(#[pin]) };
 
+    let top_level_property = if is_popup {
+        quote!(
+            top_level: bool,
+        )
+    } else {
+        quote!()
+    };
+
     quote!(
         #[derive(sp::FieldOffsets, Default)]
         #[const_field_offset(sp::const_field_offset)]
@@ -1648,6 +1670,7 @@ fn generate_sub_component(
             globals: sp::OnceCell<sp::Rc<SharedGlobals>>,
             tree_index: ::core::cell::Cell<u32>,
             tree_index_of_first_child: ::core::cell::Cell<u32>,
+            #top_level_property
         }
 
         impl #inner_component_id {
@@ -2047,6 +2070,7 @@ fn generate_item_tree(
         parent_ctx,
         index_property,
         needs_window_adapter,
+        is_popup,
     );
     let inner_component_id = self::inner_component_id(&root.sub_components[sub_tree.root]);
     let parent_component_type = parent_ctx
@@ -2212,13 +2236,31 @@ fn generate_item_tree(
         )
     };
 
+    // Popups have an additioanl argument
+    let (new_arguments, assign_variables) = if is_popup {
+        (
+            quote!(
+                #(parent: #parent_component_type,)* #globals_arg, top_level: bool
+            ),
+            quote!(_self.top_level = top_level;),
+        )
+    } else {
+        (
+            quote!(
+                #(parent: #parent_component_type,)* #globals_arg
+            ),
+            quote!(),
+        )
+    };
+
     quote!(
         #sub_comp
 
         impl #inner_component_id {
-            fn new(#(parent: #parent_component_type,)* #globals_arg) -> ::core::result::Result<sp::VRc<sp::ItemTreeVTable, Self>, slint::PlatformError> {
+            fn new(#new_arguments) -> ::core::result::Result<sp::VRc<sp::ItemTreeVTable, Self>, slint::PlatformError> {
                 #![allow(unused)]
                 let mut _self = Self::default();
+                #assign_variables
                 #(_self.parent = parent.clone() as #parent_component_type;)*
                 let self_rc = sp::VRc::new(_self);
                 let self_dyn_rc = sp::VRc::into_dyn(self_rc.clone());
@@ -3701,9 +3743,9 @@ fn compile_builtin_function_call(
                 };
                 let globals_init = quote! {
                     if let Some(popup_window_adapter) = window.create_child_window_adapter(#window_kind) {
-                        shared_global.clone_with_window_adapter(popup_window_adapter)
+                        (shared_global.clone_with_window_adapter(popup_window_adapter), true)
                     } else {
-                        shared_global.clone()
+                        (shared_global.clone(), false)
                     }
                 };
                 // The optional 4th argument is a property reference to the synthesized `is-open`,
@@ -3742,9 +3784,9 @@ fn compile_builtin_function_call(
                         let shared_global = #component_access_tokens.globals.get().unwrap();
                         let window_adapter = shared_global.window_adapter_impl();
                         let window = sp::WindowInner::from_pub(window_adapter.window());
-                        let globals = #globals_init;
+                        let (globals, top_level) = #globals_init;
 
-                        let popup_instance = #popup_window_id::new(#component_access_tokens.self_weak.get().unwrap().clone(), globals).unwrap();
+                        let popup_instance = #popup_window_id::new(#component_access_tokens.self_weak.get().unwrap().clone(), globals, top_level).unwrap();
                         let popup_instance_vrc = sp::VRc::map(popup_instance.clone(), |x| x);
                         if let Some(current_id) = #component_access_tokens.#popup_id_name.take() {
                             window.close_popup(current_id);
