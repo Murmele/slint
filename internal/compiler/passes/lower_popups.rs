@@ -12,6 +12,7 @@ use crate::typeregister::TypeRegister;
 use crate::{object_tree::*, typeregister};
 use smol_str::{SmolStr, format_smolstr};
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::rc::{Rc, Weak};
 
 const CLOSE_ON_CLICK: &str = "close-on-click";
@@ -293,43 +294,57 @@ fn lower_popup_window(
         // must carry the x/y offset that the partial renderer diffs to compute the dirty region.
 
         let geometry_binding = || {
+            let mut position = BTreeMap::default();
+            position.insert(
+                POSITION_X_PROP_NAME.clone(),
+                Expression::PropertyReference(coord_x.clone()),
+            );
+            position.insert(
+                POSITION_Y_PROP_NAME.clone(),
+                Expression::PropertyReference(coord_y.clone()),
+            );
             // For a child-window popup, compute the absolute position of the popup in the window:
             //   geometry_position = ItemAbsolutePosition(parent_element) + {x: coord_x, y: coord_y}
             let child_window_position = Expression::CodeBlock(vec![
                 Expression::StoreLocalVariable {
-                    name: "parent_pos".into(),
-                    value: Box::new(Expression::FunctionCall {
-                        function: BuiltinFunction::ItemAbsolutePosition.into(),
-                        arguments: vec![Expression::ElementReference(Rc::downgrade(
-                            parent_element,
-                        ))],
-                        source_location: None,
+                    name: "parent".into(),
+                    value: Box::new(Expression::ElementReference(Rc::downgrade(parent_element))),
+                },
+                Expression::StoreLocalVariable {
+                    name: "popup_pos".into(),
+                    value: Box::new(Expression::Struct {
+                        ty: typeregister::logical_point_type().into(),
+                        values: position,
                     }),
                 },
-                Expression::Struct {
-                    ty: typeregister::logical_point_type().into(),
-                    values: [
-                        (POSITION_X_PROP_NAME.clone(), coord_x.clone()),
-                        (POSITION_Y_PROP_NAME.clone(), coord_y.clone()),
-                    ]
-                    .into_iter()
-                    .map(|(field, coord)| {
-                        (
-                            field.clone(),
-                            Expression::BinaryExpression {
-                                lhs: Box::new(Expression::StructFieldAccess {
-                                    base: Box::new(Expression::ReadLocalVariable {
-                                        name: "parent_pos".into(),
-                                        ty: typeregister::logical_point_type().into(),
-                                    }),
-                                    name: field,
-                                }),
-                                rhs: Box::new(Expression::PropertyReference(coord)),
-                                op: '+',
-                            },
-                        )
-                    })
-                    .collect(),
+                Expression::StoreLocalVariable {
+                    name: "parent_position".into(),
+                    value: Box::new(Expression::FunctionCall {
+                        function: parent.geometry().origin,
+                        arguments: vec![],
+                    }),
+                },
+                Expression::StoreLocalVariable {
+                    name: "total_pos".into(),
+                    value: Box::new(Expression::BinaryExpression {
+                        lhs: Box::new(Expression::ReadLocalVariable {
+                            name: "parent_pos".into(),
+                            ty: typeregister::logical_point_type().into(),
+                        }),
+                        rhs: Box::new(Expression::ReadLocalVariable {
+                            name: "popup_pos".into(),
+                            ty: typeregister::logical_point_type().into(),
+                        }),
+                        op: '+',
+                    }),
+                },
+                Expression::FunctionCall {
+                    function: parent.map_to_native_window,
+                    arguments: vec![Expression::ReadLocalVariable {
+                        name: "total_pos".into(),
+                        ty: typeregister::logical_point_type().into(),
+                    }],
+                    source_location: (),
                 },
             ]);
 
