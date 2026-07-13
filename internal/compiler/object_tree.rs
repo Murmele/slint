@@ -373,6 +373,7 @@ pub struct PopupWindow {
     pub x: NamedReference,
     pub y: NamedReference,
     pub close_policy: EnumerationValue,
+    pub anchor: NamedReference,
     pub parent_element: ElementRc,
     pub is_tooltip: bool,
 }

@@ -18,7 +18,7 @@ use crate::item_tree::{
     ItemRc, ItemTreeRc, ItemTreeRef, ItemTreeRefPin, ItemTreeVTable, ItemTreeWeak, ItemWeak,
     ParentItemTraversalMode,
 };
-use crate::items::{InputType, ItemRef, MenuEntry, MouseCursor, PopupClosePolicy};
+use crate::items::{InputType, ItemRef, MenuEntry, MouseCursor, PopupAnchor, PopupClosePolicy};
 use crate::lengths::{LogicalLength, LogicalPoint, LogicalRect, LogicalVector, SizeLengths};
 use crate::menus::MenuVTable;
 use crate::properties::{Property, PropertyTracker};
@@ -433,6 +433,7 @@ pub struct PopupWindow {
     pub component: ItemTreeRc,
     /// Defines the close behavior of the popup.
     pub close_policy: PopupClosePolicy,
+    pub anchor: PopupAnchor,
     /// the item that had the focus in the parent window when the popup was opened
     focus_item_in_parent: ItemWeak,
     /// The item from where the Popup was invoked from
@@ -1645,6 +1646,7 @@ impl WindowInner {
         popup_componentrc: &ItemTreeRc,
         popup_access_position: Box<dyn Fn() -> LogicalPosition>,
         close_policy: PopupClosePolicy,
+        anchor: PopupAnchor,
         parent_item: &ItemRc,
         is_tooltip: bool,
         is_menu: bool,
@@ -1803,6 +1805,7 @@ impl WindowInner {
             location,
             component: popup_componentrc.clone(),
             close_policy,
+            anchor,
             focus_item_in_parent: focus_item,
             parent_item: parent_item.downgrade(),
             is_tooltip,

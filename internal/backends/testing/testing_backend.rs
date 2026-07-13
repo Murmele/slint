@@ -11,7 +11,7 @@ use i_slint_core::textlayout::sharedparley;
 use i_slint_core::window::{InputMethodRequest, WindowAdapter, WindowAdapterInternal, WindowInner};
 
 use i_slint_core::SharedString;
-use i_slint_core::items::TextWrap;
+use i_slint_core::items::{PopupAnchor, TextWrap};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::pin::Pin;

@@ -3600,6 +3600,7 @@ fn compile_builtin_function_call(
                     Some(&parent_ctx),
                 );
                 let position = compile_expression(&popup.position.borrow(), &popup_ctx);
+                let anchor = compile_expression(&popup.anchor.borrow(), &popup_ctx);
                 let is_tooltip = popup.is_tooltip;
                 let close_policy = compile_expression(close_policy, ctx);
                 let popup_id_name = internal_popup_id(*popup_index as usize);
@@ -3630,14 +3631,21 @@ fn compile_builtin_function_call(
 
                     let popup_instance_vrc_for_position = popup_instance_vrc.clone();
                     let access_position = sp::Box::new(move || {
-                        let _self = popup_instance_vrc_for_position.as_pin_ref(); #position
+                        let _self = popup_instance_vrc_for_position.as_pin_ref();
+                        #position
                     });
+                    let anchor =  {
+                        let _self = popup_instance_vrc.clone();
+                        let _self = _self.as_pin_ref();
+                        #anchor
+                    };
 
                     #component_access_tokens.#popup_id_name.set(Some(
                         window.show_popup(
                             &sp::VRc::into_dyn(popup_instance.into()),
                             access_position,
                             #close_policy,
+                            anchor,
                             parent_item,
                             #is_tooltip,
                             false,
