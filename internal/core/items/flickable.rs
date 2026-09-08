@@ -69,6 +69,8 @@ const WHEEL_SCROLL_DURATION: Duration = Duration::from_millis(180);
 /// it is not desired
 const MAX_DURATION: Duration = Duration::from_millis(100);
 const VELOCITY_TRACKER_SAMPLES: usize = 20;
+#[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
+const MOMENTUM_RETAIN_VELOCITY_THRESHOLD_FACTOR: f32 = 0.5;
 
 #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
 type VelocityTracker = IOsVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
@@ -76,6 +78,23 @@ type VelocityTracker = IOsVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
 type VelocityTracker = MacOsVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
 #[cfg(not(any(target_os = "ios", target_os = "linux", target_os = "none", target_os = "macos")))]
 type VelocityTracker = GeneralVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
+
+fn carried_momentum(new_estimaged_velocity: f32, current_velocity: f32) -> f32 {
+    #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
+    let is_velocity_not_substantially_less_than_carried_momentum = new_estimaged_velocity.abs()
+        > current_velocity.abs() * MOMENTUM_RETAIN_VELOCITY_THRESHOLD_FACTOR;
+    #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
+    let same_direction = new_estimaged_velocity.signum() == current_velocity.signum();
+
+    #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
+    if is_velocity_not_substantially_less_than_carried_momentum && same_direction {
+        // On Android this momentum carry on does not exist
+        current_velocity.signum()
+            * f32::min(0.000816 * f32::powf(current_velocity.abs(), 1.967), 40000.0)
+    } else {
+        0.
+    }
+}
 
 /// The implementation of the `Flickable` element
 #[repr(C)]
@@ -681,13 +700,38 @@ impl FlickableDataInner {
                 let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
                 let content_y = (Flickable::FIELD_OFFSETS.content_y()).apply_pin(flick);
 
+                let (carried_velocity_x, carried_velocity_y) = self
+                    .running_animation
+                    .as_ref()
+                    .map(|simulation| {
+                        (
+                            carried_momentum(
+                                velocity_estimation.velocity.x,
+                                simulation
+                                    .x_simulation
+                                    .as_ref()
+                                    .map(|sim| sim.borrow().remaining_velocity())
+                                    .unwrap_or_default(),
+                            ),
+                            carried_momentum(
+                                velocity_estimation.velocity.y,
+                                simulation
+                                    .y_simulation
+                                    .as_ref()
+                                    .map(|sim| sim.borrow().remaining_velocity())
+                                    .unwrap_or_default(),
+                            ),
+                        )
+                    })
+                    .unwrap_or_default();
+
                 let [limit_x, limit_y] = Self::flick_limits(flick_rc, velocity_estimation.velocity);
 
                 let x_simulation = Rc::new_cyclic(|weak| {
                     let curr_val = content_x.get().0;
                     content_x.set_physic_animation_value(weak.clone());
                     let animation = ConstantDecelerationParameters::new(
-                        velocity_estimation.velocity.x as f32,
+                        velocity_estimation.velocity.x + carried_velocity_x,
                         DECELERATION,
                     );
                     RefCell::new(animation.simulation(curr_val, limit_x))
@@ -697,7 +741,7 @@ impl FlickableDataInner {
                     let curr_val = content_y.get().0;
                     content_y.set_physic_animation_value(weak.clone());
                     let animation = ConstantDecelerationParameters::new(
-                        velocity_estimation.velocity.y as f32,
+                        velocity_estimation.velocity.y + carried_velocity_y,
                         DECELERATION,
                     );
                     RefCell::new(animation.simulation(curr_val, limit_y))
