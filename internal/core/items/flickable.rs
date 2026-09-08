@@ -17,6 +17,7 @@ use crate::input::{
     FocusEvent, FocusEventResult, InputEventFilterResult, InputEventResult, MouseEvent, TouchPhase,
 };
 use crate::item_rendering::CachedRenderingData;
+use crate::items::flickable::velocity_tracker::{GeneralVelocityTracker, VelocityTracker};
 use crate::layout::{LayoutInfo, Orientation};
 use crate::lengths::{
     LogicalBorderRadius, LogicalLength, LogicalPoint, LogicalRect, LogicalSize, LogicalVector,
@@ -38,8 +39,8 @@ use euclid::num::Zero;
 use i_slint_core_macros::*;
 #[allow(unused)]
 use num_traits::Float;
-mod data_ringbuffer;
-use data_ringbuffer::VelocityRingBuffer;
+mod least_square;
+mod velocity_tracker;
 
 /// Deceleration during the animation. It slows down the initial velocity of the simulation
 /// so that the simulation stops at some point if it didn't reach the limit
@@ -53,6 +54,7 @@ const WHEEL_SCROLL_DURATION: Duration = Duration::from_millis(180);
 /// If the duration is larger than this value, no animation will be executed because
 /// it is not desired
 const MAX_DURATION: Duration = Duration::from_millis(100);
+const VELOCITY_TRACKER_SAMPLES: usize = 20;
 
 /// The implementation of the `Flickable` element
 #[repr(C)]
@@ -402,6 +404,8 @@ enum CaptureEvents {
     MouseWheel,
 }
 
+type UsedVelocityTracker = GeneralVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
+
 #[derive(Default)]
 struct FlickableDataInner {
     /// The time and position in which the press was made
@@ -423,7 +427,7 @@ struct FlickableDataInner {
 
     /// Ringbuffer to store the last move deltas. From those data the velocity can be
     /// calculated required for the animation after the release event
-    velocity_rb: VelocityRingBuffer<5>,
+    velocity_rb: UsedVelocityTracker,
 
     /// The animation details of the currently running animation for smooth mouse wheel scrolling.
     /// This allows us to add the missing delta of the animation to the next scroll event if the user scrolls again
@@ -470,7 +474,7 @@ impl FlickableDataInner {
             self.capture_events = None;
             self.last_scroll_event = None;
             self.running_animation = None;
-            self.velocity_rb = VelocityRingBuffer::default();
+            self.velocity_rb = Default::default();
             return InputEventResult::EventIgnored;
         }
 
@@ -509,7 +513,7 @@ impl FlickableDataInner {
                 self.last_scroll_event = Some((crate::animations::current_tick(), position));
             }
             TouchPhase::Started => {
-                self.velocity_rb = VelocityRingBuffer::default();
+                self.velocity_rb = Default::default();
                 self.capture_events = Some(CaptureEvents::MouseWheel);
                 self.last_scroll_event = Some((crate::animations::current_tick(), position));
             }
@@ -632,29 +636,35 @@ impl FlickableDataInner {
 
     fn animate(&self, flick: Pin<&Flickable>, flick_rc: &ItemRc) {
         if let Some(last_time) = self.velocity_rb.last_time() {
-            let mean_velocity = self.velocity_rb.mean_velocity();
+            let velocity_estimation = self.velocity_rb.estimate_velocity();
             if self.capture_events.is_some()
-                && mean_velocity.square_length() > 0 as Coord
+                && let Some(velocity_estimation) = velocity_estimation
                 && crate::animations::current_tick().duration_since(last_time) < MAX_DURATION
             {
                 let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
                 let content_y = (Flickable::FIELD_OFFSETS.content_y()).apply_pin(flick);
 
-                let [limit_x, limit_y] = Self::flick_limits(flick_rc, mean_velocity);
+                let [limit_x, limit_y] = Self::flick_limits(flick_rc, velocity_estimation.velocity);
 
                 {
-                    let simulation =
-                        ConstantDecelerationParameters::new(mean_velocity.x as f32, DECELERATION);
+                    let simulation = ConstantDecelerationParameters::new(
+                        velocity_estimation.velocity.x as f32,
+                        DECELERATION,
+                    );
                     content_x.set_physic_animation_value(limit_x, simulation);
                 }
 
                 {
-                    let animation_y =
-                        ConstantDecelerationParameters::new(mean_velocity.y as f32, DECELERATION);
+                    let animation_y = ConstantDecelerationParameters::new(
+                        velocity_estimation.velocity.y as f32,
+                        DECELERATION,
+                    );
                     content_y.set_physic_animation_value(limit_y, animation_y);
                 }
 
-                if mean_velocity.x != 0 as Coord || mean_velocity.y != 0 as Coord {
+                if velocity_estimation.velocity.x != 0 as Coord
+                    || velocity_estimation.velocity.y != 0 as Coord
+                {
                     (Flickable::FIELD_OFFSETS.flicked()).apply_pin(flick).call(&());
                 }
             }
@@ -703,7 +713,7 @@ impl FlickableData {
                     return InputEventFilterResult::ForwardAndIgnore;
                 }
 
-                inner.velocity_rb = VelocityRingBuffer::default();
+                inner.velocity_rb = Default::default();
                 inner.pressed_mouse_state = Some((crate::animations::current_tick(), *position));
                 inner.last_mouse_position = *position;
                 let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
