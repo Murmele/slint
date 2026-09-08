@@ -1,9 +1,7 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
-//! A fixed-capacity ring buffer of time-stamped positions, used by the
-//! velocity trackers in the parent module to keep a short history of
-//! pointer samples.
+//! A fixed-capacity ring buffer of time-stamped position deltas
 
 use crate::Coord;
 use crate::animations::Instant;
@@ -283,10 +281,6 @@ mod tests_ring_buffer {
         assert_eq!(iter.next(), None);
     }
 
-    // `VelocityRingBufferIterator` starts at `curr_index`, the *oldest*
-    // slot, for a full buffer and walks forward, so it yields oldest-first
-    // rather than newest-first. This documents the expected behavior rather
-    // than fixing `VelocityRingBufferIterator`.
     #[test]
     fn test_iter_full() {
         let mut buffer: VelocityRingBuffer<3> = VelocityRingBuffer::default();
@@ -376,7 +370,6 @@ mod tests_ring_buffer {
             buffer.push(base_time + Duration::from_millis(i as u64 * 10), *value);
         }
 
-        // Newest surviving entry first, then progressively older.
         let mut iter = buffer.iter();
         assert_eq!(iter.next_back().map(|(_, v)| *v), Some(values[4]));
         assert_eq!(iter.next_back().map(|(_, v)| *v), Some(values[3]));

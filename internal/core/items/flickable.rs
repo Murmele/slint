@@ -39,7 +39,6 @@ use euclid::num::Zero;
 use i_slint_core_macros::*;
 #[allow(unused)]
 use num_traits::Float;
-mod least_square;
 mod velocity_tracker;
 
 /// Deceleration during the animation. It slows down the initial velocity of the simulation

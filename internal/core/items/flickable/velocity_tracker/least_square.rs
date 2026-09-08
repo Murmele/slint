@@ -7,16 +7,13 @@
 //! Ported from Flutter's `LeastSquaresSolver` (lsq_solver.dart), which is:
 //! Copyright 2014 The Flutter Authors. All rights reserved.
 //!
-//! Use of the original source is governed by a BSD-style license; see
-//! the "flutter" entry in THIRD_PARTY_LICENSES (or LICENSE-THIRD-PARTY).
+//! Use of the original source is governed by a BSD-style license
 //!
 //! Original: <https://github.com/flutter/flutter/blob/d6bed8ff6135cdd414f14edc3063f761d47ca846/packages/flutter/lib/src/gestures/lsq_solver.dart>
 //!
-//! Unlike the original, this port drops the per-sample weight: Slint's
-//! flickable always fits with uniform weights, so the weight factors (which
-//! are all `1.0`) are omitted rather than multiplied in. It's also generic
-//! over the float type, so callers on embedded targets can fit in `f32`
-//! instead of paying for `f64`.
+//! Changes to the original:
+//!     - no need to have generic weights (all are one for the scrolling in flutter and anywhere else yet used)
+//!     - generic over the float type
 //!
 //! [`LeastSquaresSolver::solve`] takes the polynomial `degree` as a runtime
 //! argument, matching the original API, rather than as a const generic:
