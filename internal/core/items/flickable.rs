@@ -17,7 +17,18 @@ use crate::input::{
     FocusEvent, FocusEventResult, InputEventFilterResult, InputEventResult, MouseEvent, TouchPhase,
 };
 use crate::item_rendering::CachedRenderingData;
-use crate::items::flickable::velocity_tracker::{GeneralVelocityTracker, VelocityTracker};
+#[cfg(not(any(
+    target_os = "ios",
+    target_os = "linux",
+    target_os = "none",
+    target_os = "macos"
+)))]
+use crate::items::flickable::velocity_tracker::GeneralVelocityTracker;
+#[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
+use crate::items::flickable::velocity_tracker::IOsVelocityTracker;
+#[cfg(target_os = "macos")]
+use crate::items::flickable::velocity_tracker::MacOsVelocityTracker;
+use crate::items::flickable::velocity_tracker::VelocityTracker as _;
 use crate::layout::{LayoutInfo, Orientation};
 use crate::lengths::{
     LogicalBorderRadius, LogicalLength, LogicalPoint, LogicalRect, LogicalSize, LogicalVector,
@@ -54,6 +65,13 @@ const WHEEL_SCROLL_DURATION: Duration = Duration::from_millis(180);
 /// it is not desired
 const MAX_DURATION: Duration = Duration::from_millis(100);
 const VELOCITY_TRACKER_SAMPLES: usize = 20;
+
+#[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
+type VelocityTracker = IOsVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
+#[cfg(target_os = "macos")]
+type VelocityTracker = MacOsVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
+#[cfg(not(any(target_os = "ios", target_os = "linux", target_os = "none", target_os = "macos")))]
+type VelocityTracker = GeneralVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
 
 /// The implementation of the `Flickable` element
 #[repr(C)]
@@ -403,8 +421,6 @@ enum CaptureEvents {
     MouseWheel,
 }
 
-type UsedVelocityTracker = GeneralVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
-
 #[derive(Default)]
 struct FlickableDataInner {
     /// The time and position in which the press was made
@@ -426,7 +442,7 @@ struct FlickableDataInner {
 
     /// Ringbuffer to store the last move deltas. From those data the velocity can be
     /// calculated required for the animation after the release event
-    velocity_rb: UsedVelocityTracker,
+    velocity_rb: VelocityTracker,
 
     /// The animation details of the currently running animation for smooth mouse wheel scrolling.
     /// This allows us to add the missing delta of the animation to the next scroll event if the user scrolls again

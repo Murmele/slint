@@ -9,8 +9,7 @@
 //! Original: <https://github.com/flutter/flutter/blob/d6bed8ff6135cdd414f14edc3063f761d47ca846/packages/flutter/lib/src/gestures/velocity_tracker.dart>
 //!
 //! A close approximation of iOS scroll view's fling velocity estimation
-//! strategy: a weighted average of the last few point-to-point velocities,
-//! rather than a least-squares fit through many samples.
+//! strategy: a weighted average of the last few point-to-point velocities
 
 use super::fling::{BlendWeights, weighted_recent_velocity};
 use super::ring_buffer::VelocityRingBuffer;
