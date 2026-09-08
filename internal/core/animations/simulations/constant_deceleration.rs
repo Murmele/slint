@@ -197,6 +197,10 @@ impl ConstantDeceleration {
         }
         false
     }
+
+    pub fn remaining_distance(&self, time_elapsed: core::time::Duration) -> Coord {
+        self.data.remaining_distance(time_elapsed)
+    }
 }
 
 impl Simulation for ConstantDeceleration {
