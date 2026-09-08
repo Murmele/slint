@@ -36,6 +36,11 @@ impl<const N: usize> VelocityTracker for GeneralVelocityTracker<N> {
 
     fn estimate_velocity(&self) -> Option<VelocityEstimate> {
         let latest_time = self.buffer.last_time()?;
+        if crate::animations::current_tick().duration_since(latest_time) > ASSUME_POINTER_MOVE_STOPPED
+        {
+            return Some(VelocityEstimate { velocity: LogicalVector::default(), confidence: 1.0 });
+        }
+
         let mut count = 0;
 
         let mut time = Vec::with_capacity(self.buffer.len());
@@ -122,7 +127,7 @@ mod tests_general_velocity_tracker {
 
     #[test]
     fn test() {
-        let base_time = Instant::default();
+        let base_time = crate::animations::current_tick();
         let test_cases = [
             // (
             //     "x only",
@@ -196,9 +201,11 @@ mod tests_general_velocity_tracker {
 
         for (name, test_values, expected) in test_cases {
             let mut tracker = GeneralVelocityTracker::<8>::default();
+            let last_time = test_values.last().unwrap().0;
             for (time, position) in test_values {
                 tracker.push(time, position);
             }
+            crate::animations::update_animations(last_time);
             let res = tracker.estimate_velocity();
             assert_eq!(res.is_some(), true, "Case: {name}");
             let res = res.unwrap();

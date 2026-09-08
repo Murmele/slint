@@ -15,7 +15,7 @@
 
 use super::fling::{BlendWeights, weighted_recent_velocity};
 use super::ring_buffer::VelocityRingBuffer;
-use super::{VelocityEstimate, VelocityTracker};
+use super::{ASSUME_POINTER_MOVE_STOPPED, VelocityEstimate, VelocityTracker};
 use crate::animations::Instant;
 use crate::lengths::LogicalVector;
 
@@ -38,8 +38,10 @@ impl<const N: usize> VelocityTracker for MacOsVelocityTracker<N> {
     }
 
     fn estimate_velocity(&self) -> Option<VelocityEstimate> {
-        if self.buffer.empty() {
-            return None;
+        let last_time = self.buffer.last_time()?;
+        if crate::animations::current_tick().duration_since(last_time) > ASSUME_POINTER_MOVE_STOPPED
+        {
+            return Some(VelocityEstimate { velocity: LogicalVector::default(), confidence: 1.0 });
         }
 
         Some(VelocityEstimate {
@@ -74,13 +76,14 @@ mod tests_macos_velocity_tracker {
     #[test]
     fn estimate_velocity_blends_the_last_three_segments() {
         let mut tracker = MacOsVelocityTracker::<8>::default();
-        let base_time = Instant::default();
+        let base_time = crate::animations::current_tick();
 
         // Same setup as the iOS test: segments of 100, 200, 300 px/s.
         tracker.push(base_time, LogicalVector::new(0.0, 0.0));
         tracker.push(base_time + Duration::from_millis(10), LogicalVector::new(1.0, 0.0));
         tracker.push(base_time + Duration::from_millis(20), LogicalVector::new(2.0, 0.0));
         tracker.push(base_time + Duration::from_millis(30), LogicalVector::new(3.0, 0.0));
+        crate::animations::update_animations(base_time + Duration::from_millis(30));
 
         let estimate = tracker.estimate_velocity().unwrap();
         let [oldest, middle, newest] = [100.0, 200.0, 300.0];

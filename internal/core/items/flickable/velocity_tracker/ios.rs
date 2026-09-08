@@ -14,13 +14,11 @@
 
 use super::fling::{BlendWeights, weighted_recent_velocity};
 use super::ring_buffer::VelocityRingBuffer;
-use super::{VelocityEstimate, VelocityTracker};
+use super::{ASSUME_POINTER_MOVE_STOPPED, VelocityEstimate, VelocityTracker};
 use crate::animations::Instant;
 use crate::lengths::LogicalVector;
 
-/// iOS blends mostly the second-to-last segment, a little of the last one,
-/// and very little of the newest segment (the least reliable, e.g. right at
-/// release): `[oldest, middle, newest]`.
+///                        [oldest, middle, newest]`.
 const WEIGHTS: BlendWeights = [0.6, 0.35, 0.05];
 
 #[derive(Default)]
@@ -38,8 +36,10 @@ impl<const N: usize> VelocityTracker for IOsVelocityTracker<N> {
     }
 
     fn estimate_velocity(&self) -> Option<VelocityEstimate> {
-        if self.buffer.empty() {
-            return None;
+        let last_time = self.buffer.last_time()?;
+        if crate::animations::current_tick().duration_since(last_time) > ASSUME_POINTER_MOVE_STOPPED
+        {
+            return Some(VelocityEstimate { velocity: LogicalVector::default(), confidence: 1.0 });
         }
 
         Some(VelocityEstimate {
@@ -74,7 +74,7 @@ mod tests_ios_velocity_tracker {
     #[test]
     fn estimate_velocity_blends_the_last_three_segments() {
         let mut tracker = IOsVelocityTracker::<8>::default();
-        let base_time = Instant::default();
+        let base_time = crate::animations::current_tick();
 
         // 4 samples, 10ms apart; the first sample's delta is never used
         // (there's no earlier sample to pair it with), leaving 3 segments
@@ -83,6 +83,7 @@ mod tests_ios_velocity_tracker {
         tracker.push(base_time + Duration::from_millis(10), LogicalVector::new(1.0, 0.0));
         tracker.push(base_time + Duration::from_millis(20), LogicalVector::new(2.0, 0.0));
         tracker.push(base_time + Duration::from_millis(30), LogicalVector::new(3.0, 0.0));
+        crate::animations::update_animations(base_time + Duration::from_millis(30));
 
         let estimate = tracker.estimate_velocity().unwrap();
         let [oldest, middle, newest] = [100.0, 200.0, 300.0];
