@@ -23,6 +23,11 @@ enum Direction {
     Decreasing,
 }
 
+pub trait PositionSimulation {
+    fn remaining_distance(&self, time_elapsed: core::time::Duration) -> f32;
+    fn remaining_velocity(&self) -> f32;
+}
+
 /// Common simulation trait
 /// All simulations must implement this trait
 pub trait Simulation {

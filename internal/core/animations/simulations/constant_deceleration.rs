@@ -3,7 +3,7 @@
 
 // cSpell: ignore signum underdamped
 
-use crate::animations::simulations::{Direction, Parameter, Simulation};
+use crate::animations::simulations::{Direction, Parameter, PositionSimulation, Simulation};
 use crate::{Coord, animations::Instant};
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
@@ -197,19 +197,21 @@ impl ConstantDeceleration {
         }
         false
     }
-
-    pub fn remaining_distance(&self, time_elapsed: core::time::Duration) -> Coord {
-        self.data.remaining_distance(time_elapsed)
-    }
-
-    pub fn remaining_velocity(&self) -> f32 {
-        self.velocity
-    }
 }
 
 impl Simulation for ConstantDeceleration {
     fn step(&mut self, current: &mut f32, new_tick: Instant) -> bool {
         self.step_internal(current, new_tick)
+    }
+}
+
+impl PositionSimulation for ConstantDeceleration {
+    fn remaining_distance(&self, time_elapsed: core::time::Duration) -> f32 {
+        self.data.remaining_distance(time_elapsed) as f32
+    }
+
+    fn remaining_velocity(&self) -> f32 {
+        self.velocity
     }
 }
 

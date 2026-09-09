@@ -11,10 +11,10 @@ use super::{
     VoidArg,
 };
 use crate::animations::Instant;
-use crate::animations::simulations::Parameter;
 use crate::animations::simulations::constant_deceleration::{
     ConstantDeceleration, ConstantDecelerationParameters,
 };
+use crate::animations::simulations::{Parameter, PositionSimulation};
 use crate::input::InternalKeyEvent;
 use crate::input::{
     FocusEvent, FocusEventResult, InputEventFilterResult, InputEventResult, MouseEvent, TouchPhase,
@@ -447,8 +447,8 @@ enum CaptureEvents {
 struct RunningSimulation {
     start_time: Instant,
     weak: ItemWeak,
-    x_simulation: Option<Rc<RefCell<ConstantDeceleration>>>,
-    y_simulation: Option<Rc<RefCell<ConstantDeceleration>>>,
+    x_simulation: Option<Rc<RefCell<dyn PositionSimulation>>>,
+    y_simulation: Option<Rc<RefCell<dyn PositionSimulation>>>,
 }
 
 #[derive(Default)]
@@ -580,29 +580,33 @@ impl FlickableDataInner {
                     // At the time of writing, in practice this means we must use a physics animation.
                     let [limit_x, limit_y] = Self::flick_limits(flick_rc, delta);
 
-                    let x_simulation = (delta.x != Coord::default()).then(|| {
-                        Rc::new_cyclic(|weak| {
-                            let curr_val = content_x.get().0;
-                            content_x.set_physic_animation_value(weak.clone());
-                            let simulation = ConstantDecelerationParameters::new_with_distance(
-                                delta.x as f32,
-                                WHEEL_SCROLL_DURATION.as_secs_f32(),
-                            );
-                            RefCell::new(simulation.simulation(curr_val, limit_x))
-                        })
-                    });
+                    let x_simulation: Option<Rc<RefCell<dyn PositionSimulation>>> =
+                        (delta.x != Coord::default()).then(|| {
+                            let simulation = Rc::new_cyclic(|weak| {
+                                let curr_val = content_x.get().0;
+                                content_x.set_physic_animation_value(weak.clone());
+                                let simulation = ConstantDecelerationParameters::new_with_distance(
+                                    delta.x as f32,
+                                    WHEEL_SCROLL_DURATION.as_secs_f32(),
+                                );
+                                RefCell::new(simulation.simulation(curr_val, limit_x))
+                            });
+                            simulation as Rc<RefCell<dyn PositionSimulation>>
+                        });
 
-                    let y_simulation = (delta.y != Coord::default()).then(|| {
-                        Rc::new_cyclic(|weak| {
-                            let curr_val = content_y.get().0;
-                            content_y.set_physic_animation_value(weak.clone());
-                            let simulation = ConstantDecelerationParameters::new_with_distance(
-                                delta.y as f32,
-                                WHEEL_SCROLL_DURATION.as_secs_f32(),
-                            );
-                            RefCell::new(simulation.simulation(curr_val, limit_y))
-                        })
-                    });
+                    let y_simulation: Option<Rc<RefCell<dyn PositionSimulation>>> =
+                        (delta.y != Coord::default()).then(|| {
+                            let simulation = Rc::new_cyclic(|weak| {
+                                let curr_val = content_y.get().0;
+                                content_y.set_physic_animation_value(weak.clone());
+                                let simulation = ConstantDecelerationParameters::new_with_distance(
+                                    delta.y as f32,
+                                    WHEEL_SCROLL_DURATION.as_secs_f32(),
+                                );
+                                RefCell::new(simulation.simulation(curr_val, limit_y))
+                            });
+                            simulation as Rc<RefCell<dyn PositionSimulation>>
+                        });
 
                     if delta.x != 0 as Coord || delta.y != 0 as Coord {
                         (Flickable::FIELD_OFFSETS.flicked()).apply_pin(flick).call(&());
