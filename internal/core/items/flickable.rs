@@ -71,6 +71,7 @@ const MAX_DURATION: Duration = Duration::from_millis(100);
 const VELOCITY_TRACKER_SAMPLES: usize = 20;
 #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
 const MOMENTUM_RETAIN_VELOCITY_THRESHOLD_FACTOR: f32 = 0.5;
+const MOMENTUM_RETAIN_TIMEOUT: Duration = Duration::from_millis(20);
 
 #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
 type VelocityTracker = IOsVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
@@ -80,6 +81,10 @@ type VelocityTracker = MacOsVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
 type VelocityTracker = GeneralVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
 
 fn carried_momentum(new_estimaged_velocity: f32, current_velocity: f32) -> f32 {
+    if current_velocity == 0. {
+        return 0.;
+    }
+
     #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
     let is_velocity_not_substantially_less_than_carried_momentum = new_estimaged_velocity.abs()
         > current_velocity.abs() * MOMENTUM_RETAIN_VELOCITY_THRESHOLD_FACTOR;
@@ -478,9 +483,20 @@ struct FlickableDataInner {
     /// This allows us to add the missing delta of the animation to the next scroll event if the user scrolls again
     /// before the animation is finished.
     running_animation: Option<RunningSimulation>,
+
+    retained_velocity: LogicalVector,
 }
 
 impl FlickableDataInner {
+    fn maybe_lose_momentum(&mut self, tick: &Instant) {
+        if self
+            .last_scroll_event
+            .is_none_or(|(time, _)| tick.duration_since(time) > MOMENTUM_RETAIN_TIMEOUT)
+        {
+            self.retained_velocity = Default::default();
+        }
+    }
+
     fn should_capture_scroll(&self, timeout: Duration, position: LogicalPoint) -> bool {
         self.last_scroll_event.is_some_and(|(last_time, last_position)| {
             // Note: Squared length for MCU support, which use i32 coords.
@@ -546,6 +562,9 @@ impl FlickableDataInner {
         let new_pos = ensure_in_bound(flick, current_pos + delta, flick_rc);
         delta = new_pos - current_pos;
 
+        if phase == TouchPhase::Started {
+            self.capture_momentum();
+        }
         if phase != TouchPhase::Ended {
             content_x.remove_binding();
             content_y.remove_binding();
@@ -565,8 +584,12 @@ impl FlickableDataInner {
             }
             TouchPhase::Moved => {
                 if self.capture_events.is_some_and(|capture| capture == CaptureEvents::MouseWheel) {
+                    let current_tick = crate::animations::current_tick();
+
+                    self.maybe_lose_momentum(&current_tick);
+
                     // Touchpad case with different phases
-                    self.velocity_rb.push(crate::animations::current_tick(), new_pos - current_pos);
+                    self.velocity_rb.push(current_tick, new_pos - current_pos);
                     content_x.set(new_pos.x_length());
                     content_y.set(new_pos.y_length());
                 } else {
@@ -649,6 +672,25 @@ impl FlickableDataInner {
         }
     }
 
+    fn capture_momentum(&mut self) {
+        self.retained_velocity = self
+            .running_animation
+            .as_ref()
+            .map(|sim| {
+                LogicalVector::new(
+                    sim.x_simulation
+                        .as_ref()
+                        .map(|sim| sim.borrow().remaining_velocity())
+                        .unwrap_or_default(),
+                    sim.y_simulation
+                        .as_ref()
+                        .map(|sim| sim.borrow().remaining_velocity())
+                        .unwrap_or_default(),
+                )
+            })
+            .unwrap_or_default();
+    }
+
     fn flick_limits(
         flick_rc: &ItemRc,
         flick_velocity: LogicalVector,
@@ -704,30 +746,10 @@ impl FlickableDataInner {
                 let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
                 let content_y = (Flickable::FIELD_OFFSETS.content_y()).apply_pin(flick);
 
-                let (carried_velocity_x, carried_velocity_y) = self
-                    .running_animation
-                    .as_ref()
-                    .map(|simulation| {
-                        (
-                            carried_momentum(
-                                velocity_estimation.velocity.x,
-                                simulation
-                                    .x_simulation
-                                    .as_ref()
-                                    .map(|sim| sim.borrow().remaining_velocity())
-                                    .unwrap_or_default(),
-                            ),
-                            carried_momentum(
-                                velocity_estimation.velocity.y,
-                                simulation
-                                    .y_simulation
-                                    .as_ref()
-                                    .map(|sim| sim.borrow().remaining_velocity())
-                                    .unwrap_or_default(),
-                            ),
-                        )
-                    })
-                    .unwrap_or_default();
+                let carried_velocity_x =
+                    carried_momentum(velocity_estimation.velocity.x, self.retained_velocity.x);
+                let carried_velocity_y =
+                    carried_momentum(velocity_estimation.velocity.y, self.retained_velocity.y);
 
                 let [limit_x, limit_y] = Self::flick_limits(flick_rc, velocity_estimation.velocity);
 
@@ -953,6 +975,7 @@ impl FlickableData {
         match event {
             MouseEvent::Pressed { .. } => {
                 inner.capture_events = Some(CaptureEvents::MouseOrTouchScreen);
+                inner.capture_momentum();
                 InputEventResult::GrabMouse
             }
             MouseEvent::Exit | MouseEvent::Released { .. } => {
@@ -985,7 +1008,9 @@ impl FlickableData {
                 // system.
                 if let Some((_pressed_time, _pressed_mouse_position)) = inner.pressed_mouse_state {
                     let mouse_delta = *position - inner.last_mouse_position;
-                    inner.velocity_rb.push(crate::animations::current_tick(), mouse_delta);
+                    let current_tick = crate::animations::current_tick();
+                    inner.maybe_lose_momentum(&current_tick);
+                    inner.velocity_rb.push(current_tick, mouse_delta);
 
                     let is_capturing = inner
                         .capture_events

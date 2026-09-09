@@ -211,7 +211,12 @@ impl PositionSimulation for ConstantDeceleration {
     }
 
     fn remaining_velocity(&self) -> f32 {
-        self.velocity
+        match self.direction {
+            Direction::Increasing => self.velocity.max(0.),
+            Direction::Decreasing => self.velocity.min(0.),
+        }
+    }
+
     }
 }
 
