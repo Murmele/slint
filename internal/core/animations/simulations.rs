@@ -10,6 +10,7 @@
 
 pub mod android;
 pub mod constant_deceleration;
+pub mod ios;
 pub mod constant_deceleration_spring_damper;
 pub mod spring;
 
