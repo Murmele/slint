@@ -81,6 +81,7 @@ pub struct AndroidFlick {
     // Max distance to travel when running the simulation infinitely
     distance: f32,
     deceleration_rate: f32,
+    traveled: f32,
 }
 
 impl AndroidFlick {
@@ -121,6 +122,7 @@ impl AndroidFlick {
             duration,
             distance: max_distance,
             deceleration_rate,
+            traveled: 0.,
         }
     }
 
@@ -128,19 +130,33 @@ impl AndroidFlick {
         let time_diff = new_tick.duration_since(self.start_time);
         let clamped = (time_diff.as_secs_f32() / self.duration.as_secs_f32()).clamp(0., 1.);
 
-        let limit_value = self.limit_value.as_ref().get();
+        // This position is absolute, to get it relative, we have to subtract the previous value
+        let new_traveled = self.distance * (1. - f32::powf(1. - clamped, self.deceleration_rate));
+        *current += new_traveled - self.traveled;
+        self.traveled = new_traveled;
 
-        if self.is_done(new_tick) {
-            // *current += 0.;
-            true
-        } else {
-            *current += self.distance * (1. - f32::powf(1. - clamped, self.deceleration_rate));
-            *current = match self.direction {
-                Direction::Increasing => f32::min(*current, limit_value),
-                Direction::Decreasing => f32::max(*current, limit_value),
-            };
-            false
-        }
+        // Clamping to the limit
+        let limit_value = self.limit_value.as_ref().get();
+        let clamped = match self.direction {
+            Direction::Increasing => {
+                if *current >= limit_value {
+                    *current = limit_value;
+                    true
+                } else {
+                    false
+                }
+            }
+            Direction::Decreasing => {
+                if *current <= limit_value {
+                    *current = limit_value;
+                    true
+                } else {
+                    false
+                }
+            }
+        };
+
+        self.is_done(new_tick) || clamped
     }
 
     fn is_done(&mut self, new_tick: Instant) -> bool {
