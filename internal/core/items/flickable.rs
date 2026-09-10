@@ -113,6 +113,25 @@ fn carried_momentum(
     0.
 }
 
+enum SimulationParameter {
+    Distance { delta: f32, duration: Duration },
+    Velocity { velocity: f32 },
+}
+
+fn create_simulation(
+    simulation_parameter: SimulationParameter,
+    flick: Pin<&Flickable>,
+) -> AndroidFlickParameters {
+    match simulation_parameter {
+        SimulationParameter::Velocity { velocity } => {
+            AndroidFlickParameters::new_with_default_friction(velocity)
+        }
+        SimulationParameter::Distance { delta, duration } => {
+            AndroidFlickParameters::new_with_distance(delta, duration)
+        }
+    }
+}
+
 /// The implementation of the `Flickable` element
 #[repr(C)]
 #[derive(FieldOffsets, Default, SlintElement)]
@@ -628,9 +647,12 @@ impl FlickableDataInner {
                             let simulation = Rc::new_cyclic(|weak| {
                                 let curr_val = content_x.get().0;
                                 content_x.set_physic_animation_value(weak.clone());
-                                let simulation = AndroidFlickParameters::new_with_distance(
-                                    delta.x as f32,
-                                    WHEEL_SCROLL_DURATION.as_secs_f32(),
+                                let simulation = create_simulation(
+                                    SimulationParameter::Distance {
+                                        delta: delta.x as f32,
+                                        duration: WHEEL_SCROLL_DURATION,
+                                    },
+                                    flick,
                                 );
                                 RefCell::new(simulation.simulation(curr_val, limit_x))
                             });
@@ -642,9 +664,12 @@ impl FlickableDataInner {
                             let simulation = Rc::new_cyclic(|weak| {
                                 let curr_val = content_y.get().0;
                                 content_y.set_physic_animation_value(weak.clone());
-                                let simulation = AndroidFlickParameters::new_with_distance(
-                                    delta.y as f32,
-                                    WHEEL_SCROLL_DURATION.as_secs_f32(),
+                                let simulation = create_simulation(
+                                    SimulationParameter::Distance {
+                                        delta: delta.y as f32,
+                                        duration: WHEEL_SCROLL_DURATION,
+                                    },
+                                    flick,
                                 );
                                 RefCell::new(simulation.simulation(curr_val, limit_y))
                             });
@@ -783,8 +808,11 @@ impl FlickableDataInner {
                 let x_simulation = Rc::new_cyclic(|weak| {
                     let curr_val = content_x.get().0;
                     content_x.set_physic_animation_value(weak.clone());
-                    let animation = AndroidFlickParameters::new_with_default_friction(
-                        velocity_estimation.velocity.x + carried_velocity_x,
+                    let animation = create_simulation(
+                        SimulationParameter::Velocity {
+                            velocity: velocity_estimation.velocity.x + carried_velocity_x,
+                        },
+                        flick,
                     );
                     RefCell::new(animation.simulation(curr_val, limit_x))
                 });
@@ -792,8 +820,11 @@ impl FlickableDataInner {
                 let y_simulation = Rc::new_cyclic(|weak| {
                     let curr_val = content_y.get().0;
                     content_y.set_physic_animation_value(weak.clone());
-                    let animation = AndroidFlickParameters::new_with_default_friction(
-                        velocity_estimation.velocity.y + carried_velocity_y,
+                    let animation = create_simulation(
+                        SimulationParameter::Velocity {
+                            velocity: velocity_estimation.velocity.y + carried_velocity_y,
+                        },
+                        flick,
                     );
                     RefCell::new(animation.simulation(curr_val, limit_y))
                 });

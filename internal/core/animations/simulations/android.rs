@@ -43,15 +43,16 @@ impl AndroidFlickParameters {
         Self { initial_velocity, friction: DEFAULT_FRICTION }
     }
 
-    pub fn new_with_distance(distance: f32, duration_secs: f32) -> Self {
+    pub fn new_with_distance(distance: f32, duration: Duration) -> Self {
+        let duration = duration.as_secs_f32();
         // Calculate the friction
         // distance = init_vel * max_duration / Dec rate
         // --> init_vel = distance * dec_rate / max_duration
         let dec_rate = deceleration_rate();
-        let initial_velocity = distance * dec_rate / duration_secs;
+        let initial_velocity = distance * dec_rate / duration;
 
         // extract friction from the fling_duration() function
-        let f = f32::powf(duration_secs / (dec_rate * INFLEXION), dec_rate - 1.);
+        let f = f32::powf(duration / (dec_rate * INFLEXION), dec_rate - 1.);
         let friction = initial_velocity.abs() / (f * (PHYSICAL_COEFFICIENT / INFLEXION));
         Self { initial_velocity, friction }
     }
