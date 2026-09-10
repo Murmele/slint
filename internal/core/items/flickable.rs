@@ -11,9 +11,7 @@ use super::{
     VoidArg,
 };
 use crate::animations::Instant;
-use crate::animations::simulations::constant_deceleration::{
-    ConstantDeceleration, ConstantDecelerationParameters,
-};
+use crate::animations::simulations::android::AndroidFlickParameters;
 use crate::animations::simulations::{Parameter, PositionSimulation};
 use crate::input::InternalKeyEvent;
 use crate::input::{
@@ -54,12 +52,9 @@ use euclid::num::Zero;
 use i_slint_core_macros::*;
 #[allow(unused)]
 use num_traits::Float;
+use std::println;
 mod velocity_tracker;
 
-/// Deceleration during the animation. It slows down the initial velocity of the simulation
-/// so that the simulation stops at some point if it didn't reach the limit
-/// The unit is: LogicalPixel/s^2
-const DECELERATION: f32 = 2000.;
 /// Fixed-duration animation used for wheel scrolling, where we don't have enough phase
 /// information to derive a fling velocity.
 /// The unit is: millisecond
@@ -94,11 +89,10 @@ fn carried_momentum(new_estimaged_velocity: f32, current_velocity: f32) -> f32 {
     #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
     if is_velocity_not_substantially_less_than_carried_momentum && same_direction {
         // On Android this momentum carry on does not exist
-        current_velocity.signum()
-            * f32::min(0.000816 * f32::powf(current_velocity.abs(), 1.967), 40000.0)
-    } else {
-        0.
+        return current_velocity.signum()
+            * f32::min(0.000816 * f32::powf(current_velocity.abs(), 1.967), 40000.0);
     }
+    0.
 }
 
 /// The implementation of the `Flickable` element
@@ -584,11 +578,16 @@ impl FlickableDataInner {
             }
             TouchPhase::Moved => {
                 if self.capture_events.is_some_and(|capture| capture == CaptureEvents::MouseWheel) {
+                    if let Some(e) = self.velocity_rb.estimate_velocity() {
+                        println!("Estimated y velocity: {}", e.velocity.y);
+                    }
+
                     let current_tick = crate::animations::current_tick();
 
                     self.maybe_lose_momentum(&current_tick);
 
                     // Touchpad case with different phases
+                    println!("Push: {:?}, Diff: {:?}", current_tick, new_pos - current_pos);
                     self.velocity_rb.push(current_tick, new_pos - current_pos);
                     content_x.set(new_pos.x_length());
                     content_y.set(new_pos.y_length());
@@ -608,7 +607,7 @@ impl FlickableDataInner {
                             let simulation = Rc::new_cyclic(|weak| {
                                 let curr_val = content_x.get().0;
                                 content_x.set_physic_animation_value(weak.clone());
-                                let simulation = ConstantDecelerationParameters::new_with_distance(
+                                let simulation = AndroidFlickParameters::new_with_distance(
                                     delta.x as f32,
                                     WHEEL_SCROLL_DURATION.as_secs_f32(),
                                 );
@@ -622,7 +621,7 @@ impl FlickableDataInner {
                             let simulation = Rc::new_cyclic(|weak| {
                                 let curr_val = content_y.get().0;
                                 content_y.set_physic_animation_value(weak.clone());
-                                let simulation = ConstantDecelerationParameters::new_with_distance(
+                                let simulation = AndroidFlickParameters::new_with_distance(
                                     delta.y as f32,
                                     WHEEL_SCROLL_DURATION.as_secs_f32(),
                                 );
@@ -677,14 +676,15 @@ impl FlickableDataInner {
             .running_animation
             .as_ref()
             .map(|sim| {
+                let dt = crate::animations::current_tick().duration_since(sim.start_time);
                 LogicalVector::new(
                     sim.x_simulation
                         .as_ref()
-                        .map(|sim| sim.borrow().remaining_velocity())
+                        .map(|sim| sim.borrow().remaining_velocity(dt))
                         .unwrap_or_default(),
                     sim.y_simulation
                         .as_ref()
-                        .map(|sim| sim.borrow().remaining_velocity())
+                        .map(|sim| sim.borrow().remaining_velocity(dt))
                         .unwrap_or_default(),
                 )
             })
@@ -756,9 +756,8 @@ impl FlickableDataInner {
                 let x_simulation = Rc::new_cyclic(|weak| {
                     let curr_val = content_x.get().0;
                     content_x.set_physic_animation_value(weak.clone());
-                    let animation = ConstantDecelerationParameters::new(
+                    let animation = AndroidFlickParameters::new_with_default_friction(
                         velocity_estimation.velocity.x + carried_velocity_x,
-                        DECELERATION,
                     );
                     RefCell::new(animation.simulation(curr_val, limit_x))
                 });
@@ -766,9 +765,8 @@ impl FlickableDataInner {
                 let y_simulation = Rc::new_cyclic(|weak| {
                     let curr_val = content_y.get().0;
                     content_y.set_physic_animation_value(weak.clone());
-                    let animation = ConstantDecelerationParameters::new(
+                    let animation = AndroidFlickParameters::new_with_default_friction(
                         velocity_estimation.velocity.y + carried_velocity_y,
-                        DECELERATION,
                     );
                     RefCell::new(animation.simulation(curr_val, limit_y))
                 });

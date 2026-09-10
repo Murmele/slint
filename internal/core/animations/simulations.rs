@@ -8,6 +8,7 @@
 //! - `ConstantDeceleration`
 //! - `ConstantDecelerationSpringDamper` with spring damper simulation when reaching the limit
 
+pub mod android;
 pub mod constant_deceleration;
 pub mod constant_deceleration_spring_damper;
 pub mod spring;
@@ -25,7 +26,8 @@ enum Direction {
 
 pub trait PositionSimulation {
     fn remaining_distance(&self, time_elapsed: core::time::Duration) -> f32;
-    fn remaining_velocity(&self) -> f32;
+    fn remaining_velocity(&self, time_elapsed: core::time::Duration) -> f32;
+    fn overshoot_allowed(&self) -> bool;
 }
 
 /// Common simulation trait

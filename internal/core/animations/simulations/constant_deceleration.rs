@@ -210,13 +210,15 @@ impl PositionSimulation for ConstantDeceleration {
         self.data.remaining_distance(time_elapsed) as f32
     }
 
-    fn remaining_velocity(&self) -> f32 {
+    fn remaining_velocity(&self, _time_elapsed: core::time::Duration) -> f32 {
         match self.direction {
             Direction::Increasing => self.velocity.max(0.),
             Direction::Decreasing => self.velocity.min(0.),
         }
     }
 
+    fn overshoot_allowed(&self) -> bool {
+        false
     }
 }
 
