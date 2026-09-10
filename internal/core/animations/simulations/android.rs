@@ -128,8 +128,19 @@ impl AndroidFlick {
         let time_diff = new_tick.duration_since(self.start_time);
         let clamped = (time_diff.as_secs_f32() / self.duration.as_secs_f32()).clamp(0., 1.);
 
-        *current += self.distance * (1. - f32::powf(1. - clamped, self.deceleration_rate));
-        self.is_done(new_tick)
+        let limit_value = self.limit_value.as_ref().get();
+
+        if self.is_done(new_tick) {
+            // *current += 0.;
+            true
+        } else {
+            *current += self.distance * (1. - f32::powf(1. - clamped, self.deceleration_rate));
+            *current = match self.direction {
+                Direction::Increasing => f32::min(*current, limit_value),
+                Direction::Decreasing => f32::max(*current, limit_value),
+            };
+            false
+        }
     }
 
     fn is_done(&mut self, new_tick: Instant) -> bool {
