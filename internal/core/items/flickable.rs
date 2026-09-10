@@ -19,6 +19,7 @@ use crate::input::{
 };
 use crate::item_rendering::CachedRenderingData;
 use crate::item_tree::ItemWeak;
+use crate::items::AutoBool;
 #[cfg(not(any(
     target_os = "ios",
     target_os = "linux",
@@ -64,10 +65,12 @@ const WHEEL_SCROLL_DURATION: Duration = Duration::from_millis(180);
 /// it is not desired
 const MAX_DURATION: Duration = Duration::from_millis(100);
 const VELOCITY_TRACKER_SAMPLES: usize = 20;
-#[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
 const MOMENTUM_RETAIN_VELOCITY_THRESHOLD_FACTOR: f32 = 0.5;
 const MOMENTUM_RETAIN_TIMEOUT: Duration = Duration::from_millis(20);
 
+// We use for linux and no os this because embedded is computational power constrait
+// and embedded linux can be as well and the velocity estimation is much easier
+// than for the general velocity tracker
 #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
 type VelocityTracker = IOsVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
 #[cfg(target_os = "macos")]
@@ -75,18 +78,33 @@ type VelocityTracker = MacOsVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
 #[cfg(not(any(target_os = "ios", target_os = "linux", target_os = "none", target_os = "macos")))]
 type VelocityTracker = GeneralVelocityTracker<VELOCITY_TRACKER_SAMPLES>;
 
-fn carried_momentum(new_estimaged_velocity: f32, current_velocity: f32) -> f32 {
-    if current_velocity == 0. {
+fn carried_momentum(
+    new_estimaged_velocity: f32,
+    current_velocity: f32,
+    flick: Pin<&Flickable>,
+) -> f32 {
+    let cm = match flick.carry_momentum() {
+        AutoBool::Auto => {
+            #[cfg(target_os = "ios")]
+            {
+                true
+            }
+            #[cfg(not(target_os = "ios"))]
+            {
+                false
+            }
+        }
+        AutoBool::On => true,
+        AutoBool::Off => false,
+    };
+    if current_velocity == 0. || !cm {
         return 0.;
     }
 
-    #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
     let is_velocity_not_substantially_less_than_carried_momentum = new_estimaged_velocity.abs()
         > current_velocity.abs() * MOMENTUM_RETAIN_VELOCITY_THRESHOLD_FACTOR;
-    #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
     let same_direction = new_estimaged_velocity.signum() == current_velocity.signum();
 
-    #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
     if is_velocity_not_substantially_less_than_carried_momentum && same_direction {
         // On Android this momentum carry on does not exist
         return current_velocity.signum()
@@ -107,6 +125,9 @@ pub struct Flickable {
 
     pub interactive: Property<bool>,
     pub mouse_drag_pan_enabled: Property<bool>,
+
+    pub bounce: Property<AutoBool>,
+    pub carry_momentum: Property<AutoBool>,
 
     pub flicked: Callback<VoidArg>,
 
@@ -746,10 +767,16 @@ impl FlickableDataInner {
                 let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
                 let content_y = (Flickable::FIELD_OFFSETS.content_y()).apply_pin(flick);
 
-                let carried_velocity_x =
-                    carried_momentum(velocity_estimation.velocity.x, self.retained_velocity.x);
-                let carried_velocity_y =
-                    carried_momentum(velocity_estimation.velocity.y, self.retained_velocity.y);
+                let carried_velocity_x = carried_momentum(
+                    velocity_estimation.velocity.x,
+                    self.retained_velocity.x,
+                    flick,
+                );
+                let carried_velocity_y = carried_momentum(
+                    velocity_estimation.velocity.y,
+                    self.retained_velocity.y,
+                    flick,
+                );
 
                 let [limit_x, limit_y] = Self::flick_limits(flick_rc, velocity_estimation.velocity);
 
