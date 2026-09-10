@@ -23,7 +23,12 @@ mod least_square;
 mod macos;
 mod ring_buffer;
 
-#[cfg(not(any(target_os = "ios", target_os = "linux", target_os = "none", target_os = "macos")))]
+#[cfg(not(any(
+    target_os = "ios",
+    target_os = "linux",
+    target_os = "none",
+    target_os = "macos"
+)))]
 pub(crate) use general::GeneralVelocityTracker;
 #[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
 pub(crate) use ios::IOsVelocityTracker;

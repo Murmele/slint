@@ -19,10 +19,11 @@
 //! mass/spring/damper ODE Flutter's own `SpringSimulation` solves.
 
 use core::time::Duration;
+use std::println;
 
+use crate::animations::Instant;
 use crate::animations::simulations::spring::SpringRegime;
 use crate::animations::simulations::{Direction, Parameter, PositionSimulation, Simulation};
-use crate::animations::Instant;
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
 
@@ -63,6 +64,11 @@ pub struct IOsFlickParameters {
 impl IOsFlickParameters {
     pub fn new(initial_velocity: f32) -> Self {
         Self { initial_velocity }
+    }
+    pub fn new_with_distance(distance: f32, _duration: Duration) -> Self {
+        let drag_log = f32::ln(DRAG);
+        // finalX - x0 = -v0 / drag_log  =>  v0 = -distance * drag_log
+        Self { initial_velocity: -distance * drag_log }
     }
 }
 
@@ -150,8 +156,12 @@ impl IOsFlick {
         // See BouncingScrollSimulation's `maxSpringTransferVelocity` clamp: only ever
         // caps an excessively fast *positive* handoff velocity, same as upstream.
         let spring_velocity = f32::min(v_at_spring, MAX_SPRING_TRANSFER_VELOCITY);
-        let spring =
-            SpringRegime::new(0., spring_velocity, spring_natural_frequency(), SPRING_DAMPING_RATIO);
+        let spring = SpringRegime::new(
+            0.,
+            spring_velocity,
+            spring_natural_frequency(),
+            SPRING_DAMPING_RATIO,
+        );
 
         Self {
             limit_value,
@@ -198,7 +208,7 @@ impl IOsFlick {
     /// Position, velocity, and whether the simulation has settled, at
     /// elapsed time `t` since `start_time`.
     fn evaluate(&self, t: f32) -> (f32, f32, bool) {
-        if t < self.spring_time {
+        let res = if t < self.spring_time {
             let (position, velocity) = self.friction_at(t);
             (position, velocity, f32::abs(velocity) < VELOCITY_TOLERANCE)
         } else {
@@ -207,7 +217,9 @@ impl IOsFlick {
             let done = f32::abs(position - limit) < DISTANCE_TOLERANCE
                 && f32::abs(velocity) < VELOCITY_TOLERANCE;
             (position, velocity, done)
-        }
+        };
+        println!("Evaluate: {res:?}");
+        res
     }
 
     fn step_internal(&mut self, current: &mut f32, new_tick: Instant) -> bool {

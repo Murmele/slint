@@ -10,8 +10,9 @@
 
 pub mod android;
 pub mod constant_deceleration;
-pub mod ios;
 pub mod constant_deceleration_spring_damper;
+pub mod flick;
+pub mod ios;
 pub mod spring;
 
 use crate::animations::Instant;

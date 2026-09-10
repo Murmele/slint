@@ -11,8 +11,10 @@ use super::{
     VoidArg,
 };
 use crate::animations::Instant;
-use crate::animations::simulations::android::AndroidFlickParameters;
-use crate::animations::simulations::{Parameter, PositionSimulation};
+use crate::animations::simulations::PositionSimulation;
+use crate::animations::simulations::flick::{
+    FlickSimulation, FlickSimulationParameter, create_simulation, use_bounce,
+};
 use crate::input::InternalKeyEvent;
 use crate::input::{
     FocusEvent, FocusEventResult, InputEventFilterResult, InputEventResult, MouseEvent, TouchPhase,
@@ -42,7 +44,7 @@ use crate::rtti::*;
 use crate::window::WindowAdapter;
 use crate::{Callback, Coord, Property};
 use alloc::boxed::Box;
-use alloc::rc::Rc;
+use alloc::rc::{Rc, Weak};
 use const_field_offset::FieldOffsets;
 use core::cell::RefCell;
 use core::pin::Pin;
@@ -113,25 +115,6 @@ fn carried_momentum(
     0.
 }
 
-enum SimulationParameter {
-    Distance { delta: f32, duration: Duration },
-    Velocity { velocity: f32 },
-}
-
-fn create_simulation(
-    simulation_parameter: SimulationParameter,
-    flick: Pin<&Flickable>,
-) -> AndroidFlickParameters {
-    match simulation_parameter {
-        SimulationParameter::Velocity { velocity } => {
-            AndroidFlickParameters::new_with_default_friction(velocity)
-        }
-        SimulationParameter::Distance { delta, duration } => {
-            AndroidFlickParameters::new_with_distance(delta, duration)
-        }
-    }
-}
-
 /// The implementation of the `Flickable` element
 #[repr(C)]
 #[derive(FieldOffsets, Default, SlintElement)]
@@ -145,7 +128,8 @@ pub struct Flickable {
     pub interactive: Property<bool>,
     pub mouse_drag_pan_enabled: Property<bool>,
 
-    pub bounce: Property<AutoBool>,
+    pub bounce_x: Property<AutoBool>,
+    pub bounce_y: Property<AutoBool>,
     pub carry_momentum: Property<AutoBool>,
 
     pub flicked: Callback<VoidArg>,
@@ -158,6 +142,12 @@ pub struct Flickable {
 
 impl Item for Flickable {
     fn init(self: Pin<&Self>, self_rc: &ItemRc) {
+        #[cfg(slint_debug_property)]
+        {
+            *self.bounce_x.debug_name.borrow_mut() = "Bounce x".into();
+            *self.content_x.debug_name.borrow_mut() = "Content x".into();
+            *self.content_y.debug_name.borrow_mut() = "Content y".into();
+        }
         self.data.in_bound_change_handler.init_delayed(
             self_rc.downgrade(),
             // Binding that returns if the Flickable is out of bounds:
@@ -191,12 +181,12 @@ impl Item for Flickable {
                 let p = ensure_in_bound(flick, LogicalPoint::from_lengths(vpx, vpy), &flick_rc);
 
                 let x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
-                if *x_out_of_bounds && !x.has_binding() {
+                if *x_out_of_bounds && !x.has_binding() && !use_bounce(flick.bounce_x()) {
                     x.set(p.x_length());
                 }
 
                 let y = (Flickable::FIELD_OFFSETS.content_y()).apply_pin(flick);
-                if *y_out_of_bounds && !y.has_binding() {
+                if *y_out_of_bounds && !y.has_binding() && !use_bounce(flick.bounce_y()) {
                     y.set(p.y_length());
                 }
             },
@@ -549,8 +539,12 @@ impl FlickableDataInner {
     ) -> bool {
         let geo = Flickable::geometry_without_virtual_keyboard(flick_rc);
 
-        (delta.y != 0 as Coord && flick.content_height() > geo.height_length())
-            || (delta.x != 0 as Coord && flick.content_width() > geo.width_length())
+        let allowed_y = use_bounce(flick.bounce_y())
+            || (delta.y != 0 as Coord && flick.content_height() > geo.height_length());
+        let allowed_x = use_bounce(flick.bounce_y())
+            || (delta.x != 0 as Coord && flick.content_width() > geo.width_length());
+
+        allowed_x || allowed_y
     }
 
     fn process_wheel_event(
@@ -642,39 +636,43 @@ impl FlickableDataInner {
                     // At the time of writing, in practice this means we must use a physics animation.
                     let [limit_x, limit_y] = Self::flick_limits(flick_rc, delta);
 
-                    let x_simulation: Option<Rc<RefCell<dyn PositionSimulation>>> =
-                        (delta.x != Coord::default()).then(|| {
-                            let simulation = Rc::new_cyclic(|weak| {
-                                let curr_val = content_x.get().0;
-                                content_x.set_physic_animation_value(weak.clone());
-                                let simulation = create_simulation(
-                                    SimulationParameter::Distance {
-                                        delta: delta.x as f32,
-                                        duration: WHEEL_SCROLL_DURATION,
-                                    },
-                                    flick,
-                                );
-                                RefCell::new(simulation.simulation(curr_val, limit_x))
-                            });
-                            simulation as Rc<RefCell<dyn PositionSimulation>>
+                    let x_simulation: Option<Rc<RefCell<dyn PositionSimulation>>> = (delta.x
+                        != Coord::default())
+                    .then(|| {
+                        let simulation = Rc::new_cyclic(|weak: &Weak<RefCell<FlickSimulation>>| {
+                            let curr_val = content_x.get().0;
+                            content_x.set_physic_animation_value(weak.clone());
+                            RefCell::new(create_simulation(
+                                FlickSimulationParameter::Distance {
+                                    delta: delta.x as f32,
+                                    duration: WHEEL_SCROLL_DURATION,
+                                },
+                                flick.bounce_x(),
+                                curr_val,
+                                limit_x,
+                            ))
                         });
+                        simulation as Rc<RefCell<dyn PositionSimulation>>
+                    });
 
-                    let y_simulation: Option<Rc<RefCell<dyn PositionSimulation>>> =
-                        (delta.y != Coord::default()).then(|| {
-                            let simulation = Rc::new_cyclic(|weak| {
-                                let curr_val = content_y.get().0;
-                                content_y.set_physic_animation_value(weak.clone());
-                                let simulation = create_simulation(
-                                    SimulationParameter::Distance {
-                                        delta: delta.y as f32,
-                                        duration: WHEEL_SCROLL_DURATION,
-                                    },
-                                    flick,
-                                );
-                                RefCell::new(simulation.simulation(curr_val, limit_y))
-                            });
-                            simulation as Rc<RefCell<dyn PositionSimulation>>
+                    let y_simulation: Option<Rc<RefCell<dyn PositionSimulation>>> = (delta.y
+                        != Coord::default())
+                    .then(|| {
+                        let simulation = Rc::new_cyclic(|weak: &Weak<RefCell<FlickSimulation>>| {
+                            let curr_val = content_y.get().0;
+                            content_y.set_physic_animation_value(weak.clone());
+                            RefCell::new(create_simulation(
+                                FlickSimulationParameter::Distance {
+                                    delta: delta.y as f32,
+                                    duration: WHEEL_SCROLL_DURATION,
+                                },
+                                flick.bounce_y(),
+                                curr_val,
+                                limit_y,
+                            ))
                         });
+                        simulation as Rc<RefCell<dyn PositionSimulation>>
+                    });
 
                     if delta.x != 0 as Coord || delta.y != 0 as Coord {
                         (Flickable::FIELD_OFFSETS.flicked()).apply_pin(flick).call(&());
@@ -805,28 +803,30 @@ impl FlickableDataInner {
 
                 let [limit_x, limit_y] = Self::flick_limits(flick_rc, velocity_estimation.velocity);
 
-                let x_simulation = Rc::new_cyclic(|weak| {
+                let x_simulation = Rc::new_cyclic(|weak: &Weak<RefCell<FlickSimulation>>| {
                     let curr_val = content_x.get().0;
                     content_x.set_physic_animation_value(weak.clone());
-                    let animation = create_simulation(
-                        SimulationParameter::Velocity {
+                    RefCell::new(create_simulation(
+                        FlickSimulationParameter::Velocity {
                             velocity: velocity_estimation.velocity.x + carried_velocity_x,
                         },
-                        flick,
-                    );
-                    RefCell::new(animation.simulation(curr_val, limit_x))
+                        flick.bounce_x(),
+                        curr_val,
+                        limit_x,
+                    ))
                 });
 
-                let y_simulation = Rc::new_cyclic(|weak| {
+                let y_simulation = Rc::new_cyclic(|weak: &Weak<RefCell<FlickSimulation>>| {
                     let curr_val = content_y.get().0;
-                    content_y.set_physic_animation_value(weak.clone());
-                    let animation = create_simulation(
-                        SimulationParameter::Velocity {
+                    // content_y.set_physic_animation_value(weak.clone());
+                    RefCell::new(create_simulation(
+                        FlickSimulationParameter::Velocity {
                             velocity: velocity_estimation.velocity.y + carried_velocity_y,
                         },
-                        flick,
-                    );
-                    RefCell::new(animation.simulation(curr_val, limit_y))
+                        flick.bounce_y(),
+                        curr_val,
+                        limit_y,
+                    ))
                 });
 
                 self.running_animation = Some(RunningSimulation {
@@ -999,10 +999,15 @@ impl FlickableData {
 
         // We should capture the mouse movement, if the flickable can move in this
         // axis, and the mouse has moved more than the threshold in this axis.
-        ((content_width > flickable_width || flick.content_x() != zero)
-            && abs(mouse_delta.x_length()) > DISTANCE_THRESHOLD)
-            || ((content_height > flickable_height || flick.content_y() != zero)
-                && abs(mouse_delta.y_length()) > DISTANCE_THRESHOLD)
+        let should_capture_x = (use_bounce(flick.bounce_x())
+            || content_width > flickable_width
+            || flick.content_x() != zero)
+            && abs(mouse_delta.x_length()) > DISTANCE_THRESHOLD;
+        let should_capture_y = (use_bounce(flick.bounce_y())
+            || content_height > flickable_height
+            || flick.content_y() != zero)
+            && abs(mouse_delta.y_length()) > DISTANCE_THRESHOLD;
+        should_capture_x || should_capture_y
     }
 
     /// Whether the flickable has any content to pan in either direction, regardless of mouse movement.
@@ -1016,8 +1021,14 @@ impl FlickableData {
         let content_height = flick.content_height();
         let zero = LogicalLength::zero();
 
-        (content_width > flickable_width || flick.content_x() != zero)
-            || (content_height > flickable_height || flick.content_y() != zero)
+        let can_pan_x = use_bounce(flick.bounce_x())
+            || content_width > flickable_width
+            || flick.content_x() != zero;
+        let can_pan_y = use_bounce(flick.bounce_y())
+            || content_height > flickable_height
+            || flick.content_y() != zero;
+
+        can_pan_x || can_pan_y
     }
 
     fn handle_mouse(
@@ -1087,8 +1098,11 @@ impl FlickableData {
                         // ListView will continuously update it.
                         // So we cannot calculate the delta in content coordinates.
                         let new_content_position = current_content_position + mouse_delta;
+                        println!("Before new_content_position _y: {:?}", new_content_position.x);
                         let new_content_position =
                             ensure_in_bound(flick, new_content_position, flick_rc);
+
+                        println!("new_content_position _y: {:?}", new_content_position.x);
 
                         content_x.set(new_content_position.x_length());
                         content_y.set(new_content_position.y_length());
@@ -1148,16 +1162,20 @@ fn abs(l: LogicalLength) -> LogicalLength {
 }
 
 /// Make sure that the point is within the bounds
-fn ensure_in_bound(flick: Pin<&Flickable>, p: LogicalPoint, flick_rc: &ItemRc) -> LogicalPoint {
+fn ensure_in_bound(flick: Pin<&Flickable>, mut p: LogicalPoint, flick_rc: &ItemRc) -> LogicalPoint {
     let geo = Flickable::geometry_without_virtual_keyboard(flick_rc);
     let w = geo.width_length();
     let h = geo.height_length();
-    let cw = (Flickable::FIELD_OFFSETS.content_width()).apply_pin(flick).get();
-    let ch = (Flickable::FIELD_OFFSETS.content_height()).apply_pin(flick).get();
+    let cw = flick.content_width();
+    let ch = flick.content_height();
 
-    let min = LogicalPoint::from_lengths(w - cw, h - ch);
-    let max = LogicalPoint::default();
-    p.max(min).min(max)
+    if !use_bounce(flick.bounce_x()) {
+        p.x = p.x.clamp((w - cw).get(), Default::default());
+    }
+    if !use_bounce(flick.bounce_y()) {
+        p.y = p.y.clamp((h - ch).get(), Default::default());
+    }
+    p
 }
 
 /// # Safety

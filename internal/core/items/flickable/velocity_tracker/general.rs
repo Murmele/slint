@@ -7,11 +7,11 @@
 //!
 //! Original: <https://github.com/flutter/flutter/blob/d6bed8ff6135cdd414f14edc3063f761d47ca846/packages/flutter/lib/src/gestures/velocity_tracker.dart> (the `VelocityTracker` class)
 
+use super::least_square::LeastSquaresSolver;
 use super::ring_buffer::{VelocityRingBuffer, VelocityRingBufferIterator};
 use super::{ASSUME_POINTER_MOVE_STOPPED, VelocityEstimate, VelocityTracker};
 use crate::Coord;
 use crate::animations::Instant;
-use super::least_square::LeastSquaresSolver;
 use crate::lengths::LogicalVector;
 use alloc::vec::Vec;
 use core::time::Duration;
@@ -36,7 +36,8 @@ impl<const N: usize> VelocityTracker for GeneralVelocityTracker<N> {
 
     fn estimate_velocity(&self) -> Option<VelocityEstimate> {
         let latest_time = self.buffer.last_time()?;
-        if crate::animations::current_tick().duration_since(latest_time) > ASSUME_POINTER_MOVE_STOPPED
+        if crate::animations::current_tick().duration_since(latest_time)
+            > ASSUME_POINTER_MOVE_STOPPED
         {
             return Some(VelocityEstimate { velocity: LogicalVector::default(), confidence: 1.0 });
         }

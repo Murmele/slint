@@ -4,7 +4,7 @@
 use super::*;
 use crate::{
     animations::simulations::{
-        Parameter, Simulation,
+        Simulation,
         spring::{SpringDurationBounceParameters, SpringParameters, SpringRegime},
     },
     items::{AnimationDirection, PropertyAnimation},

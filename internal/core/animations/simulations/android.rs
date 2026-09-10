@@ -12,8 +12,8 @@
 
 use core::time::Duration;
 
+use crate::animations::Instant;
 use crate::animations::simulations::{Direction, Parameter, PositionSimulation, Simulation};
-use crate::{Coord, animations::Instant};
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
 
