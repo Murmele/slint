@@ -1104,7 +1104,7 @@ impl<T: Clone> Property<T> {
         T: 'static,
     {
         if self.debug_name.borrow().ends_with("content-y") {
-            println!("Set property {}: {}", self.debug_name.borrow(), format_property_value(t));
+            // println!("Set property {}: {}", self.debug_name.borrow(), format_property_value(t));
         }
     }
 

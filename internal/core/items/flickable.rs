@@ -408,7 +408,7 @@ impl Flickable {
         Self::FIELD_OFFSETS.content_y().apply_pin(self).set(euclid::Length::new(-new_cy));
     }
 
-    fn geometry_without_virtual_keyboard(self_rc: &ItemRc) -> LogicalRect {
+    pub(crate) fn geometry_without_virtual_keyboard(self_rc: &ItemRc) -> LogicalRect {
         let mut geometry = self_rc.geometry();
 
         // subtract keyboard rect if needed
@@ -549,6 +549,27 @@ impl FlickableDataInner {
         allowed_x || allowed_y
     }
 
+    fn calculate_move_offset(
+        &self,
+        current_pos: LogicalPoint,
+        delta: LogicalVector,
+        flick: Pin<&Flickable>,
+        flick_rc: &ItemRc,
+    ) -> LogicalVector {
+        let new_pos = ensure_in_bound(flick, current_pos + delta, flick_rc, false);
+        let delta_old = delta;
+        let delta =
+            FlickSimulation::apply_friction(current_pos, new_pos - current_pos, flick, flick_rc);
+        println!(
+            "Changing delta: {:?}. Old: {:?}, New unbound: {:?}. Old position: {:?}",
+            delta_old - delta,
+            delta,
+            current_pos + delta,
+            current_pos
+        );
+        delta
+    }
+
     fn process_wheel_event(
         &mut self,
         flick: Pin<&Flickable>,
@@ -589,8 +610,7 @@ impl FlickableDataInner {
             }
         }
 
-        let new_pos = ensure_in_bound(flick, current_pos + delta, flick_rc, false);
-        delta = new_pos - current_pos;
+        let new_pos = current_pos + self.calculate_move_offset(current_pos, delta, flick, flick_rc);
 
         if phase == TouchPhase::Started {
             self.capture_momentum();
@@ -858,12 +878,13 @@ impl FlickableDataInner {
                     });
                     Some(y_simulation as Rc<RefCell<dyn PositionSimulation>>)
                 }
-                Some(velocity_estimation) if !inside_bounds_y => {
+                Some(_velocity_estimation) if !inside_bounds_y => {
                     let content_y = (Flickable::FIELD_OFFSETS.content_y()).apply_pin(flick);
-                    let limit_y =
-                        Self::flick_limits(flick_rc, velocity_estimation.velocity.y, false);
+                    let curr_val = content_y.get().0;
+                    // Spring back to whichever edge we're already past, not
+                    // wherever the release velocity happens to point.
+                    let limit_y = Self::flick_limits(flick_rc, curr_val, false);
                     let y_simulation = Rc::new_cyclic(|weak: &Weak<RefCell<SpringSimulation>>| {
-                        let curr_val = content_y.get().0;
                         content_y.set_physic_animation_value(weak.clone());
                         RefCell::new(FlickSimulation::create_spring_simulation(curr_val, limit_y))
                     });
@@ -1137,12 +1158,13 @@ impl FlickableData {
                         // Do not rely on the existing content position to be stable, as e.g. the
                         // ListView will continuously update it.
                         // So we cannot calculate the delta in content coordinates.
-                        let new_content_position = current_content_position + mouse_delta;
-                        println!("Before new_content_position _y: {:?}", new_content_position.x);
-                        let new_content_position =
-                            ensure_in_bound(flick, new_content_position, flick_rc, false);
-
-                        println!("new_content_position _y: {:?}", new_content_position.x);
+                        let new_content_position = current_content_position
+                            + inner.calculate_move_offset(
+                                current_content_position,
+                                mouse_delta,
+                                flick,
+                                flick_rc,
+                            );
 
                         content_x.set(new_content_position.x_length());
                         content_y.set(new_content_position.y_length());

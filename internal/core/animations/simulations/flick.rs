@@ -16,6 +16,14 @@ use crate::animations::simulations::ios::{IOsFlick, IOsFlickParameters};
 use crate::animations::simulations::scroll_spring::SpringSimulation;
 use crate::animations::simulations::{Parameter, PositionSimulation, Simulation};
 use crate::items::AutoBool;
+use crate::lengths::{LogicalPoint, LogicalVector, RectLengths};
+
+/// `BouncingScrollPhysics.frictionFactor`'s base factor for
+/// `ScrollDecelerationRate.normal`, used on iOS.
+const IOS_FRICTION_FACTOR: f32 = 0.52;
+/// `BouncingScrollPhysics.frictionFactor`'s base factor for
+/// `ScrollDecelerationRate.fast`, used on macOS.
+const MACOS_FRICTION_FACTOR: f32 = 0.26;
 
 /// Parameters to start a flick simulation from, independent of which
 /// concrete simulation ends up running.
@@ -69,7 +77,93 @@ impl PositionSimulation for FlickSimulation {
     }
 }
 
+/// `BouncingScrollPhysics.frictionFactor`: the further past the edge
+/// `overscroll_fraction` (a fraction of the viewport size) already is, the
+/// harder further overscroll gets. `base` is `0.52` on iOS and `0.26` on
+/// macOS ("fast" deceleration).
+fn friction_factor(overscroll_fraction: f32, base: f32) -> f32 {
+    base * (1. - overscroll_fraction) * (1. - overscroll_fraction)
+}
+
+/// `BouncingScrollPhysics._applyFriction`: resists the portion of `abs_delta`
+/// that lies within `extent_outside` of the edge by `gamma`, and passes the
+/// rest through unresisted, since past `extent_outside` there's no more
+/// "outside" left to resist.
+fn apply_friction_scalar(extent_outside: f32, abs_delta: f32, gamma: f32) -> f32 {
+    if extent_outside > 0. {
+        let delta_to_limit = extent_outside / gamma;
+        if abs_delta < delta_to_limit {
+            return abs_delta * gamma;
+        }
+        extent_outside + (abs_delta - delta_to_limit)
+    } else {
+        abs_delta
+    }
+}
+
+/// Rubber-bands a proposed drag `delta` along one axis, mirroring Flutter's
+/// `BouncingScrollPhysics.applyPhysicsToUserOffset`
+/// (`scroll_physics.dart`, Copyright 2014 The Flutter Authors, BSD-style license,
+/// <https://github.com/flutter/flutter/blob/d6bed8ff6135cdd414f14edc3063f761d47ca846/packages/flutter/lib/src/widgets/scroll_physics.dart>):
+/// once already overscrolled, further movement in the same direction gets
+/// harder the further out `pos` already is, while movement back toward the
+/// valid range ("easing") meets less resistance, or none at all on macOS.
+///
+/// `pos`/`delta`/`min_pos` are in the same units as `content_x`/`content_y`
+/// (`0` is the leading edge, `min_pos` the trailing edge), not Flutter's
+/// `pixels` (which increases into the content); the shape of the formula is
+/// the same either way.
+fn apply_friction_axis(pos: f32, delta: f32, min_pos: f32, viewport: f32) -> f32 {
+    let overscroll_past_start = f32::max(pos, 0.);
+    let overscroll_past_end = f32::max(min_pos - pos, 0.);
+    let overscroll_past = f32::max(overscroll_past_start, overscroll_past_end);
+    if delta == 0. || overscroll_past <= 0. {
+        return delta;
+    }
+
+    let easing = (overscroll_past_start > 0. && delta < 0.)
+        || (overscroll_past_end > 0. && delta > 0.);
+    let fast = cfg!(target_os = "macos");
+    if easing && fast {
+        // macOS lets an easing drag back toward the valid range through at full speed.
+        return delta;
+    }
+
+    let base = if fast { MACOS_FRICTION_FACTOR } else { IOS_FRICTION_FACTOR };
+    let overscroll_fraction = if easing {
+        (overscroll_past - delta.abs()) / viewport
+    } else {
+        overscroll_past / viewport
+    };
+    let gamma = friction_factor(overscroll_fraction, base);
+    delta.signum() * apply_friction_scalar(overscroll_past, delta.abs(), gamma)
+}
+
 impl FlickSimulation {
+    /// Applies overscroll drag resistance to a proposed `content_x`/`content_y`
+    /// delta, per axis (see [`apply_friction_axis`]).
+    ///
+    /// This runs regardless of platform: an axis only has anything to resist
+    /// once it's out of range, and `ensure_in_bound` already keeps a
+    /// bounce-off axis (Android's default) hard-clamped in range before this
+    /// ever runs, so there's nothing left here to gate on platform.
+    pub fn apply_friction(
+        current_pos: LogicalPoint,
+        offset: LogicalVector,
+        flick: Pin<&crate::items::Flickable>,
+        flick_rc: &crate::item_tree::ItemRc,
+    ) -> LogicalVector {
+        let geo = crate::items::Flickable::geometry_without_virtual_keyboard(flick_rc);
+        let width = geo.width_length().get();
+        let height = geo.height_length().get();
+        let min_x = width - flick.content_width().get();
+        let min_y = height - flick.content_height().get();
+        LogicalVector::new(
+            apply_friction_axis(current_pos.x as f32, offset.x as f32, min_x, width) as _,
+            apply_friction_axis(current_pos.y as f32, offset.y as f32, min_y, height) as _,
+        )
+    }
+
     /// Whether to use the iOS-style (rubber-band overscroll) simulation rather
     /// than the Android-style (hard-clamped) one: forced on by `bounce: on`,
     /// forced off by `bounce: off`, and otherwise on exactly where iOS's own
