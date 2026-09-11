@@ -55,4 +55,5 @@ pub(crate) trait VelocityTracker {
     fn push(&mut self, time: Instant, position_delta: LogicalVector);
     fn estimate_velocity(&self) -> Option<VelocityEstimate>;
     fn last_time(&self) -> Option<Instant>;
+    fn last_position(&self) -> Option<LogicalVector>;
 }

@@ -13,6 +13,7 @@ use crate::Property;
 use crate::animations::Instant;
 use crate::animations::simulations::android::{AndroidFlick, AndroidFlickParameters};
 use crate::animations::simulations::ios::{IOsFlick, IOsFlickParameters};
+use crate::animations::simulations::scroll_spring::SpringSimulation;
 use crate::animations::simulations::{Parameter, PositionSimulation, Simulation};
 use crate::items::AutoBool;
 
@@ -68,43 +69,54 @@ impl PositionSimulation for FlickSimulation {
     }
 }
 
-/// Whether to use the iOS-style (rubber-band overscroll) simulation rather
-/// than the Android-style (hard-clamped) one: forced on by `bounce: on`,
-/// forced off by `bounce: off`, and otherwise on exactly where iOS's own
-/// scroll views bounce.
-pub fn use_bounce(bounce: AutoBool) -> bool {
-    match bounce {
-        AutoBool::Auto => cfg!(target_os = "ios"),
-        AutoBool::On => true,
-        AutoBool::Off => false,
+impl FlickSimulation {
+    /// Whether to use the iOS-style (rubber-band overscroll) simulation rather
+    /// than the Android-style (hard-clamped) one: forced on by `bounce: on`,
+    /// forced off by `bounce: off`, and otherwise on exactly where iOS's own
+    /// scroll views bounce.
+    pub fn use_bounce(bounce: AutoBool) -> bool {
+        match bounce {
+            AutoBool::Auto => cfg!(target_os = "ios"),
+            AutoBool::On => true,
+            AutoBool::Off => false,
+        }
     }
-}
 
-/// Builds and starts the flick simulation for one axis, choosing between
-/// the Android and iOS physics based on `bounce` and the platform.
-pub fn create_simulation(
-    simulation_parameter: FlickSimulationParameter,
-    bounce: AutoBool,
-    start_value: f32,
-    limit_value: Pin<Box<Property<f32>>>,
-) -> FlickSimulation {
-    if use_bounce(bounce) {
-        let params = match simulation_parameter {
-            FlickSimulationParameter::Velocity { velocity } => IOsFlickParameters::new(velocity),
-            FlickSimulationParameter::Distance { delta, duration } => {
-                IOsFlickParameters::new_with_distance(delta, duration)
-            }
-        };
-        FlickSimulation::Ios(params.simulation(start_value, limit_value))
-    } else {
-        let params = match simulation_parameter {
-            FlickSimulationParameter::Velocity { velocity } => {
-                AndroidFlickParameters::new_with_default_friction(velocity)
-            }
-            FlickSimulationParameter::Distance { delta, duration } => {
-                AndroidFlickParameters::new_with_distance(delta, duration)
-            }
-        };
-        FlickSimulation::Android(params.simulation(start_value, limit_value))
+    /// Builds and starts the flick simulation for one axis, choosing between
+    /// the Android and iOS physics based on `bounce` and the platform.
+    pub fn create_simulation(
+        simulation_parameter: FlickSimulationParameter,
+        bounce: AutoBool,
+        start_value: f32,
+        limit_value: Pin<Box<Property<f32>>>,
+    ) -> FlickSimulation {
+        if Self::use_bounce(bounce) {
+            let params = match simulation_parameter {
+                FlickSimulationParameter::Velocity { velocity } => {
+                    IOsFlickParameters::new(velocity)
+                }
+                FlickSimulationParameter::Distance { delta, duration } => {
+                    IOsFlickParameters::new_with_distance(delta, duration)
+                }
+            };
+            FlickSimulation::Ios(params.simulation(start_value, limit_value))
+        } else {
+            let params = match simulation_parameter {
+                FlickSimulationParameter::Velocity { velocity } => {
+                    AndroidFlickParameters::new_with_default_friction(velocity)
+                }
+                FlickSimulationParameter::Distance { delta, duration } => {
+                    AndroidFlickParameters::new_with_distance(delta, duration)
+                }
+            };
+            FlickSimulation::Android(params.simulation(start_value, limit_value))
+        }
+    }
+
+    pub fn create_spring_simulation(
+        start_value: f32,
+        limit_value: Pin<Box<Property<f32>>>,
+    ) -> SpringSimulation {
+        SpringSimulation::new_with_default_parameters(start_value, limit_value)
     }
 }

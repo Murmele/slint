@@ -13,6 +13,7 @@ pub mod constant_deceleration;
 pub mod constant_deceleration_spring_damper;
 pub mod flick;
 pub mod ios;
+pub mod scroll_spring;
 pub mod spring;
 
 use crate::animations::Instant;

@@ -10,10 +10,9 @@
 //! Original: <https://github.com/flutter/flutter/blob/d6bed8ff6135cdd414f14edc3063f761d47ca846/packages/flutter/lib/src/widgets/scroll_simulation.dart>
 //!
 
-use core::time::Duration;
-
 use crate::animations::Instant;
 use crate::animations::simulations::{Direction, Parameter, PositionSimulation, Simulation};
+use core::time::Duration;
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
 

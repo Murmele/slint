@@ -68,6 +68,10 @@ impl<'a, const N: usize> VelocityRingBuffer<N> {
     pub fn last_time(&self) -> Option<Instant> {
         if !self.empty() { Some(self.values[self.latest_index()].0) } else { None }
     }
+
+    pub fn last_position(&self) -> Option<LogicalVector> {
+        if !self.empty() { Some(self.values[self.latest_index()].1) } else { None }
+    }
 }
 
 pub(crate) struct VelocityRingBufferIterator<'a, const N: usize> {
