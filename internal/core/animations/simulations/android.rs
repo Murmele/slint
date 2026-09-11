@@ -102,12 +102,12 @@ impl AndroidFlick {
         let direction = if start_value == limit_value.as_ref().get() {
             if data.initial_velocity >= 0. { Direction::Increasing } else { Direction::Decreasing }
         } else if start_value < limit_value.as_ref().get() {
-            assert!(data.initial_velocity >= 0.); // Makes no sense yet that the velocity goes into the other direction
+            debug_assert!(data.initial_velocity >= 0.); // Makes no sense yet that the velocity goes into the other direction
             data.initial_velocity = f32::abs(data.initial_velocity);
             Direction::Increasing
         } else {
             data.initial_velocity = -f32::abs(data.initial_velocity);
-            assert!(data.initial_velocity <= 0.);
+            debug_assert!(data.initial_velocity <= 0.);
             Direction::Decreasing
         };
         let deceleration_rate = deceleration_rate();

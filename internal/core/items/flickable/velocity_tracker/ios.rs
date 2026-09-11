@@ -34,10 +34,6 @@ impl<const N: usize> VelocityTracker for IOsVelocityTracker<N> {
         self.buffer.last_time()
     }
 
-    fn last_position(&self) -> Option<LogicalVector> {
-        self.buffer.last_position()
-    }
-
     fn estimate_velocity(&self) -> Option<VelocityEstimate> {
         let last_time = self.buffer.last_time()?;
         if crate::animations::current_tick().duration_since(last_time) > ASSUME_POINTER_MOVE_STOPPED

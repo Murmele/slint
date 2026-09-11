@@ -146,13 +146,13 @@ impl ConstantDeceleration {
             }
         } else if start_value < limit_value.as_ref().get() {
             data.deceleration = f32::abs(data.deceleration);
-            assert!(initial_velocity >= 0.); // Makes no sense yet that the velocity goes into the other direction
+            debug_assert!(initial_velocity >= 0.); // Makes no sense yet that the velocity goes into the other direction
             initial_velocity = f32::abs(initial_velocity);
             Direction::Increasing
         } else {
             data.deceleration = -f32::abs(data.deceleration);
             initial_velocity = -f32::abs(initial_velocity);
-            assert!(initial_velocity <= 0.);
+            debug_assert!(initial_velocity <= 0.);
             Direction::Decreasing
         };
 

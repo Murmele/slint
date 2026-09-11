@@ -114,6 +114,7 @@ impl IOsFlick {
         limit_value: core::pin::Pin<alloc::boxed::Box<crate::Property<f32>>>,
         data: IOsFlickParameters,
     ) -> Self {
+        println!("New IOsFlick. Start: {}, end: {}", start_value, limit_value.as_ref().get());
         Self::new_internal(start_value, limit_value, data, crate::animations::current_tick())
     }
 
@@ -127,12 +128,12 @@ impl IOsFlick {
         let direction = if start_value == limit {
             if data.initial_velocity >= 0. { Direction::Increasing } else { Direction::Decreasing }
         } else if start_value < limit {
-            assert!(data.initial_velocity >= 0.); // Makes no sense yet that the velocity goes into the other direction
+            debug_assert!(data.initial_velocity >= 0.); // Makes no sense yet that the velocity goes into the other direction
             data.initial_velocity = f32::abs(data.initial_velocity);
             Direction::Increasing
         } else {
             data.initial_velocity = -f32::abs(data.initial_velocity);
-            assert!(data.initial_velocity <= 0.);
+            debug_assert!(data.initial_velocity <= 0.);
             Direction::Decreasing
         };
 

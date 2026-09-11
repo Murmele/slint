@@ -173,7 +173,8 @@ impl Item for Flickable {
                 let flick = flick.as_pin_ref();
                 let vpx = flick.content_x();
                 let vpy = flick.content_y();
-                let p = ensure_in_bound(flick, LogicalPoint::from_lengths(vpx, vpy), &flick_rc);
+                let p =
+                    ensure_in_bound(flick, LogicalPoint::from_lengths(vpx, vpy), &flick_rc, false);
 
                 let x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
                 if *x_out_of_bounds
@@ -588,7 +589,7 @@ impl FlickableDataInner {
             }
         }
 
-        let new_pos = ensure_in_bound(flick, current_pos + delta, flick_rc);
+        let new_pos = ensure_in_bound(flick, current_pos + delta, flick_rc, false);
         delta = new_pos - current_pos;
 
         if phase == TouchPhase::Started {
@@ -755,6 +756,7 @@ impl FlickableDataInner {
                         flick,
                         LogicalPoint::from_lengths(-flick.content_width(), -flick.content_height()),
                         &flick_rc,
+                        true,
                     )
                 })
         };
@@ -784,42 +786,54 @@ impl FlickableDataInner {
     }
 
     fn animate(&mut self, flick: Pin<&Flickable>, flick_rc: &ItemRc) {
-        if self.capture_events.is_some()
-            && let Some(last_position) = self.velocity_rb.last_position()
-        {
-            let (inside_bounds_x, inside_bounds_y) =
-                inside_bounds(flick, LogicalPoint::new(last_position.x, last_position.y), flick_rc);
+        if self.capture_events.is_some() {
+            let (inside_bounds_x, inside_bounds_y) = inside_bounds(
+                flick,
+                LogicalPoint::new(flick.content_x().get(), flick.content_y().get()),
+                flick_rc,
+            );
             let velocity_estimation = self.velocity_rb.estimate_velocity();
 
-            let x_simulation = if inside_bounds_x
-                && let Some(velocity_estimation) = velocity_estimation.as_ref()
-            {
-                let limit_x = Self::flick_limits(flick_rc, velocity_estimation.velocity.x, true);
-                let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
-                let carried_velocity_x = carried_momentum(
-                    velocity_estimation.velocity.x,
-                    self.retained_velocity.x,
-                    flick,
-                );
-                let x_simulation = Rc::new_cyclic(|weak: &Weak<RefCell<FlickSimulation>>| {
-                    let curr_val = content_x.get().0;
-                    content_x.set_physic_animation_value(weak.clone());
-                    RefCell::new(FlickSimulation::create_simulation(
-                        FlickSimulationParameter::Velocity {
-                            velocity: velocity_estimation.velocity.x + carried_velocity_x,
-                        },
-                        flick.bounce_x(),
-                        curr_val,
-                        limit_x,
-                    ))
-                });
-                Some(x_simulation as Rc<RefCell<dyn PositionSimulation>>)
-            } else if !inside_bounds_x {
-                unimplemented!()
-            } else {
-                None
-            };
+            // let x_simulation = match velocity_estimation.as_ref() {
+            //     Some(velocity_estimation) if inside_bounds_x => {
+            //         let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
+            //         let carried_velocity_x = carried_momentum(
+            //             velocity_estimation.velocity.x,
+            //             self.retained_velocity.x,
+            //             flick,
+            //         );
+            //         let limit_x =
+            //             Self::flick_limits(flick_rc, velocity_estimation.velocity.x, true);
+            //         let x_simulation = Rc::new_cyclic(|weak: &Weak<RefCell<FlickSimulation>>| {
+            //             let curr_val = content_x.get().0;
+            //             content_x.set_physic_animation_value(weak.clone());
+            //             RefCell::new(FlickSimulation::create_simulation(
+            //                 FlickSimulationParameter::Velocity {
+            //                     velocity: velocity_estimation.velocity.x + carried_velocity_x,
+            //                 },
+            //                 flick.bounce_x(),
+            //                 curr_val,
+            //                 limit_x,
+            //             ))
+            //         });
+            //         Some(x_simulation as Rc<RefCell<dyn PositionSimulation>>)
+            //     }
+            //     Some(velocity_estimation) if !inside_bounds_x => {
+            //         let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
+            //         let limit_x =
+            //             Self::flick_limits(flick_rc, velocity_estimation.velocity.x, true);
+            //         let x_simulation = Rc::new_cyclic(|weak: &Weak<RefCell<SpringSimulation>>| {
+            //             let curr_val = content_x.get().0;
+            //             content_x.set_physic_animation_value(weak.clone());
+            //             RefCell::new(FlickSimulation::create_spring_simulation(curr_val, limit_x))
+            //         });
+            //         Some(x_simulation as Rc<RefCell<dyn PositionSimulation>>)
+            //     }
+            //     _ => None,
+            // };
+            let x_simulation = None;
 
+            println!("Setup new y simulation. Inside bounds: {inside_bounds_y}");
             let y_simulation = match velocity_estimation.as_ref() {
                 Some(velocity_estimation) if inside_bounds_y => {
                     let content_y = (Flickable::FIELD_OFFSETS.content_y()).apply_pin(flick);
@@ -1126,7 +1140,7 @@ impl FlickableData {
                         let new_content_position = current_content_position + mouse_delta;
                         println!("Before new_content_position _y: {:?}", new_content_position.x);
                         let new_content_position =
-                            ensure_in_bound(flick, new_content_position, flick_rc);
+                            ensure_in_bound(flick, new_content_position, flick_rc, false);
 
                         println!("new_content_position _y: {:?}", new_content_position.x);
 
@@ -1188,17 +1202,22 @@ fn abs(l: LogicalLength) -> LogicalLength {
 }
 
 /// Make sure that the point is within the bounds
-fn ensure_in_bound(flick: Pin<&Flickable>, mut p: LogicalPoint, flick_rc: &ItemRc) -> LogicalPoint {
+fn ensure_in_bound(
+    flick: Pin<&Flickable>,
+    mut p: LogicalPoint,
+    flick_rc: &ItemRc,
+    ignore_bounce: bool,
+) -> LogicalPoint {
     let geo = Flickable::geometry_without_virtual_keyboard(flick_rc);
     let w = geo.width_length();
     let h = geo.height_length();
     let cw = flick.content_width();
     let ch = flick.content_height();
 
-    if !FlickSimulation::use_bounce(flick.bounce_x()) {
+    if ignore_bounce || !FlickSimulation::use_bounce(flick.bounce_x()) {
         p.x = p.x.clamp((w - cw).get(), Default::default());
     }
-    if !FlickSimulation::use_bounce(flick.bounce_y()) {
+    if ignore_bounce || !FlickSimulation::use_bounce(flick.bounce_y()) {
         p.y = p.y.clamp((h - ch).get(), Default::default());
     }
     p
@@ -1213,6 +1232,8 @@ fn inside_bounds(flick: Pin<&Flickable>, p: LogicalPoint, flick_rc: &ItemRc) -> 
 
     let inside_bounds_x = p.x >= (w - cw).get() && p.x <= 0.;
     let inside_bounds_y = p.y >= (h - ch).get() && p.y <= 0.;
+
+    println!("Inside bounds y. Point: {p:?}. Min: {}, Max: {}", (h - ch).get(), p.y);
 
     (inside_bounds_x, inside_bounds_y)
 }

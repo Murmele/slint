@@ -1103,7 +1103,7 @@ impl<T: Clone> Property<T> {
     where
         T: 'static,
     {
-        if self.debug_name.borrow().ends_with("MainWindow::lv-2.content-x") {
+        if self.debug_name.borrow().ends_with("content-y") {
             println!("Set property {}: {}", self.debug_name.borrow(), format_property_value(t));
         }
     }

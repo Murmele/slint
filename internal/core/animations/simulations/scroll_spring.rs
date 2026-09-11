@@ -16,6 +16,7 @@ use crate::animations::simulations::{Direction, Parameter, PositionSimulation, S
 use core::time::Duration;
 #[cfg(not(feature = "std"))]
 use num_traits::Float;
+use std::println;
 
 const DEFAULT_MASS: f32 = 0.5;
 const DEFAULT_STIFFNESS: f32 = 100.;
@@ -29,6 +30,7 @@ pub struct SpringSimulation {
     start_time: Instant,
     traveled: f32,
     data: SpringRegime,
+    init_pos: f32,
 }
 
 impl SpringSimulation {
@@ -43,23 +45,30 @@ impl SpringSimulation {
             DEFAULT_RATIO,
         )
         .to_natural_frequency_and_damping_ratio();
-        let spring = SpringRegime::new(l - start_value, 0., w_n, zeta);
+        let init_pos = l - start_value;
+        println!("New spring. Diff: {}, Start value: {}, Limit: {}", init_pos, start_value, l);
+        let spring = SpringRegime::new(init_pos, 0., w_n, zeta);
 
         Self {
             limit_value,
             start_time: crate::animations::current_tick(),
             traveled: 0.,
             data: spring,
+            init_pos,
         }
     }
 
     fn step_internal(&mut self, current: &mut f32, new_tick: Instant) -> bool {
         let t = new_tick.duration_since(self.start_time).as_secs_f32();
-        let (new_traveled, new_vel) = self.data.evaluate(t);
+        let (new_pos, new_vel) = self.data.evaluate(t);
+        let new_traveled = self.init_pos - new_pos;
         *current += new_traveled - self.traveled;
         self.traveled = new_traveled;
 
-        new_traveled.abs() < ZERO_TOLERANCE && new_vel.abs() < ZERO_TOLERANCE
+        let done = new_pos.abs() < ZERO_TOLERANCE && new_vel.abs() < ZERO_TOLERANCE;
+
+        println!("Scroll spring step: ({done}), {}", *current);
+        done
     }
 }
 
