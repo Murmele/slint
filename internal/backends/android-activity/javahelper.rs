@@ -377,20 +377,20 @@ fn load_java_helper(
 }
 
 bind_java_type! {
-    AndroidSystemClock => "android.os.SystemClock",
+    JavaSystem => "java.lang.System",
     methods {
-        static fn uptime_millis { name = "uptimeMillis", sig = () -> jlong, },
+        static fn nano_time { name = "nanoTime", sig = () -> jlong, },
     }
 }
 
 impl JavaHelper {
     pub fn input_timestamp(&self, event_nanos: i64, window: &i_slint_core::api::Window) -> Instant {
         let offset = self.2.get_or_init(|| {
-            let uptime = self
-                .with_jni_env(|env, _| AndroidSystemClock::uptime_millis(env))
+            let now_nanos = self
+                .with_jni_env(|env, _| JavaSystem::nano_time(env))
                 .unwrap_or_else(|e| print_jni_error(&self.1, e));
             let ctx = i_slint_core::window::WindowInner::from_pub(window).context();
-            i_slint_core::animations::Instant::now(&ctx).0.as_nanos() as i64 - uptime * 1_000_000
+            i_slint_core::animations::Instant::now(&ctx).0.as_nanos() as i64 - now_nanos
         });
         Instant(Duration::from_nanos(event_nanos.saturating_add(*offset).max(0) as u64))
     }
