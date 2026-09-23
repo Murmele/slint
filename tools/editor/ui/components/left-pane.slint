@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
 import { Style, PaintStyle, Metrics, Colors, Typography, ButtonStyle, PaletteCardStyle } from "../style.slint";
-import { BodyLabel, ComponentPaletteRow, EdgeDivider, HorizontalResizeDivider, MutedLabel, SectionTitle, PrimerTextInput, SidebarToggleButton } from "common.slint";
+import { BodyLabel, ComponentPaletteRow, EdgeDivider, HorizontalResizeDivider, MutedLabel, SectionTitle, PrimerTextInput, SidebarToggleButton } from "index.slint";
 import { Api, EditorSurfaceMode, ElementLibraryGroup, ElementLibraryEntry } from "../api.slint";
 import { EditorTreeIcons } from "editor-tree-icons.slint";
 import { Project } from "../project.slint";
 import { FileTreeView } from "file-tree-view.slint";
-import { ScrollView } from "std-widgets.slint";
+import { EditorScrollView } from "editor-scroll-view.slint";
 
 component NewSlintFileButton inherits Rectangle {
     in property <ButtonStyle> style: Style.compact-button;
@@ -246,7 +246,7 @@ component ElementPaletteRows inherits VerticalLayout {
     callback drag-started();
     spacing: 0px;
 
-    ScrollView {
+    EditorScrollView {
         accessible-role: AccessibleRole.list;
         accessible-label: "Element library";
         min-height: 0px;

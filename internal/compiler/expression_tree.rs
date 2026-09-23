@@ -2137,6 +2137,10 @@ pub struct BindingExpression {
     /// 0 means the expression was added by some passes and it is not explicit in the source code
     pub priority: i32,
 
+    /// Whether a state is what created this binding. The value it takes while no state
+    /// applies is then the property's type default.
+    pub from_state: bool,
+
     pub animation: Option<PropertyAnimation>,
 
     /// The analysis information. None before it is computed
@@ -2152,6 +2156,7 @@ impl std::convert::From<Expression> for BindingExpression {
             expression,
             span: None,
             priority: 0,
+            from_state: false,
             animation: Default::default(),
             analysis: Default::default(),
             two_way_bindings: Default::default(),
@@ -2165,6 +2170,7 @@ impl BindingExpression {
             expression: Expression::Uncompiled(node.clone()),
             span: Some(node.to_source_location()),
             priority: 1,
+            from_state: false,
             animation: Default::default(),
             analysis: Default::default(),
             two_way_bindings: Default::default(),
@@ -2175,9 +2181,44 @@ impl BindingExpression {
             expression,
             span: Some(span),
             priority: 0,
+            from_state: false,
             animation: Default::default(),
             analysis: Default::default(),
             two_way_bindings: Default::default(),
+        }
+    }
+
+    /// The value this binding takes while none of the states apply, if a state created it.
+    pub fn state_fallback_mut(&mut self) -> Option<&mut Expression> {
+        if !self.from_state {
+            return None;
+        }
+        let mut current = self.expression.ignore_debug_hooks_mut();
+        let mut in_state_chain = false;
+        while let Expression::Condition {
+            false_expr,
+            source_location: Some(ConditionLocation::StateChange(_)),
+            ..
+        } = current
+        {
+            current = false_expr.ignore_debug_hooks_mut();
+            in_state_chain = true;
+        }
+        in_state_chain.then_some(current)
+    }
+
+    /// Where a state changes the property, if a state's change is what this binding is.
+    ///
+    /// Such a binding also carries the value the property has while no state applies, at the end
+    /// of its chain of conditions. Unlike [`Self::state_fallback_mut`], this doesn't say that
+    /// value is still a placeholder: something else may bind the property too.
+    pub fn state_change(&self) -> Option<&SourceLocation> {
+        match self.value_expression() {
+            Expression::Condition {
+                source_location: Some(ConditionLocation::StateChange(location)),
+                ..
+            } => Some(location),
+            _ => None,
         }
     }
 
@@ -2187,6 +2228,7 @@ impl BindingExpression {
             expression: Expression::Invalid,
             span: None,
             priority: 0,
+            from_state: false,
             animation: Default::default(),
             analysis: Default::default(),
             two_way_bindings: vec![other],
@@ -2221,6 +2263,7 @@ impl BindingExpression {
                 **expression = other.expression.clone();
                 *synthetic = false;
                 self.priority = other.priority;
+                self.from_state = other.from_state;
                 return true;
             }
             if self.two_way_bindings.is_empty() {
@@ -2235,6 +2278,7 @@ impl BindingExpression {
             return true;
         }
         self.priority = other.priority;
+        self.from_state = other.from_state;
         self.expression = other.expression.clone();
         true
     }

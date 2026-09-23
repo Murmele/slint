@@ -55,6 +55,7 @@ renderer-skia-vulkan = [
   "i-slint-backend-linuxkms?/renderer-skia-vulkan",
   "i-slint-renderer-skia/vulkan",
 ]
+renderer-skia-software = ["i-slint-backend-winit?/renderer-skia", "i-slint-backend-linuxkms?/renderer-skia-software"]
 renderer-software = [
   "i-slint-backend-winit?/renderer-software",
   "i-slint-backend-linuxkms?/renderer-software",
@@ -106,7 +107,7 @@ i-slint-renderer-femtovg = { workspace = true, optional = true }
 [target.'cfg(target_os = "android")'.dependencies]
 i-slint-backend-android-activity = { workspace = true, optional = true }
 
-[target.'cfg(not(target_os = "wasm"))'.dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 i-slint-backend-qt = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
