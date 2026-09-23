@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
 //! Combines the Android-style (hard-clamped) and iOS-style (rubber-band
-//! overscroll) flick animation behind one type, so callers such as
-//! `Flickable` don't need to know which concrete animation is running.
+//! overscroll) flick animation behind one type
 
 use alloc::boxed::Box;
 use core::pin::Pin;
@@ -28,8 +27,6 @@ const IOS_FRICTION_FACTOR: f32 = 0.52;
 const MACOS_FRICTION_FACTOR: f32 = 0.26;
 const MOMENTUM_RETAIN_VELOCITY_THRESHOLD_FACTOR: f32 = 0.5;
 
-/// Parameters to start a flick animation from, independent of which
-/// concrete animation ends up running.
 pub enum FlickAnimationParameter {
     /// Cover a fixed distance in a fixed duration, e.g. wheel scrolling.
     Distance { delta: f32, duration: Duration },
@@ -37,12 +34,7 @@ pub enum FlickAnimationParameter {
     Velocity { velocity: f32 },
 }
 
-/// Either an Android-style hard-clamped fling or an iOS-style rubber-band
-/// fling. Wrapping both in one enum (rather than picking a single concrete
-/// type at compile time) lets `create_animation` choose per call, based on
-/// the internal `bounce` setting and platform, since that decision can change at
-/// runtime even on a single platform (`AutoBool::On` forces iOS-style physics
-/// anywhere).
+/// Common flick animation type to dynamically switching between simulations
 pub enum FlickAnimation {
     Android(AndroidFlick),
     Ios(IOsFlick),
@@ -75,16 +67,14 @@ impl PositionSimulation for FlickAnimation {
 
 /// `BouncingScrollPhysics.frictionFactor`: the further past the edge
 /// `overscroll_fraction` (a fraction of the viewport size) already is, the
-/// harder further overscroll gets. `base` is `0.52` on iOS and `0.26` on
-/// macOS ("fast" deceleration).
+/// harder further overscroll gets.
 fn friction_factor(overscroll_fraction: f32, base: f32) -> f32 {
     base * (1. - overscroll_fraction) * (1. - overscroll_fraction)
 }
 
 /// `BouncingScrollPhysics._applyFriction`: resists the portion of `abs_delta`
 /// that lies within `extent_outside` of the edge by `gamma`, and passes the
-/// rest through unresisted, since past `extent_outside` there's no more
-/// "outside" left to resist.
+/// rest through unresisted
 fn apply_friction_scalar(extent_outside: f32, abs_delta: f32, gamma: f32) -> f32 {
     if extent_outside > 0. {
         let delta_to_limit = extent_outside / gamma;
@@ -138,11 +128,6 @@ fn apply_friction_axis(pos: f32, delta: f32, min_pos: f32, viewport: f32) -> f32
 impl FlickAnimation {
     /// Applies overscroll drag resistance to a proposed `content_x`/`content_y`
     /// delta, per axis (see [`apply_friction_axis`]).
-    ///
-    /// This runs regardless of platform: an axis only has anything to resist
-    /// once it's out of range, and `ensure_in_bound` already keeps a
-    /// bounce-off axis (Android's default) hard-clamped in range before this
-    /// ever runs, so there's nothing left here to gate on platform.
     pub fn apply_friction(
         current_pos: LogicalPoint,
         offset: LogicalVector,
@@ -178,6 +163,7 @@ impl FlickAnimation {
                 {
                     true
                 }
+                // On Android this momentum carry does not exist
                 #[cfg(not(target_os = "ios"))]
                 {
                     false
@@ -190,7 +176,6 @@ impl FlickAnimation {
             return 0.;
         }
 
-        // On Android this momentum carry on does not exist
         let carried_velocity = current_velocity.signum()
             * f32::min(0.000816 * f32::powf(current_velocity.abs(), 1.967), 40000.0);
 
@@ -204,10 +189,8 @@ impl FlickAnimation {
         0.
     }
 
-    /// Whether to use the iOS-style (rubber-band overscroll) animation rather
-    /// than the Android-style (hard-clamped) one: forced on by `AutoBool::On`,
-    /// forced off by `AutoBool::Off`, and otherwise on exactly where iOS's own
-    /// scroll views bounce.
+    /// Wether to bounce or not depending on the bounce variable
+    /// and if `Auto` on the platform
     pub fn use_bounce(bounce: AutoBool) -> bool {
         match bounce {
             AutoBool::Auto => cfg!(target_os = "ios"),
