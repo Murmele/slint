@@ -134,7 +134,7 @@ mod tests_general_velocity_tracker {
             tracker.push(Instant(Duration::from_micros(i * 3500)), LogicalVector::new(0., 21.));
         }
         assert_eq!(tracker.buffer.len(), 3);
-        assert_eq!(tracker.last_sample_time(), Some(Duration::from_micros(24500)));
+        assert_eq!(tracker.last_time(), Some(Instant(Duration::from_micros(24500))));
         let estimate = tracker.estimate_velocity_internal().unwrap();
         values_equal!(estimate.velocity.y, 6000., 0.1);
     }

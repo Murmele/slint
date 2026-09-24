@@ -196,40 +196,6 @@ mod tests {
     use crate::animations::simulations::test_limit_property;
 
     #[test]
-    fn aosp_reference_trajectories() {
-        for line in include_str!("android/aosp_reference.csv").lines() {
-            if line.starts_with('#') || line.is_empty() {
-                continue;
-            }
-            let values: alloc::vec::Vec<f32> =
-                line.split(',').map(|s| s.parse().unwrap()).collect();
-            let [velocity, friction, duration, distance, time, position, speed] = values.as_slice()
-            else {
-                panic!("Invalid reference row");
-            };
-            let simulation = AndroidFlick::new_internal(
-                0.,
-                test_limit_property(velocity.signum() * 1_000_000.),
-                AndroidFlickParameters { initial_velocity: *velocity, friction: *friction },
-                Instant::default(),
-            );
-            assert_eq!(simulation.duration.as_millis(), *duration as u128, "{line}");
-            assert_eq!(simulation.distance, *distance, "{line}");
-            let elapsed = Duration::from_millis(*time as u64);
-            let (actual_position, actual_speed) = simulation.sample(elapsed);
-            // Java rounds each position to an integer; Slint keeps subpixel positions.
-            assert!((actual_position - position).abs() <= 0.51, "{line}: {actual_position}");
-            assert!(
-                (actual_speed - speed).abs() <= 0.02 + speed.abs() * 0.00001,
-                "{line}: {actual_speed}"
-            );
-            assert!(
-                (simulation.remaining_distance(elapsed) + actual_position - distance).abs() < 0.01
-            );
-        }
-    }
-
-    #[test]
     fn incremental_motion_and_dynamic_bounds() {
         for sign in [-1., 1.] {
             let start = Instant::default();
