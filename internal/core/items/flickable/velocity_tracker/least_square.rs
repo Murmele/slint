@@ -209,9 +209,9 @@ where
         for h in 0..m {
             let mut term = T::one();
             let mut err = self.y[h] - coefficients[0];
-            for i in 1..n {
+            for coefficient in coefficients.iter().take(n).skip(1) {
                 term *= self.x[h];
-                err -= term * coefficients[i];
+                err -= term * *coefficient;
             }
             sum_squared_error += err * err;
             let v = self.y[h] - y_mean;

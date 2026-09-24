@@ -35,9 +35,9 @@ impl<const N: usize> VelocityEstimator for GeneralVelocityTracker<N> {
         let mut y = Vec::with_capacity(self.buffer.len());
 
         let mut previous: Option<&(Instant, Vector2D<f32, LogicalPx>)> = None;
-        let mut iter = self.buffer.iter().rev(); // from newest to oldest
         let mut position = Vector2D::<f32, LogicalPx>::default(); // The entries are delta so we have to subtract
-        while let Some(e) = iter.next() {
+        // from newest to oldest
+        for e in self.buffer.iter().rev() {
             let delta = previous
                 .map(|p| {
                     position -= p.1;
@@ -82,7 +82,7 @@ impl<const N: usize> VelocityEstimator for GeneralVelocityTracker<N> {
             }
         }
 
-        return None;
+        None
     }
 }
 
