@@ -1,144 +1,202 @@
 <!-- Copyright © SixtyFPS GmbH <info@slint.dev> -->
 <!-- SPDX-License-Identifier: MIT -->
 
-# Why Slint Master and AOSP Scrolling Differ
+# Murmele Android Scrolling Compared With AOSP
+
+## Tested Revision and Setup
 
 Date: September 30, 2026.
-Slint base: `4e05af780806a06889f0effaad407949eb8a644d`.
-Device: Samsung Galaxy A34, Android 16.
-Build: Release with Material styling and Skia.
-Scope: master only.
+Repository: [Murmele/slint](https://github.com/Murmele/slint/tree/mm/flickable-scroll-animation-v2).
+Branch: `mm/flickable-scroll-animation-v2`.
+Upstream commit: `bdbec1e4372d2d13f0782fc1bcea5aa6bffcfac7`.
+Local comparison harness: `406a18d41a299d46d7a75c2bddd6eb4c58b122f2`.
+Device: Samsung Galaxy A34, model SM-A346B, Android 16.
+Density: 2.8125 physical pixels per dp.
+Build: Release, Material style, Skia renderer.
 
-## Confirmed Causes
+The harness forwards the same current and historical touch samples to Slint and the native reference.
+Both lists start at row 100, with an initial offset difference of 0.18 dp.
+The reference fling uses a bundled Android 16 AOSP `OverScroller`, with friction fixed to `0.015`.
+Its recognizer and `VelocityTracker` use the installed Samsung framework.
+This is an AOSP trajectory comparison, not a complete AOSP widget port.
+See [AOSP-PROVENANCE.md](AOSP-PROVENANCE.md).
 
-### Historical Input Arrives but the Velocity Tracker Ignores It
+Murmele's estimator and physics are unchanged.
+The core instrumentation only logs the release estimate behind `SLINT_SCROLL_DIAGNOSTICS=1`.
 
-The Android backend forwards native event times and per-pointer historical positions.
-The comparison bridge does the same for copied `MotionEvent` objects.
-Slint's touch state preserves this information in its input events.
+## Screen Test Results
 
-Master's `Flickable` matches `MouseEvent::Moved { position, .. }`.
-It records current position deltas using `current_tick()` and a five-entry velocity buffer.
-It does not consume the supplied timestamp or historical positions.
-Callback timing can differ from native sample timing.
-The five current movements can omit intermediate acceleration or reversals.
+The campaign ran three gesture cases twice each, starting a fresh app process for every run.
+All six delivery checks passed, including preservation of native timestamps, current samples, historical samples, and coordinate translation.
+Every run exercised history: 7–95 historical samples reached the forwarding bridge.
+Both lists moved in every run.
+The six verifier unit tests also passed.
 
-Available data and data used by the estimator are different claims.
-The manual recording did not directly capture Slint's computed launch estimate.
-It cannot quantify each mechanism's contribution.
-The improved app adds that diagnostic.
+Requested distance and duration identify each case; release speeds below come from measured estimates.
+The cases were slow (120 dp / 800 ms), short hard (120 dp / 80 ms), and long fast (360 dp / 180 ms).
 
-### The Deceleration Models Differ
+| Case | Repeat | AOSP release speed (dp/s) | Slint release speed (dp/s) | AOSP post-release travel (dp) | Slint post-release travel (dp) | Result |
+|---|---:|---:|---:|---:|---:|---|
+| Slow | 1 | 150.0 | 129.4 | 7.1 | 6.1 | Release-speed comparison failed |
+| Slow | 2 | 150.0 | 159.4 | 7.1 | 9.4 | All tolerances passed |
+| Short hard | 1 | 1501.9 | 1532.7 | 393.6 | 419.4 | All tolerances passed |
+| Short hard | 2 | 1502.2 | 1523.0 | 393.6 | 415.4 | All tolerances passed |
+| Long fast | 1 | 1998.9 | 2022.0 | 646.8 | 675.4 | All tolerances passed |
+| Long fast | 2 | 1998.9 | 1944.3 | 646.8 | 632.7 | All tolerances passed |
 
-Master uses constant deceleration of `2000` logical pixels per second squared.
-Speed decreases approximately linearly to zero or a boundary.
-The reference uses AOSP's spline calculation, with a different speed decay and stopping trajectory.
-Equal launch velocity cannot make these simulations agree.
+Five of six runs passed all comparison tolerances.
+The strict `--require-parity` campaign returned status 1 because slow repeat 1 failed the release-speed comparison.
+The failure remains in the retained results.
 
-Sources in this checkout:
+## Remaining Differences
 
-- `internal/core/items/flickable.rs`: `handle_mouse`, `animate`, and `DECELERATION`.
-- `internal/core/items/flickable/data_ringbuffer.rs`: `mean_velocity`.
-- `internal/core/animations/simulations/constant_deceleration.rs`: `step_internal`.
-- [Pinned AOSP OverScroller](https://android.googlesource.com/platform/frameworks/base/+/99b01a65cc4c104933788b3143285ab6bae65827/core/java/android/widget/OverScroller.java).
+### Release Estimates Are Close for Fast Flicks but Vary at Low Speed
 
-## Manual Recording Results
+The four faster runs differ from native release speed by 1.2–2.7%.
+The slow runs differ by -13.8% and +6.2% despite native estimates of 150.0 dp/s in both.
+Two repeats do not establish how often the low-speed difference occurs.
 
-The user performed 11 single-finger gestures after correcting row geometry.
-The CSV contains 629 current touch samples and 596 historical samples.
-The median display observation interval was approximately 8.33 ms.
-Slint positions were sampled every 8 ms.
-Charts derive speed from position changes over 50 ms intervals.
+### Coordinate Truncation and Recency Weighting Reproduce the Estimate Error
 
-| Gesture | AOSP travel | Slint travel | AOSP last movement | Slint last movement |
+An offline replay reconstructed Slint's last 20 samples from the retained current and historical touch records.
+It applied integer coordinate truncation, density conversion, the 100 ms horizon, and the source's exponentially weighted quadratic fit.
+The replay reproduced all six logged estimates within 0.002 dp/s.
+This ties the launch mismatch to the estimator's inputs and weighting, rather than a different fling curve.
+
+| Case | Repeat | Logged Slint (dp/s) | Replayed truncated, weighted fit (dp/s) | Fractional coordinates, weighted fit (dp/s) | Fractional coordinates, uniform fit (dp/s) |
+|---|---:|---:|---:|---:|---:|
+| Slow | 1 | 129.398 | 129.397 | 146.978 | 149.935 |
+| Slow | 2 | 159.378 | 159.378 | 152.627 | 150.367 |
+| Short hard | 1 | 1532.739 | 1532.739 | 1522.412 | 1491.459 |
+| Short hard | 2 | 1522.950 | 1522.950 | 1529.642 | 1499.587 |
+| Long fast | 1 | 2022.017 | 2022.016 | 2040.779 | 1997.890 |
+| Long fast | 2 | 1944.255 | 1944.254 | 1944.151 | 1987.746 |
+
+The production Android backend and comparison bridge both truncate floating-point touch coordinates to physical integers before converting to logical coordinates.
+The estimator weights each sample with `0.5^(age / half_life)`, where `half_life` is the sample window's span divided by 14.
+A 100 ms window therefore has a half-life of about 7 ms.
+Recent quantization and timestamp irregularities have much more influence than older samples.
+
+For slow repeat 1, retaining fractional coordinates changes the weighted estimate from 129.4 to 147.0 dp/s.
+Removing recency weighting as well gives 149.9 dp/s, versus the native estimate of 150.0 dp/s.
+For long fast repeat 2, retaining fractional coordinates barely changes the estimate; the weighting accounts for most of the difference in this replay.
+Neither factor alone explains every case.
+The uniform fractional-coordinate fits are within 0.7% of the native estimates across these six runs.
+This is an observed counterfactual, not proof that the device's tracker uses exactly that implementation.
+
+Sources:
+
+- `internal/backends/android-activity/androidwindowadapter.rs`: `pointer_logical_position`.
+- `internal/backends/android-activity/javahelper.rs`: `callback_forward_touch`.
+- `internal/core/items/flickable/velocity_tracker/general.rs`: `estimate_velocity_internal` and `RECENCY_HALF_LIFE_DIVISOR`.
+- `internal/core/items/flickable/velocity_tracker/least_square.rs`: `solve_weighted`.
+
+### Travel and Timing Still Differ
+
+The short hard flicks travel 5.6–6.6% farther in Slint after release.
+The long fast flicks differ by +4.4% and -2.2%.
+Slint's last recorded movement occurs 0–34 ms later across these six runs.
+
+| Case | Repeat | AOSP last movement after release (ms) | Slint last movement after release (ms) | Maximum post-release displacement difference (dp) |
 |---|---:|---:|---:|---:|
-| 2: long rapid gesture | 6313 dp | 7645 dp | 2.416 s | 2.769 s |
-| 4: short flick | 186 dp | 98 dp | 0.525 s | 0.312 s |
-| 9: hard reverse flick | 2213 dp | 1481 dp | 1.541 s | 1.220 s |
-| 10: short flick | 125 dp | 41 dp | 0.440 s | 0.203 s |
-| 11: final flick | 159 dp | 144 dp | 0.491 s | 0.386 s |
+| Slow | 1 | 114 | 139 | 1.5 |
+| Slow | 2 | 120 | 153 | 2.8 |
+| Short hard | 1 | 738 | 772 | 25.8 |
+| Short hard | 2 | 738 | 763 | 27.7 |
+| Long fast | 1 | 914 | 939 | 38.5 |
+| Long fast | 2 | 912 | 912 | 38.2 |
 
-Travel values are magnitudes measured after release.
-Times are seconds after release, based on the last observed position change.
-Sampling and physical-pixel quantization limit timing precision.
-The final flick has relatively similar travel, but Slint stops approximately 105 ms earlier.
-The long gesture shows the opposite duration relationship.
-Different initial velocity and different decay both contribute.
-No time or distance is scaled to percentages.
+### The Source Spline Explains the Actual Slint Fling
 
-The retained capture and plots are under `output/android-aosp-recording-2026-09-30` in the original workspace.
-They are historical evidence; the runner produces fresh evidence for each revision.
+Slint's velocity-driven Android simulation uses its portable AOSP spline implementation.
+Replaying that spline with each logged Slint velocity reproduced its sampled animation with a maximum per-run RMS error of 0.049 dp.
+The largest individual residual was 0.23 dp.
+The fitted start-clock offset was at most 0.1 ms relative to consumed release.
+The replay did not scale distance or duration.
+The displayed native/Slint charts retain their original absolute positions and observation times.
 
-## Harness Error Corrected
-
-Native rows rounded every 56 dp height to 158 physical pixels at the phone's 2.8125 scale factor.
-Slint retained 157.5 pixels per row.
-This accumulated approximately 50 pixels of alignment error by row 100.
-The corrected app rounds cumulative row boundaries instead.
-The initial offset difference is approximately 0.18 dp, or half a physical pixel.
-Native text font padding is disabled to align labels.
-This was a harness error, not a physics difference.
-
-## Unresolved Behavior and Scope
-
-The long gesture produced approximately 56 dp of separation before release while the finger remained down.
-Post-release simulation cannot explain that separation.
-Recognition displacement, delivery, coordinate conversion, and timing need a focused drag investigation.
-Replaying history as additional drag displacement would double-count motion.
-
-The reference recognizer and velocity tracker come from the installed Samsung framework.
-Only its fling simulation is a pinned AOSP copy.
-This app has not established that Samsung's tracker is identical to AOSP's tracker.
-The diagnostic bridge preserves Java's millisecond event timestamps; it does not preserve sub-millisecond native precision.
-It does not prove complete AOSP widget equivalence.
-
-Android 16 AOSP normally uses a second-degree least-squares tracker for X/Y.
-It skips resampled samples and clears velocity after a movement gap greater than 40 ms at release.
-`ScrollView` also clamps velocity, selects the active pointer, applies a minimum threshold, and reverses the sign for content movement.
-Exact velocity parity requires those inputs and policies.
-[AOSP tracker](https://android.googlesource.com/platform/frameworks/native/+/refs/heads/android16-release/libs/input/VelocityTracker.cpp),
-[AOSP ScrollView](https://android.googlesource.com/platform/frameworks/base/+/99b01a65cc4c104933788b3143285ab6bae65827/core/java/android/widget/ScrollView.java).
-
-## Automated Evidence
-
-The improved harness records input after event-loop forwarding and logs Slint's actual release estimate.
-It tests slow, short hard, and long fast gestures twice each.
-Delivery checks run before comparisons of velocity, travel, and stopping time.
-The runner retains screenshots, logs, CSVs, and machine-readable results for every case.
-Use `--require-parity` to make mismatches fail the command.
-Keep parity failures visible while improving master.
-A passing delivery campaign does not establish physics parity.
-
-## Automated Device Results
-
-The September 30 campaign passed delivery validation in all six runs.
-All six also passed the 10% release-velocity comparison.
-Both slow cases passed all parity tolerances.
-Both short hard cases failed travel and position-curve parity.
-Both long fast cases additionally failed stopping-time parity.
-`--require-parity` exited with status 1 when rechecking the retained evidence.
-
-| Case | Native release speed | Slint release speed | AOSP travel | Slint travel |
+| Case | Repeat | Source-predicted Slint fling distance (dp) | Native distance from its fling callback (dp) | Source-predicted Slint duration (ms) |
 |---|---:|---:|---:|---:|
-| Slow, trial 1 | 150.0 dp/s | 150.4 dp/s | 7.1 dp | 7.1 dp |
-| Slow, trial 2 | 150.0 dp/s | 153.2 dp/s | 7.1 dp | 8.4 dp |
-| Short hard, trial 1 | 1502.2 dp/s | 1493.5 dp/s | 393.6 dp | 570.1 dp |
-| Short hard, trial 2 | 1501.9 dp/s | 1491.0 dp/s | 393.6 dp | 568.2 dp |
-| Long fast, trial 1 | 1998.9 dp/s | 2011.7 dp/s | 646.8 dp | 1028.4 dp |
-| Long fast, trial 2 | 1998.9 dp/s | 2013.9 dp/s | 646.8 dp | 1030.6 dp |
+| Slow | 1 | 5 | 7.1 | 123 |
+| Slow | 2 | 8 | 7.1 | 143 |
+| Short hard | 1 | 407 | 393.6 | 760 |
+| Short hard | 2 | 403 | 393.6 | 756 |
+| Long fast | 1 | 659 | 646.8 | 932 |
+| Long fast | 2 | 616 | 646.8 | 905 |
 
-These are measured release estimates, not requested automation speeds.
-Between 8 and 93 historical samples per run reached the forwarding bridge intact.
-Short hard and long fast launch estimates differ by less than 1%, but travel differs by approximately 45% and 59%.
-This directly demonstrates the simulation mismatch for these gestures.
-It does not prove that launch estimates match for other paths or rapid reversals.
-The six verifier unit tests also passed, including five checks that reject invalid captures.
-Full device evidence is retained locally under `/private/tmp/slint-aosp-auto-results`.
+The Slint start position implied by its final offset and source-predicted fling distance agrees with the native fling start within 0.015 dp in every run.
+This and the curve replay explain the final separation through differing release estimates and distance quantization.
+Slint truncates total distance to an integer logical pixel; AOSP truncates to an integer physical pixel.
+That introduces a smaller discrepancy even with equal logical release speeds.
+These runs provide no evidence of an additional large spline-shape error at the tested speeds.
 
-## Next Changes to Validate
+Sources: `internal/core/animations/simulations/android.rs` and `internal/core/animations/simulations/android/spline.rs`.
 
-1. Consume native timestamps and history in master's velocity tracker.
-2. Compare a pinned AOSP tracker and Slint using identical samples, including pauses and reversals.
-3. Feed equal launch velocities into both simulations to isolate trajectory differences.
-4. Adapt Android's simulation once the intended model is established by tests.
-5. Diagnose finger-down separation independently.
+### The Runner's Travel Baseline Includes Pending Drag Movement
+
+The runner takes its baseline from the last display-frame observation before the native release callback.
+That frame can precede Slint's last drag update.
+The reported post-release travel therefore includes pending drag displacement in addition to the fling.
+For short hard repeat 1, the runner reports 419.4 dp, whereas the source predicts a 407 dp fling.
+The remaining 12.4 dp is consistent with the outstanding drag movement at its baseline.
+Long fast repeat 1 similarly reports 675.4 dp for a 659 dp fling.
+
+The existing results remain unchanged so this limitation stays visible.
+Future travel assertions should record each simulation's actual start offset rather than rely on a pre-release frame.
+Reported last-movement times also combine simulation duration, observation delay, and coordinate quantization.
+They are not exact animation-completion timestamps.
+
+### The Observed Lists Also Separate Before Release
+
+The following values compare absolute sampled positions, preserving any difference already present when the finger lifts.
+A positive final difference means Slint finished farther down the list.
+
+| Case | Repeat | Maximum observed separation before release (dp) | Final Slint minus AOSP offset (dp) |
+|---|---:|---:|---:|
+| Slow | 1 | 1.4 | -2.1 |
+| Slow | 2 | 2.5 | +0.9 |
+| Short hard | 1 | 32.2 | +13.4 |
+| Short hard | 2 | 24.5 | +9.4 |
+| Long fast | 1 | 38.9 | +12.2 |
+| Long fast | 2 | 29.7 | -30.8 |
+
+The bridge's median queue delay was 0.08–0.23 ms per run, with individual delays up to 7.45 ms.
+Of 235 native offset changes during contact, 232 had a later Slint sample within one physical pixel of the same offset.
+Those matching observations lagged by a median of 4.0–6.1 ms per run, and at most 16.2 ms.
+Some intermediate native positions were skipped by the Slint sampling timer.
+
+The atomic offset shown in the Java frame callback is the last value published by Slint's 8 ms timer.
+The native offset is read directly from the native view.
+This asymmetry and the asynchronous bridge can produce a temporary gap while both positions follow the same finger movement.
+The matching offset records and aligned fling start positions support latency as the main explanation for separation in these straight swipes.
+They do not establish the visible presentation time of either renderer or settle rapid-reversal behavior.
+The original charts are not shifted to hide this delay.
+
+## What Passing Means
+
+The existing comparison allows 10% release-speed error and 50 ms difference in the last recorded movement.
+Travel and post-release displacement curves allow 10% of native travel or 5 dp, whichever is larger.
+These are harness tolerances, not Android specifications.
+Passing them does not establish a one-to-one match.
+
+Frame observations have a median interval of approximately 8.32 ms, or 120 Hz.
+Slint publishes its sampled offset through an 8 ms timer; native offset changes are also recorded independently.
+Native integer-pixel offsets and Slint's floating-point offsets have different quantization.
+Timing and instantaneous separation have these measurement limits.
+Java touch timestamps retain millisecond precision.
+The comparison charts do not rescale time or distance, or shift one side to overlap the other.
+
+## Evidence and Next Questions
+
+The local evidence directory is `output/android-aosp-murmele-2026-09-30` in the original workspace.
+It contains each run's CSV, device log, and screenshot, plus `results.json`, `build.json`, the deployed APK, and absolute-position charts.
+`plot_results.py` regenerates the charts from the retained frame offsets.
+
+`replay_diagnosis.py` and `diagnosis.json` retain the estimator ablations and source-curve replay in that evidence directory.
+The replay checks require matching release estimates within 0.01 dp/s, inferred start alignment within 0.02 dp, and spline RMS error below 0.06 dp.
+All six passed.
+
+The next focused changes to validate are preserving fractional touch coordinates, choosing an Android estimator from identical delivered samples, and recording exact simulation starts.
+Renderer presentation timing needs separate instrumentation if transient visible separation remains after correcting the observer.
+This campaign did not test rapid reversals, repeated flicks, boundaries, maximum speed, or the minimum-fling threshold.
+It makes no conclusions about those behaviors or about iOS.

@@ -11,8 +11,7 @@ The reference's fling trajectory uses AOSP with friction fixed to `0.015`.
 Touch recognition and its velocity tracker use the installed Android framework.
 This is an AOSP trajectory comparison, not a complete AOSP widget port.
 Edge effects are disabled.
-See [AOSP-PROVENANCE.md](AOSP-PROVENANCE.md).
-[FINDINGS.md](FINDINGS.md) retains the earlier master measurements; these are not results for this branch.
+See [AOSP-PROVENANCE.md](AOSP-PROVENANCE.md) and the current device results in [FINDINGS.md](FINDINGS.md).
 
 ## Build and Run
 
