@@ -721,7 +721,7 @@ public class SlintAndroidJavaHelper {
                 titleRow.setOrientation(LinearLayout.HORIZONTAL);
                 titleRow.setBackgroundColor(Color.argb(245, 255, 255, 255));
                 TextView slintTitle = new TextView(mActivity);
-                slintTitle.setText(nativeControl ? "AOSP A" : "Slint master");
+                slintTitle.setText(nativeControl ? "AOSP A" : "Slint Murmele");
                 slintTitle.setTextSize(18);
                 slintTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
                 slintTitle.setTextColor(nativeControl
