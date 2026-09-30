@@ -78,3 +78,16 @@ Use `--analyze-only` with the same output directory to recheck saved evidence wi
 Negative verifier tests reject lost history, changed timestamps, corrupted coordinates, initial misalignment, and a stationary Slint list.
 The scripts accept an emulator serial for CI.
 This branch does not configure or claim a passing GitHub workflow.
+
+## Replay the Recorded Diagnosis
+
+The retained [Galaxy A34 recordings](evidence/murmele-galaxy-a34-2026-09-30/README.md) reproduce the findings without a connected phone.
+The offline replay requires NumPy; the screen-test runner uses Python's standard library.
+
+```sh
+uv run --with numpy scripts/replay_diagnosis.py \
+  evidence/murmele-galaxy-a34-2026-09-30 --verify --output /tmp/scroll-diagnosis.json
+```
+
+The replay compares coordinate truncation and weighting on identical samples, then checks the recorded fling against Slint's source spline.
+Its bounds verify this recorded diagnosis; they are separate from native/Slint parity tolerances.

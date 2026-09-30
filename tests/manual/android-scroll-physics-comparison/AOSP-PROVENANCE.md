@@ -3,7 +3,7 @@
 
 # AOSP Comparison Build
 
-Slint base: `4e05af780806a06889f0effaad407949eb8a644d` (origin/master).
+Slint base: `bdbec1e4372d2d13f0782fc1bcea5aa6bffcfac7`, Murmele's `mm/flickable-scroll-animation-v2`.
 AOSP source: Android 16, frameworks/base `99b01a65cc4c104933788b3143285ab6bae65827`.
 
 Sources retain their Apache 2.0 copyright and license headers.
@@ -16,4 +16,4 @@ Spline coefficients and fling calculations are unchanged.
 The native comparison view overrides fling and computeScroll to use the bundled class.
 Samsung ScrollView touch recognition and Android VelocityTracker remain in use.
 Edge effects are disabled; this is a free-fling comparison, not a complete AOSP widget port.
-Slint core physics are unchanged from the recorded master revision.
+Slint core physics are unchanged from the recorded Murmele revision.

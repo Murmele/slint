@@ -473,3 +473,8 @@ path = [
 ]
 SPDX-FileCopyrightText = "Copyright © SixtyFPS GmbH <info@slint.dev>"
 SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ["tests/manual/android-scroll-physics-comparison/evidence/**"]
+SPDX-FileCopyrightText = "Copyright © SixtyFPS GmbH <info@slint.dev>"
+SPDX-License-Identifier = "MIT"

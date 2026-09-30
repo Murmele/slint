@@ -188,13 +188,13 @@ The comparison charts do not rescale time or distance, or shift one side to over
 
 ## Evidence and Next Questions
 
-The local evidence directory is `output/android-aosp-murmele-2026-09-30` in the original workspace.
-It contains each run's CSV, device log, and screenshot, plus `results.json`, `build.json`, the deployed APK, and absolute-position charts.
-`plot_results.py` regenerates the charts from the retained frame offsets.
-
-`replay_diagnosis.py` and `diagnosis.json` retain the estimator ablations and source-curve replay in that evidence directory.
+The [retained evidence](evidence/murmele-galaxy-a34-2026-09-30/README.md) includes all six compressed CSVs, release log excerpts, results, build metadata, diagnosis, and absolute-position charts.
+The [offline replay](scripts/replay_diagnosis.py) reconstructs estimator ablations and the source curve without a phone.
+See [README.md](README.md#replay-the-recorded-diagnosis) for the command.
 The replay checks require matching release estimates within 0.01 dp/s, inferred start alignment within 0.02 dp, and spline RMS error below 0.06 dp.
 All six passed.
+
+Full device logs, screenshots, the deployed APK, and the chart generator remain in the original workspace's `output/android-aosp-murmele-2026-09-30` directory.
 
 The next focused changes to validate are preserving fractional touch coordinates, choosing an Android estimator from identical delivered samples, and recording exact simulation starts.
 Renderer presentation timing needs separate instrumentation if transient visible separation remains after correcting the observer.

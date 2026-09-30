@@ -1,0 +1,380 @@
+[
+  {
+    "case": "slow",
+    "trial": 1,
+    "native_release_dp_s": 150.04444444444445,
+    "slint_release_dp_s": 129.39848,
+    "estimator_replay": {
+      "float_uniform": 149.93492158154513,
+      "float_weighted": 146.97842927741257,
+      "int_uniform": 147.78332023548415,
+      "int_weighted": 129.3971862709285
+    },
+    "slint_spline_prediction": {
+      "distance_dp": 5,
+      "duration_ms": 123
+    },
+    "native_spline_prediction": {
+      "distance_dp": 7,
+      "duration_ms": 137
+    },
+    "slint_travel_from_last_sample_before_consumed_release": 5.0,
+    "native_travel_from_fling_callback": 7.110700000000179,
+    "slint_last_pre_consumed_release_offset": 5655.837,
+    "native_fling_start_offset": 5655.8223,
+    "delivery_delay_ms": 1.747769,
+    "last_samples": [
+      [
+        10250507,
+        1212.1924
+      ],
+      [
+        10250504,
+        1213.5352
+      ],
+      [
+        10250498,
+        1215.7148
+      ],
+      [
+        10250496,
+        1216.915
+      ],
+      [
+        10250490,
+        1219.2393
+      ]
+    ],
+    "spline_curve_replay": {
+      "start_offset_relative_to_consumed_release_ms": -0.0,
+      "rmse_dp": 0.0015493563358749969,
+      "max_error_dp": 0.0035109860937154735
+    },
+    "slint_start_inferred_from_final_and_source_distance": 5655.837,
+    "inferred_start_minus_native_fling_start_dp": 0.014700000000630098,
+    "observation_latency": {
+      "median_bridge_queue_ms": 0.124538,
+      "max_bridge_queue_ms": 1.747769,
+      "native_contact_offset_changes": 90,
+      "matched_within_one_physical_pixel": 90,
+      "median_matched_observation_delay_ms": 4.0495385,
+      "max_matched_observation_delay_ms": 7.512,
+      "method": "First later Slint timer sample within one physical pixel of each native contact offset; search at most 40 ms."
+    }
+  },
+  {
+    "case": "slow",
+    "trial": 2,
+    "native_release_dp_s": 150.04444444444445,
+    "slint_release_dp_s": 159.37836,
+    "estimator_replay": {
+      "float_uniform": 150.3673291576883,
+      "float_weighted": 152.6271998472009,
+      "int_uniform": 152.07365262966744,
+      "int_weighted": 159.37782368596885
+    },
+    "slint_spline_prediction": {
+      "distance_dp": 8,
+      "duration_ms": 143
+    },
+    "native_spline_prediction": {
+      "distance_dp": 7,
+      "duration_ms": 137
+    },
+    "slint_travel_from_last_sample_before_consumed_release": 7.9990999999999985,
+    "native_travel_from_fling_callback": 7.110700000000179,
+    "slint_last_pre_consumed_release_offset": 5655.8354,
+    "native_fling_start_offset": 5655.8223,
+    "delivery_delay_ms": 0.109616,
+    "last_samples": [
+      [
+        10258222,
+        1212.5449
+      ],
+      [
+        10258220,
+        1213.5352
+      ],
+      [
+        10258214,
+        1216.0674
+      ],
+      [
+        10258211,
+        1217.3379
+      ],
+      [
+        10258205,
+        1219.5859
+      ]
+    ],
+    "spline_curve_replay": {
+      "start_offset_relative_to_consumed_release_ms": 0.1,
+      "rmse_dp": 0.003037248596935725,
+      "max_error_dp": 0.007905867176305037
+    },
+    "slint_start_inferred_from_final_and_source_distance": 5655.8345,
+    "inferred_start_minus_native_fling_start_dp": 0.012200000000120781,
+    "observation_latency": {
+      "median_bridge_queue_ms": 0.085308,
+      "max_bridge_queue_ms": 7.445769,
+      "native_contact_offset_changes": 89,
+      "matched_within_one_physical_pixel": 89,
+      "median_matched_observation_delay_ms": 4.242846,
+      "max_matched_observation_delay_ms": 16.223,
+      "method": "First later Slint timer sample within one physical pixel of each native contact offset; search at most 40 ms."
+    }
+  },
+  {
+    "case": "short-hard",
+    "trial": 1,
+    "native_release_dp_s": 1501.8666666666666,
+    "slint_release_dp_s": 1532.7386,
+    "estimator_replay": {
+      "float_uniform": 1491.4592212153639,
+      "float_weighted": 1522.412275254952,
+      "int_uniform": 1489.314819557884,
+      "int_weighted": 1532.7388859541998
+    },
+    "slint_spline_prediction": {
+      "distance_dp": 407,
+      "duration_ms": 760
+    },
+    "native_spline_prediction": {
+      "distance_dp": 393,
+      "duration_ms": 749
+    },
+    "slint_travel_from_last_sample_before_consumed_release": 419.4422999999997,
+    "native_travel_from_fling_callback": 393.60000000000036,
+    "slint_last_pre_consumed_release_offset": 5638.755,
+    "native_fling_start_offset": 5651.2,
+    "delivery_delay_ms": 1.406231,
+    "last_samples": [
+      [
+        10265195,
+        1225.9375
+      ],
+      [
+        10265193,
+        1236.3496
+      ],
+      [
+        10265187,
+        1260.6982
+      ],
+      [
+        10265184,
+        1274.375
+      ],
+      [
+        10265178,
+        1295.9062
+      ]
+    ],
+    "spline_curve_replay": {
+      "start_offset_relative_to_consumed_release_ms": 0.1,
+      "rmse_dp": 0.029919557924102835,
+      "max_error_dp": 0.08423048862914584
+    },
+    "slint_start_inferred_from_final_and_source_distance": 5651.1973,
+    "inferred_start_minus_native_fling_start_dp": -0.0027000000000043656,
+    "observation_latency": {
+      "median_bridge_queue_ms": 0.1536925,
+      "max_bridge_queue_ms": 2.171307,
+      "native_contact_offset_changes": 8,
+      "matched_within_one_physical_pixel": 6,
+      "median_matched_observation_delay_ms": 6.052154,
+      "max_matched_observation_delay_ms": 10.342692,
+      "method": "First later Slint timer sample within one physical pixel of each native contact offset; search at most 40 ms."
+    }
+  },
+  {
+    "case": "short-hard",
+    "trial": 2,
+    "native_release_dp_s": 1502.2222222222222,
+    "slint_release_dp_s": 1522.9502,
+    "estimator_replay": {
+      "float_uniform": 1499.5873319178197,
+      "float_weighted": 1529.6415102863712,
+      "int_uniform": 1496.0815940402324,
+      "int_weighted": 1522.949513646157
+    },
+    "slint_spline_prediction": {
+      "distance_dp": 403,
+      "duration_ms": 756
+    },
+    "native_spline_prediction": {
+      "distance_dp": 393,
+      "duration_ms": 749
+    },
+    "slint_travel_from_last_sample_before_consumed_release": 403.0003999999999,
+    "native_travel_from_fling_callback": 393.60010000000057,
+    "slint_last_pre_consumed_release_offset": 5654.044,
+    "native_fling_start_offset": 5654.0444,
+    "delivery_delay_ms": 2.284615,
+    "last_samples": [
+      [
+        10272210,
+        1217.1221
+      ],
+      [
+        10272208,
+        1227.9004
+      ],
+      [
+        10272202,
+        1252.1279
+      ],
+      [
+        10272200,
+        1261.7002
+      ],
+      [
+        10272193,
+        1287.335
+      ]
+    ],
+    "spline_curve_replay": {
+      "start_offset_relative_to_consumed_release_ms": -0.0,
+      "rmse_dp": 0.03043278954242994,
+      "max_error_dp": 0.09159611435006809
+    },
+    "slint_start_inferred_from_final_and_source_distance": 5654.0444,
+    "inferred_start_minus_native_fling_start_dp": 0.0,
+    "observation_latency": {
+      "median_bridge_queue_ms": 0.229308,
+      "max_bridge_queue_ms": 4.229,
+      "native_contact_offset_changes": 7,
+      "matched_within_one_physical_pixel": 7,
+      "median_matched_observation_delay_ms": 5.241615,
+      "max_matched_observation_delay_ms": 12.915077,
+      "method": "First later Slint timer sample within one physical pixel of each native contact offset; search at most 40 ms."
+    }
+  },
+  {
+    "case": "long-fast",
+    "trial": 1,
+    "native_release_dp_s": 1998.9333333333334,
+    "slint_release_dp_s": 2022.0167,
+    "estimator_replay": {
+      "float_uniform": 1997.8895456776631,
+      "float_weighted": 2040.7793660164955,
+      "int_uniform": 2001.4692779395702,
+      "int_weighted": 2022.015528574229
+    },
+    "slint_spline_prediction": {
+      "distance_dp": 659,
+      "duration_ms": 932
+    },
+    "native_spline_prediction": {
+      "distance_dp": 646,
+      "duration_ms": 924
+    },
+    "slint_travel_from_last_sample_before_consumed_release": 658.9996000000001,
+    "native_travel_from_fling_callback": 646.7555000000002,
+    "slint_last_pre_consumed_release_offset": 5899.019,
+    "native_fling_start_offset": 5899.0225,
+    "delivery_delay_ms": 2.412231,
+    "last_samples": [
+      [
+        10279300,
+        528.04297
+      ],
+      [
+        10279298,
+        542.6221
+      ],
+      [
+        10279292,
+        574.87695
+      ],
+      [
+        10279290,
+        587.5996
+      ],
+      [
+        10279283,
+        621.7529
+      ]
+    ],
+    "spline_curve_replay": {
+      "start_offset_relative_to_consumed_release_ms": -0.0,
+      "rmse_dp": 0.048264372331677755,
+      "max_error_dp": 0.22603697512568033
+    },
+    "slint_start_inferred_from_final_and_source_distance": 5899.0186,
+    "inferred_start_minus_native_fling_start_dp": -0.003899999999703141,
+    "observation_latency": {
+      "median_bridge_queue_ms": 0.08,
+      "max_bridge_queue_ms": 4.904539,
+      "native_contact_offset_changes": 21,
+      "matched_within_one_physical_pixel": 20,
+      "median_matched_observation_delay_ms": 4.387193,
+      "max_matched_observation_delay_ms": 13.608693,
+      "method": "First later Slint timer sample within one physical pixel of each native contact offset; search at most 40 ms."
+    }
+  },
+  {
+    "case": "long-fast",
+    "trial": 2,
+    "native_release_dp_s": 1998.9333333333334,
+    "slint_release_dp_s": 1944.2546,
+    "estimator_replay": {
+      "float_uniform": 1987.7455442804132,
+      "float_weighted": 1944.150734048125,
+      "int_uniform": 1992.480652625466,
+      "int_weighted": 1944.25438290537
+    },
+    "slint_spline_prediction": {
+      "distance_dp": 616,
+      "duration_ms": 905
+    },
+    "native_spline_prediction": {
+      "distance_dp": 646,
+      "duration_ms": 924
+    },
+    "slint_travel_from_last_sample_before_consumed_release": 615.9985999999999,
+    "native_travel_from_fling_callback": 646.7554,
+    "slint_last_pre_consumed_release_offset": 5890.1304,
+    "native_fling_start_offset": 5890.1333,
+    "delivery_delay_ms": 1.128616,
+    "last_samples": [
+      [
+        10286366,
+        553.78516
+      ],
+      [
+        10286364,
+        565.1113
+      ],
+      [
+        10286357,
+        600.6289
+      ],
+      [
+        10286355,
+        615.71094
+      ],
+      [
+        10286349,
+        647.52344
+      ]
+    ],
+    "spline_curve_replay": {
+      "start_offset_relative_to_consumed_release_ms": -0.0,
+      "rmse_dp": 0.041012161970839706,
+      "max_error_dp": 0.1288782941746831
+    },
+    "slint_start_inferred_from_final_and_source_distance": 5890.129,
+    "inferred_start_minus_native_fling_start_dp": -0.004300000000512227,
+    "observation_latency": {
+      "median_bridge_queue_ms": 0.078154,
+      "max_bridge_queue_ms": 1.475154,
+      "native_contact_offset_changes": 20,
+      "matched_within_one_physical_pixel": 20,
+      "median_matched_observation_delay_ms": 5.1226155,
+      "max_matched_observation_delay_ms": 8.048077,
+      "method": "First later Slint timer sample within one physical pixel of each native contact offset; search at most 40 ms."
+    }
+  }
+]
