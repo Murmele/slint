@@ -14,7 +14,6 @@ fn main() {
     }
     let release_mode = env::var("PROFILE").as_ref().map(|s| s.as_str()) == Ok("release");
 
-    // This is the only Java source file
     let java_src = "SlintAndroidJavaHelper.java";
     let java_src_path = format!("java/{java_src}");
 
@@ -36,6 +35,7 @@ fn main() {
     // Compile the Java file into .class files
     let o = JavaBuild::new()
         .file(&java_src_path)
+        .file("java/AospOverScroller.java")
         .class_path(&android_jar)
         .classes_out_dir(&out_class_dir)
         .java_source_version(8)
@@ -83,4 +83,5 @@ fn main() {
     }
 
     println!("cargo:rerun-if-changed={java_src_path}");
+    println!("cargo:rerun-if-changed=java/AospOverScroller.java");
 }

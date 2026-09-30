@@ -926,6 +926,19 @@ impl FlickableDataInner {
                 flick_rc,
             );
             let velocity_estimation = self.velocity_rb.estimate_velocity();
+            #[cfg(target_os = "android")]
+            if option_env!("SLINT_SCROLL_DIAGNOSTICS") == Some("1") {
+                if let Some(estimate) = velocity_estimation.as_ref() {
+                    std::println!(
+                        "SCROLL_ESTIMATE,{},{},{}",
+                        estimate.velocity.x,
+                        estimate.velocity.y,
+                        crate::animations::current_tick()
+                            .duration_since(self.velocity_rb.last_time().unwrap_or_default())
+                            .as_secs_f64()
+                    );
+                }
+            }
             let geo = Flickable::geometry_without_virtual_keyboard(flick_rc);
 
             let x_simulation = if inside_bounds_x {

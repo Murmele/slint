@@ -117,6 +117,7 @@ path = [
   "examples/Cargo.lock",
   "demos/Cargo.lock",
   "tests/Cargo.lock",
+  "tests/manual/android-scroll-physics-comparison/Cargo.lock",
   "**/uv.lock",
   "REUSE.toml",
   "biome.json",
