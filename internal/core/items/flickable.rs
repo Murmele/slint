@@ -420,6 +420,26 @@ impl core::ops::Deref for FlickableDataBox {
 
 /// The distance required before it starts flicking if there is another item intercepting the mouse.
 pub(super) const DISTANCE_THRESHOLD: LogicalLength = LogicalLength::new(8 as _);
+#[cfg(all(target_os = "ios", feature = "std"))]
+fn ios_scroll_experiment() -> u8 {
+    static MODE: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+    *MODE.get_or_init(|| match std::env::var("SLINT_IOS_SCROLL_EXPERIMENT").as_deref() {
+        Ok("threshold10") => 1,
+        Ok("rubberband10") => 2,
+        Ok("spring-coordinate") => 3,
+        Ok("spring-clock") => 4,
+        _ => 0,
+    })
+}
+
+fn touch_distance_threshold() -> LogicalLength {
+    #[cfg(all(target_os = "ios", feature = "std"))]
+    if ios_scroll_experiment() > 0 {
+        return LogicalLength::new(10 as _);
+    }
+    DISTANCE_THRESHOLD
+}
+
 /// Time required before we stop caring about child event if the mouse hasn't been moved
 pub(super) const DURATION_THRESHOLD: Duration = Duration::from_millis(500);
 /// The delay to which press are forwarded to the inner item
@@ -501,6 +521,15 @@ impl FlickableDataInner {
         }
     }
 
+    fn subtract_touch_distance_threshold(delta: Coord) -> Coord {
+        let threshold = touch_distance_threshold().0;
+        if delta >= 0 as Coord {
+            (delta - threshold).max(0 as Coord)
+        } else {
+            (delta + threshold).min(0 as Coord)
+        }
+    }
+
     fn should_capture_scroll(&self, timeout: Duration, position: LogicalPoint) -> bool {
         self.last_scroll_event.is_some_and(|(last_time, last_position)| {
             // Note: Squared length for MCU support, which use i32 coords.
@@ -539,6 +568,29 @@ impl FlickableDataInner {
         let geo = Flickable::geometry_without_virtual_keyboard(flick_rc);
         let use_bounce_x = FlickAnimation::use_bounce(effective_bounce(flick, &geo, Dimension::X));
         let use_bounce_y = FlickAnimation::use_bounce(effective_bounce(flick, &geo, Dimension::Y));
+        #[cfg(all(target_os = "ios", feature = "std"))]
+        if ios_scroll_experiment() >= 2 {
+            let width = geo.width_length().get() as f32;
+            let height = geo.height_length().get() as f32;
+            let min_x = (width - flick.content_width().get() as f32).min(0.);
+            let min_y = (height - flick.content_height().get() as f32).min(0.);
+            let x = if use_bounce_x {
+                animation::rubber_band_move_axis(current_pos.x as f32, delta.x as f32, min_x, width)
+            } else {
+                (current_pos.x as f32 + delta.x as f32).clamp(min_x, 0.)
+            };
+            let y = if use_bounce_y {
+                animation::rubber_band_move_axis(
+                    current_pos.y as f32,
+                    delta.y as f32,
+                    min_y,
+                    height,
+                )
+            } else {
+                (current_pos.y as f32 + delta.y as f32).clamp(min_y, 0.)
+            };
+            return LogicalPoint::new(x as _, y as _) - current_pos;
+        }
         let new_pos = ensure_in_bound(flick, current_pos + delta, &geo, use_bounce_x, use_bounce_y);
         FlickAnimation::apply_friction(current_pos, new_pos - current_pos, flick, flick_rc)
     }
@@ -908,6 +960,23 @@ impl FlickableDataInner {
         let limit = Self::flick_limits(flick_rc, curr_val, dimension);
         Rc::new_cyclic(|weak: &Weak<RefCell<SpringSimulation>>| {
             content.set_physic_animation_value(weak.clone());
+            #[cfg(all(target_os = "ios", feature = "std"))]
+            if ios_scroll_experiment() >= 3 {
+                let geo = Flickable::geometry_without_virtual_keyboard(flick_rc);
+                let viewport = match dimension {
+                    Dimension::X => geo.width_length().get() as f32,
+                    Dimension::Y => geo.height_length().get() as f32,
+                };
+                let mut simulation =
+                    SpringSimulation::new_with_rubber_band_parameters(curr_val, limit, viewport);
+                if ios_scroll_experiment() == 4 {
+                    if let Some(adapter) = flick_rc.window_adapter() {
+                        let ctx = crate::window::WindowInner::from_pub(adapter.window()).context();
+                        simulation = simulation.with_start_time(Instant::now(ctx));
+                    }
+                }
+                return RefCell::new(simulation);
+            }
             RefCell::new(FlickAnimation::create_spring_animation(curr_val, limit))
         })
     }
@@ -1204,14 +1273,14 @@ impl FlickableData {
             Dimension::X,
         )) || content_width > flickable_width
             || flick.content_x() != zero)
-            && abs(mouse_delta.x_length()) > DISTANCE_THRESHOLD;
+            && abs(mouse_delta.x_length()) > touch_distance_threshold();
         let should_capture_y = (FlickAnimation::use_bounce(effective_bounce(
             flick,
             &flickable_geometry,
             Dimension::Y,
         )) || content_height > flickable_height
             || flick.content_y() != zero)
-            && abs(mouse_delta.y_length()) > DISTANCE_THRESHOLD;
+            && abs(mouse_delta.y_length()) > touch_distance_threshold();
         should_capture_x || should_capture_y
     }
 
@@ -1307,10 +1376,12 @@ impl FlickableData {
 
                         if !is_capturing && event.is_from_touch() {
                             // Otherwise we'd jump instead of starting the drag smoothly.
-                            mouse_delta.x =
-                                FlickableDataInner::subtract_distance_threshold(mouse_delta.x);
-                            mouse_delta.y =
-                                FlickableDataInner::subtract_distance_threshold(mouse_delta.y);
+                            mouse_delta.x = FlickableDataInner::subtract_touch_distance_threshold(
+                                mouse_delta.x,
+                            );
+                            mouse_delta.y = FlickableDataInner::subtract_touch_distance_threshold(
+                                mouse_delta.y,
+                            );
                         }
 
                         let flicked = inner.scroll_move(
@@ -1327,8 +1398,8 @@ impl FlickableData {
                         inner.capture_events = Some(CaptureEvents::MouseMove);
 
                         InputEventResult::GrabMouse
-                    } else if abs(mouse_delta.x_length()) > DISTANCE_THRESHOLD
-                        || abs(mouse_delta.y_length()) > DISTANCE_THRESHOLD
+                    } else if abs(mouse_delta.x_length()) > touch_distance_threshold()
+                        || abs(mouse_delta.y_length()) > touch_distance_threshold()
                     {
                         // drag in a unsupported direction gives up the grab
                         InputEventResult::EventIgnored

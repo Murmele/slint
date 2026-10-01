@@ -1,0 +1,8 @@
+{
+  "complete_pan_traces": 18,
+  "complete_pull_traces": 18,
+  "exact_requested_distances_delivered": true,
+  "corrected_holds_at_least_80_ms": true,
+  "median_sampling_intervals_under_9_ms": true,
+  "spring_candidate_passes_max_gap_0_5_pt": false
+}
