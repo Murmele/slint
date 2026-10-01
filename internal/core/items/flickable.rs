@@ -428,6 +428,8 @@ fn ios_scroll_experiment() -> u8 {
         Ok("rubberband10") => 2,
         Ok("spring-coordinate") => 3,
         Ok("spring-clock") => 4,
+        Ok("spring-runloop") | Ok("spring-history") => 3,
+        Ok("spring-zero-velocity") => 5,
         _ => 0,
     })
 }
@@ -967,8 +969,11 @@ impl FlickableDataInner {
                     Dimension::X => geo.width_length().get() as f32,
                     Dimension::Y => geo.height_length().get() as f32,
                 };
-                let mut simulation =
-                    SpringSimulation::new_with_rubber_band_parameters(curr_val, limit, viewport);
+                let mut simulation = if ios_scroll_experiment() == 5 {
+                    SpringSimulation::new_with_rubber_band_velocity(curr_val, limit, viewport, 0.)
+                } else {
+                    SpringSimulation::new_with_rubber_band_parameters(curr_val, limit, viewport)
+                };
                 if ios_scroll_experiment() == 4 {
                     if let Some(adapter) = flick_rc.window_adapter() {
                         let ctx = crate::window::WindowInner::from_pub(adapter.window()).context();

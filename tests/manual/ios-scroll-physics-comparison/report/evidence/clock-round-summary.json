@@ -1,0 +1,98 @@
+[
+  {
+    "scenario": "overscroll-spring-clock-d200-trial-1",
+    "release_clock_lag_ms": 408.767,
+    "max_return_gap_pt": 2.5500000000000007,
+    "max_first_25ms_gap_pt": 2.2690000000000055,
+    "max_later_gap_pt": 2.5500000000000007,
+    "return_rms_0_8_s_pt": 1.0137642724026135,
+    "median_interval_ms": 8.332459023222327,
+    "pan_ended_clock_lag_ms": 2.155,
+    "native_ended_action_after_release_ms": 4.773500026203692,
+    "inferred_refreshed_tick_age_at_release_ms": -2.618500026203692
+  },
+  {
+    "scenario": "overscroll-spring-clock-d200-trial-2",
+    "release_clock_lag_ms": 409.369,
+    "max_return_gap_pt": 2.331000000000003,
+    "max_first_25ms_gap_pt": 2.1329999999999956,
+    "max_later_gap_pt": 2.331000000000003,
+    "return_rms_0_8_s_pt": 0.7839822622355685,
+    "median_interval_ms": 8.333645528182387,
+    "pan_ended_clock_lag_ms": 2.359,
+    "native_ended_action_after_release_ms": 4.569999990053475,
+    "inferred_refreshed_tick_age_at_release_ms": -2.210999990053475
+  },
+  {
+    "scenario": "overscroll-spring-clock-d600-trial-1",
+    "release_clock_lag_ms": 400.355,
+    "max_return_gap_pt": 8.966000000000008,
+    "max_first_25ms_gap_pt": 8.966000000000008,
+    "max_later_gap_pt": 6.304000000000002,
+    "return_rms_0_8_s_pt": 1.8641771431526122,
+    "median_interval_ms": 8.328896015882492,
+    "pan_ended_clock_lag_ms": 2.432,
+    "native_ended_action_after_release_ms": 4.641084000468254,
+    "inferred_refreshed_tick_age_at_release_ms": -2.209084000468254
+  },
+  {
+    "scenario": "overscroll-spring-clock-d600-trial-2",
+    "release_clock_lag_ms": 400.342,
+    "max_return_gap_pt": 9.161000000000001,
+    "max_first_25ms_gap_pt": 9.161000000000001,
+    "max_later_gap_pt": 5.832999999999998,
+    "return_rms_0_8_s_pt": 1.8178305954307763,
+    "median_interval_ms": 8.329250034876168,
+    "pan_ended_clock_lag_ms": 2.157,
+    "native_ended_action_after_release_ms": 4.31912497151643,
+    "inferred_refreshed_tick_age_at_release_ms": -2.1621249715164303
+  },
+  {
+    "scenario": "overscroll-spring-coordinate-d200-trial-1",
+    "release_clock_lag_ms": 408.255,
+    "max_return_gap_pt": 2.4470000000000027,
+    "max_first_25ms_gap_pt": 2.4470000000000027,
+    "max_later_gap_pt": 1.6559999999999917,
+    "return_rms_0_8_s_pt": 0.7122452687920549,
+    "median_interval_ms": 8.337207953445613,
+    "pan_ended_clock_lag_ms": 1.375,
+    "native_ended_action_after_release_ms": 2.6701670140028,
+    "inferred_refreshed_tick_age_at_release_ms": -1.2951670140028
+  },
+  {
+    "scenario": "overscroll-spring-coordinate-d200-trial-2",
+    "release_clock_lag_ms": 408.625,
+    "max_return_gap_pt": 2.319999999999993,
+    "max_first_25ms_gap_pt": 2.319999999999993,
+    "max_later_gap_pt": 1.8670000000000009,
+    "return_rms_0_8_s_pt": 0.7707682268843649,
+    "median_interval_ms": 8.339354011695832,
+    "pan_ended_clock_lag_ms": 2.498,
+    "native_ended_action_after_release_ms": 4.967416054569185,
+    "inferred_refreshed_tick_age_at_release_ms": -2.4694160545691846
+  },
+  {
+    "scenario": "overscroll-spring-coordinate-d600-trial-1",
+    "release_clock_lag_ms": 400.328,
+    "max_return_gap_pt": 9.455000000000013,
+    "max_first_25ms_gap_pt": 9.455000000000013,
+    "max_later_gap_pt": 2.318000000000012,
+    "return_rms_0_8_s_pt": 1.4814277284374475,
+    "median_interval_ms": 8.329750038683414,
+    "pan_ended_clock_lag_ms": 2.724,
+    "native_ended_action_after_release_ms": 5.817041965201497,
+    "inferred_refreshed_tick_age_at_release_ms": -3.093041965201497
+  },
+  {
+    "scenario": "overscroll-spring-coordinate-d600-trial-2",
+    "release_clock_lag_ms": 400.253,
+    "max_return_gap_pt": 9.02600000000001,
+    "max_first_25ms_gap_pt": 9.02600000000001,
+    "max_later_gap_pt": 8.179000000000002,
+    "return_rms_0_8_s_pt": 1.6820361885474804,
+    "median_interval_ms": 8.33552103722468,
+    "pan_ended_clock_lag_ms": 2.471,
+    "native_ended_action_after_release_ms": 4.690667032264173,
+    "inferred_refreshed_tick_age_at_release_ms": -2.219667032264173
+  }
+]

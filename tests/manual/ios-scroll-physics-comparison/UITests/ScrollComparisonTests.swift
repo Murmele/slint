@@ -14,6 +14,7 @@ final class ScrollComparisonTests: XCTestCase {
         scenario: String,
         startOffset: Double? = nil,
         fromBottomDistance: Double? = nil,
+        rowCount: Int? = nil,
         inputTrace: Bool = false,
         traceSaveDelayMs: Int = 250,
         nativeOnlyInput: Bool = false,
@@ -24,6 +25,7 @@ final class ScrollComparisonTests: XCTestCase {
         app.launchEnvironment["SCROLL_SCENARIO"] = scenario
         app.launchEnvironment["NATIVE_ONLY_INPUT"] = nativeOnlyInput ? "1" : "0"
         app.launchEnvironment["SLINT_IOS_SCROLL_EXPERIMENT"] = physicsVariant
+        if let rowCount { app.launchEnvironment["SCROLL_ROW_COUNT"] = String(rowCount) }
         if let startOffset {
             app.launchEnvironment["START_OFFSET"] = String(startOffset)
         }
@@ -425,6 +427,97 @@ final class ScrollComparisonTests: XCTestCase {
         for variant in ["spring-coordinate", "spring-clock"] {
             captureOverscroll(distances: [200, 600], repeats: 2,
                               physicsVariant: variant)
+        }
+    }
+
+    func testOverscrollReleaseMomentumMatrix() {
+        captureReleaseMatrix(distances: [100, 600], repeats: 2)
+    }
+
+    func testOverscrollReleaseDeliveryCheck() {
+        captureReleaseMatrix(distances: [100], repeats: 1)
+    }
+
+    func testOverscrollQuietReleaseControl() {
+        captureReleaseMatrix(distances: [100, 600], repeats: 2, quietStop: true)
+    }
+
+    func testFlingIntoBottomBoundary() {
+        captureBoundaryCollisions(atTop: false)
+    }
+
+    func testFlingIntoTopBoundary() {
+        captureBoundaryCollisions(atTop: true)
+    }
+
+    private func captureBoundaryCollisions(atTop: Bool) {
+        let boundary = atTop ? "top" : "bottom"
+        for velocity in [400.0, 1_000.0, 1_500.0, 2_200.0, 3_000.0, 4_500.0] {
+            for trial in 1...2 {
+                let name = "collision-\(boundary)-v\(Int(velocity))-trial\(trial)"
+                let app = launch(scenario: name, startOffset: 9 * 72,
+                                 rowCount: atTop ? 1_000 : 25,
+                                 inputTrace: true, traceSaveDelayMs: 2_600,
+                                 physicsVariant: "spring-coordinate")
+                let start = app.coordinate(withNormalizedOffset:
+                    CGVector(dx: 0.20, dy: atTop ? 0.35 : 0.70))
+                let end = start.withOffset(CGVector(dx: 0, dy: atTop ? 200 : -200))
+                start.press(forDuration: 0.08, thenDragTo: end,
+                            withVelocity: XCUIGestureVelocity(rawValue: velocity),
+                            thenHoldForDuration: 0)
+                let saved = expectation(description: "Save \(boundary) collision")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { saved.fulfill() }
+                wait(for: [saved], timeout: 5)
+                let metrics = app.staticTexts["Scroll comparison metrics"].value as? String ?? ""
+                XCTAssertTrue(metrics.contains("UIKit="))
+                XCTAssertTrue(metrics.contains("Slint="))
+                XCTContext.runActivity(named: "\(name): \(metrics)") { _ in }
+                app.terminate()
+            }
+        }
+    }
+
+    private func captureReleaseMatrix(distances: [Double], repeats: Int, quietStop: Bool = false) {
+        for distance in distances {
+            for velocity in (quietStop ? [1_600.0] : [400.0, 1_600.0]) {
+                for stopDuration in (quietStop ? [0.4] : [0.0, 0.4]) {
+                    for trial in 1...repeats {
+                        let prefix = quietStop ? "release-quiet" : "release-public"
+                        let name = "\(prefix)-d\(Int(distance))-v\(Int(velocity))"
+                            + "-hold\(Int(stopDuration * 1_000))-trial\(trial)"
+                        let app = launch(scenario: name, startOffset: 0, inputTrace: true,
+                                         traceSaveDelayMs: 2_200,
+                                         physicsVariant: "spring-coordinate")
+                        if quietStop {
+                            let processID = (app.value(forKey: "processID") as! NSNumber).int32Value
+                            XCTAssertTrue(synthesizeOverscrollRelease(
+                                processID, app.frame.width, app.frame.height,
+                                distance, velocity, stopDuration))
+                        } else {
+                            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.20, dy: 0.18))
+                            let end = start.withOffset(CGVector(dx: 0, dy: distance))
+                            start.press(forDuration: 0.08, thenDragTo: end,
+                                        withVelocity: XCUIGestureVelocity(rawValue: velocity),
+                                        thenHoldForDuration: stopDuration)
+                        }
+                        let saved = expectation(description: "Save release comparison")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) { saved.fulfill() }
+                        wait(for: [saved], timeout: 5)
+                        let metrics = app.staticTexts["Scroll comparison metrics"].value as? String ?? ""
+                        XCTAssertTrue(metrics.contains("UIKitPeakOverscroll="))
+                        XCTAssertTrue(metrics.contains("SlintPeakOverscroll="))
+                        XCTContext.runActivity(named: "\(name): \(metrics)") { _ in }
+                        app.terminate()
+                    }
+                }
+            }
+        }
+    }
+
+    func testLocalSimulatorSpringAlternatives() {
+        for variant in ["spring-coordinate", "spring-runloop", "spring-zero-velocity",
+                        "spring-history"] {
+            captureOverscroll(distances: [200, 600], repeats: 2, physicsVariant: variant)
         }
     }
 

@@ -11,3 +11,5 @@ BOOL synthesizePanProbe(pid_t processID, double width, double height, const doub
                         double holdDuration);
 
 BOOL synthesizeOverscrollPull(pid_t processID, double width, double height, double distance);
+BOOL synthesizeOverscrollRelease(pid_t processID, double width, double height, double distance,
+                                double velocity, double stopDuration);

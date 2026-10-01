@@ -9,6 +9,7 @@ slint::slint! {
     export component Comparison inherits Window {
         title: "UIKit over Slint";
         background: #f4f6fa;
+        in property <int> row-count: 1000;
         out property <float> scroll-offset: -list.content-y / 1px;
         out property <float> viewport-x: (list.x + (list.width - list.visible-width) / 2) / 1px;
         out property <float> viewport-y: (list.y + (list.height - list.visible-height) / 2) / 1px;
@@ -22,10 +23,10 @@ slint::slint! {
         list := ScrollView {
             x: 8px; y: 102px;
             width: root.width - 16px; height: root.height - 148px;
-            content-width: self.width - 12px; content-height: 1000 * 72px;
+            content-width: self.width - 12px; content-height: root.row-count * 72px;
             horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
             scrolled => { root.scroll-moved(); }
-            for row in 1000 : Rectangle {
+            for row in root.row-count : Rectangle {
                 y: row * 72px; height: 72px; width: list.content-width;
                 background: mod(row, 2) == 0 ? #e4ebf5 : #ffffff;
                 Text {
@@ -91,6 +92,67 @@ extern "C" fn slint_animation_clock_lag_ms() -> f32 {
     })
 }
 
+#[repr(C)]
+struct TouchSample {
+    timestamp: f64,
+    x: f32,
+    y: f32,
+}
+
+// Diagnostic path: preserve the UIKit samples that Winit currently discards.
+#[unsafe(no_mangle)]
+unsafe extern "C" fn slint_diagnostic_touch(
+    id: i32,
+    phase: i32,
+    x: f32,
+    y: f32,
+    timestamp: f64,
+    callback_time: f64,
+    samples: *const TouchSample,
+    sample_count: usize,
+) {
+    use i_slint_core::{
+        animations::Instant,
+        input::{TouchHistory, TouchPhase},
+        lengths::LogicalPoint,
+        platform::{InternalEvent, WindowEvent},
+    };
+    APP.with(|slot| {
+        if let Some(app) = slot.borrow().as_ref().and_then(slint::Weak::upgrade) {
+            let ctx = i_slint_core::window::WindowInner::from_pub(app.window()).context();
+            ctx.update_timers_and_animations();
+            let now = Instant::now(ctx);
+            let sample_time = |time: f64| {
+                now - std::time::Duration::from_secs_f64((callback_time - time).max(0.))
+            };
+            // The caller owns this array and keeps it alive throughout the synchronous call.
+            let samples = unsafe { std::slice::from_raw_parts(samples, sample_count) };
+            let history = TouchHistory {
+                history: samples
+                    .iter()
+                    .filter(|sample| sample.timestamp < timestamp)
+                    .map(|sample| {
+                        (LogicalPoint::new(sample.x, sample.y), sample_time(sample.timestamp))
+                    })
+                    .collect(),
+            };
+            let phase = match phase {
+                0 => TouchPhase::Started,
+                1 => TouchPhase::Moved,
+                2 => TouchPhase::Ended,
+                _ => TouchPhase::Cancelled,
+            };
+            app.window().dispatch_event(WindowEvent::internal(InternalEvent::Touch {
+                id,
+                position: LogicalPoint::new(x, y),
+                phase,
+                event_time: Some(sample_time(timestamp)),
+                history,
+            }));
+        }
+    });
+}
+
 #[unsafe(no_mangle)]
 extern "C" fn set_slint_scroll_offset(offset: f32) {
     APP.with(|slot| {
@@ -107,6 +169,12 @@ unsafe extern "C" {
 
 fn main() {
     let app = Comparison::new().unwrap();
+    let rows = std::env::var("SCROLL_ROW_COUNT")
+        .ok()
+        .and_then(|value| value.parse::<i32>().ok())
+        .filter(|count| (1..=1000).contains(count))
+        .unwrap_or(1000);
+    app.set_row_count(rows);
     APP.with(|slot| *slot.borrow_mut() = Some(app.as_weak()));
     app.on_scroll_moved(|| unsafe { record_slint_drag() });
     let weak = app.as_weak();

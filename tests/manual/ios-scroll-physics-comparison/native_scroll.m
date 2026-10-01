@@ -9,6 +9,11 @@ extern float slint_scroll_offset(void);
 extern float slint_animation_clock_lag_ms(void);
 extern void set_slint_scroll_offset(float offset);
 
+typedef struct { double timestamp; float x, y; } SlintTouchSample;
+extern void slint_diagnostic_touch(int id, int phase, float x, float y, double timestamp,
+                                  double callback_time, const SlintTouchSample *samples,
+                                  size_t sample_count);
+
 typedef struct {
     float x, y, width, height, content_width, content_height;
 } SlintScrollGeometry;
@@ -20,6 +25,8 @@ extern SlintScrollGeometry slint_scroll_geometry(void);
 - (instancetype)initWithHost:(UIView *)host scrollView:(ForwardingScrollView *)scrollView;
 @property (nonatomic, weak) UIView *host;
 @property (nonatomic, weak) ForwardingScrollView *scrollView;
+@property (nonatomic, strong) NSMapTable<UITouch *, NSNumber *> *touchIDs;
+@property (nonatomic) int nextTouchID;
 @end
 
 @interface ForwardingScrollView : UIScrollView
@@ -54,6 +61,7 @@ extern SlintScrollGeometry slint_scroll_geometry(void);
 - (void)recordTouches:(NSSet<UITouch *> *)touches event:(UIEvent *)event phase:(NSInteger)phase;
 - (void)recordContentOffset;
 - (void)recordSlintDrag;
+- (void)recordSlintRelease;
 @end
 
 static __weak ForwardingScrollView *recordingScrollView;
@@ -73,33 +81,73 @@ void record_slint_drag(void)
     self.scrollView = scrollView;
     self.delegate = self;
     self.cancelsTouchesInView = NO;
+    self.touchIDs = [NSMapTable strongToStrongObjectsMapTable];
     return self;
+}
+- (void)forwardTouches:(NSSet<UITouch *> *)touches event:(UIEvent *)event phase:(int)phase
+{
+    if ([NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
+        return;
+    if ([NSProcessInfo.processInfo.environment[@"SLINT_IOS_SCROLL_EXPERIMENT"]
+                isEqualToString:@"spring-history"]) {
+        for (UITouch *touch in touches) {
+            NSNumber *touchID = [self.touchIDs objectForKey:touch];
+            if (!touchID) {
+                touchID = @(self.nextTouchID++);
+                [self.touchIDs setObject:touchID forKey:touch];
+            }
+            NSArray<UITouch *> *history = [event coalescedTouchesForTouch:touch] ?: @[ touch ];
+            NSMutableData *storage = [NSMutableData dataWithLength:
+                    MAX(history.count, 1) * sizeof(SlintTouchSample)];
+            SlintTouchSample *samples = storage.mutableBytes;
+            for (NSUInteger index = 0; index < history.count; ++index) {
+                CGPoint point = [history[index] locationInView:self.host];
+                samples[index] = (SlintTouchSample){ history[index].timestamp, point.x, point.y };
+            }
+            CGPoint point = [touch locationInView:self.host];
+            slint_diagnostic_touch(touchID.intValue, phase, point.x, point.y, touch.timestamp,
+                                   CACurrentMediaTime(), samples, history.count);
+            if (phase >= 2)
+                [self.touchIDs removeObjectForKey:touch];
+        }
+    } else {
+        switch (phase) {
+        case 0: [self.host touchesBegan:touches withEvent:event]; break;
+        case 1: [self.host touchesMoved:touches withEvent:event]; break;
+        case 2: [self.host touchesEnded:touches withEvent:event]; break;
+        default: [self.host touchesCancelled:touches withEvent:event]; break;
+        }
+    }
+    if (phase == 2)
+        [self.scrollView recordSlintRelease];
 }
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self.scrollView recordTouches:touches event:event phase:0];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
-        [self.host touchesBegan:touches withEvent:event];
+    [self forwardTouches:touches event:event phase:0];
 }
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self.scrollView recordTouches:touches event:event phase:1];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
-        [self.host touchesMoved:touches withEvent:event];
+    [self forwardTouches:touches event:event phase:1];
 }
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     self.scrollView.nativeReleaseVelocity =
             [self.scrollView.panGestureRecognizer velocityInView:self.scrollView].y;
     [self.scrollView recordTouches:touches event:event phase:2];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
-        [self.host touchesEnded:touches withEvent:event];
+    if ([NSProcessInfo.processInfo.environment[@"SLINT_IOS_SCROLL_EXPERIMENT"]
+                isEqualToString:@"spring-runloop"]) {
+        CFRunLoopPerformBlock(CFRunLoopGetMain(), kCFRunLoopCommonModes,
+                             ^{ [self forwardTouches:touches event:event phase:2]; });
+    } else {
+        [self forwardTouches:touches event:event phase:2];
+    }
 }
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self.scrollView recordTouches:touches event:event phase:3];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
-        [self.host touchesCancelled:touches withEvent:event];
+    [self forwardTouches:touches event:event phase:3];
 }
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
         shouldRecognizeSimultaneouslyWithGestureRecognizer:
@@ -213,6 +261,15 @@ void record_slint_drag(void)
                     location:location
             previousLocation:location];
 }
+- (void)recordSlintRelease
+{
+    CGPoint location = CGPointMake(NAN, self.fingerY);
+    [self appendInputEvent:@"slint_release_forwarded"
+                callbackTime:CACurrentMediaTime()
+              eventTimestamp:NAN touchTimestamp:NAN touchPhase:-1 touchID:0
+              coalescedCount:0 coalescedIndex:-1 predictedCount:0
+                    location:location previousLocation:location];
+}
 - (void)startTrace
 {
     if (self.displayLink)
@@ -264,8 +321,13 @@ void record_slint_drag(void)
     }
     CGFloat difference = slintOffset - nativeOffset;
     self.maxOffsetDifference = MAX(self.maxOffsetDifference, fabs(difference));
-    self.maxNativeOverscroll = MAX(self.maxNativeOverscroll, -nativeOffset);
-    self.maxSlintOverscroll = MAX(self.maxSlintOverscroll, -slintOffset);
+    CGFloat nativeLimit = MAX(0, self.contentSize.height - self.bounds.size.height);
+    SlintScrollGeometry geometry = slint_scroll_geometry();
+    CGFloat slintLimit = MAX(0, geometry.content_height - geometry.height);
+    self.maxNativeOverscroll = MAX(self.maxNativeOverscroll,
+                                   MAX(-nativeOffset, nativeOffset - nativeLimit));
+    self.maxSlintOverscroll = MAX(self.maxSlintOverscroll,
+                                  MAX(-slintOffset, slintOffset - slintLimit));
     CGFloat percent = nativeOffset == 0 ? 0 : difference / fabs(nativeOffset) * 100;
     self.metricsLabel.text =
             [NSString stringWithFormat:@"OFFSET     UIKit %8.1f   Slint %8.1f\n"
@@ -307,6 +369,11 @@ void record_slint_drag(void)
                     stringByAppendingPathComponent:[NSString stringWithFormat:@"scroll-%@.csv",
                                                                               traceName]];
     [self.trace writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    NSString *directory = [path stringByDeletingLastPathComponent];
+    NSData *geometry = [NSData dataWithContentsOfFile:
+            [directory stringByAppendingPathComponent:@"viewport-geometry.json"]];
+    [geometry writeToFile:[directory stringByAppendingPathComponent:
+            [NSString stringWithFormat:@"geometry-%@.json", traceName]] atomically:YES];
     if (self.inputTracingEnabled) {
         NSString *inputPath =
                 [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)
@@ -437,8 +504,9 @@ void record_slint_drag(void)
     [self.scroll addGestureRecognizer:[[PassiveTouchForwarder alloc] initWithHost:host
                                                                        scrollView:self.scroll]];
     [self addSubview:self.scroll];
-    NSMutableArray *rows = [NSMutableArray arrayWithCapacity:1000];
-    for (NSInteger row = 0; row < 1000; row++) {
+    NSInteger rowCount = MAX(1, (NSInteger)(slint_scroll_geometry().content_height / 72));
+    NSMutableArray *rows = [NSMutableArray arrayWithCapacity:rowCount];
+    for (NSInteger row = 0; row < rowCount; row++) {
         UIView *item = [[UIView alloc] init];
         item.userInteractionEnabled = NO;
         item.backgroundColor = row % 2 == 0

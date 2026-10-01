@@ -66,13 +66,28 @@ impl SpringSimulation {
         limit_value: core::pin::Pin<alloc::boxed::Box<crate::Property<f32>>>,
         viewport: f32,
     ) -> Self {
+        Self::new_with_rubber_band_velocity(
+            start_value,
+            limit_value,
+            viewport,
+            EXPERIMENTAL_RETURN_RATE,
+        )
+    }
+
+    #[cfg(any(target_os = "ios", test))]
+    pub(crate) fn new_with_rubber_band_velocity(
+        start_value: f32,
+        limit_value: core::pin::Pin<alloc::boxed::Box<crate::Property<f32>>>,
+        viewport: f32,
+        return_rate: f32,
+    ) -> Self {
         if viewport <= 0. {
             return Self::new_with_default_parameters(start_value, limit_value);
         }
         let displayed = limit_value.as_ref().get() - start_value;
         let compression = (1. - displayed.abs() / viewport).max(0.001);
         let init_pos = displayed / (0.55 * compression);
-        let velocity = -init_pos * EXPERIMENTAL_RETURN_RATE / compression;
+        let velocity = -init_pos * return_rate / compression;
         let (w_n, zeta) = SpringPhysicalParameters::new_with_damping_ratio(
             DEFAULT_MASS,
             DEFAULT_STIFFNESS,
@@ -123,7 +138,11 @@ impl Simulation for SpringSimulation {
 impl PositionSimulation for SpringSimulation {
     fn remaining_distance(&self, time_elapsed: core::time::Duration) -> f32 {
         let position = self.data.current_position(time_elapsed.as_secs_f32());
-        self.display_travel(self.init_pos) - self.display_travel(self.init_pos - position)
+        if self.rubber_band_viewport.is_some() {
+            self.display_travel(self.init_pos) - self.display_travel(self.init_pos - position)
+        } else {
+            position
+        }
     }
 
     fn remaining_velocity(&self, time_elapsed: core::time::Duration) -> f32 {

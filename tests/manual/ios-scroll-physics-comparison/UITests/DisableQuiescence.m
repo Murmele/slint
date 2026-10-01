@@ -98,3 +98,17 @@ BOOL synthesizeOverscrollPull(pid_t processID, double width, double height, doub
     return synthesizePanProbeAtPoint(processID, CGPointMake(width * 0.20, height * 0.18),
                                      times, xOffsets, yOffsets, count, 0.40);
 }
+
+BOOL synthesizeOverscrollRelease(pid_t processID, double width, double height, double distance,
+                                double velocity, double stopDuration)
+{
+    const double duration = distance / velocity;
+    // One physical pixel on both tested screens supplies fresh, slow pan samples.
+    const double times[] = { 0.08, 0.08 + duration,
+                            0.08 + duration + stopDuration * 0.75,
+                            0.08 + duration + stopDuration };
+    const double xOffsets[] = { 0, 0, 0, 0 };
+    const double yOffsets[] = { 0, distance, distance - 1.0 / 3.0, distance };
+    return synthesizePanProbeAtPoint(processID, CGPointMake(width * 0.20, height * 0.18),
+                                     times, xOffsets, yOffsets, 4, 0.001);
+}
