@@ -54,7 +54,7 @@ pdf = canvas.Canvas(str(output), pagesize=(width, height))
 pdf.setTitle("UIKit and Slint - Three-Part Scroll Physics Report")
 pdf.setAuthor("Slint scroll physics investigation")
 page = 0
-page_count = 31
+page_count = 34
 
 
 def text(value, x, top, available=None, style=body):
@@ -706,6 +706,65 @@ for platform, label in [("phone", "Physical iPhone"), ("simulator", "Simulator")
             f"{platform}-top-collision-{detail}.png",
             "Item 10, downward flick, finger up before impact. UIKit red, Slint blue; actual points and seconds.",
         )
+
+
+y = begin(
+    "Part 3 - Held-return models", "A smaller worst error, with visible regressions"
+)
+y = text(
+    "A new UIKit-only campaign records 96 curves at measured viewport heights of 770 and 383 points. "
+    "This offline check uses the 60 held-pull curves: 36 for fitting and 24 for validation. "
+    "Moving releases are excluded. Both predictions start at UIKit's measured release exposure on the actual release clock.",
+    margin,
+    y,
+)
+y = text(
+    "The current raw-coordinate candidate keeps its existing parameters. The alternative fits one shared spring on displayed exposure. "
+    "A coarse grid finds natural frequency 29/s, damping ratio 1.8, and initial inward rate 0.1704965/s. "
+    "These are empirical model parameters. No validation curve supplies fit parameters, and there are no time shifts or normalized axes.",
+    margin,
+    y,
+)
+y = table(
+    [
+        [
+            "Held validation metric",
+            "Current candidate replay",
+            "Shared displayed-coordinate fit",
+        ],
+        ["Worst absolute position gap", "13.105 pt", "4.983 pt"],
+        ["Mean per-curve RMS", "1.433 pt", "0.867 pt"],
+        ["Within 0.5 pt throughout return", "0 / 24", "0 / 24"],
+    ],
+    y,
+)
+y = text(
+    "<b>The maxima are different cases.</b> The 500-point pull in the 383-point viewport improves from 13.105 to 3.095 points. "
+    "The 400-point pull there improves from 10.986 to 4.983 points. A 150-point pull in the 770-point viewport worsens "
+    "from 1.770 to 3.827 points. Only 11 of 24 validation curves improve in RMS.",
+    margin,
+    y,
+)
+text(
+    "This is an offline comparison, not a new Slint device measurement or an accepted fix. "
+    "The repository includes the source CSV, all per-curve results, and replay/plot scripts. "
+    "Source data: Murmele/slint commit cc987e7d93; tested app commit 273e86870b, iPhone 13 Pro Max, iOS 27.0 (24A437), Release.",
+    margin,
+    y,
+    style=small,
+)
+figure(
+    "Part 3 - Held-return models",
+    "Actual UIKit position and two offline predictions",
+    "held-return-model-comparison.png",
+    "Red: measured UIKit. Blue: current candidate replay. Green: shared alternative prediction. Both models start at measured native release exposure.",
+)
+figure(
+    "Part 3 - Held-return models",
+    "Every held-validation error remains visible",
+    "held-return-validation-errors.png",
+    "Maximum position gaps over 0-1.5 seconds after release. No per-case refitting; larger pulls improve while smaller pulls can worsen.",
+)
 
 assert page == page_count
 pdf.save()

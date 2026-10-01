@@ -1,0 +1,852 @@
+{
+  "parameters": {
+    "omega": 29.0,
+    "zeta": 1.8000000000000007,
+    "beta": 0.17049654179379722,
+    "fit_rms_pt": 1.3405259989119243
+  },
+  "fit_count": 36,
+  "validation_count": 24,
+  "curves": [
+    {
+      "scenario": "return-vp387-d100-speed400-hold400-trial-1",
+      "distance": 100,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.9934950427052465,
+        "max_gap_pt": 3.4315905586005684
+      },
+      "current_candidate": {
+        "rms_pt": 0.4071466873797386,
+        "max_gap_pt": 1.843871070319457
+      }
+    },
+    {
+      "scenario": "return-vp387-d100-speed400-hold400-trial-2",
+      "distance": 100,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.0792669300266111,
+        "max_gap_pt": 3.4033871554486286
+      },
+      "current_candidate": {
+        "rms_pt": 0.45612834480618764,
+        "max_gap_pt": 1.9133279694918315
+      }
+    },
+    {
+      "scenario": "return-vp387-d100-speed400-hold400-trial-3",
+      "distance": 100,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.8724308661157587,
+        "max_gap_pt": 2.8558405748284024
+      },
+      "current_candidate": {
+        "rms_pt": 0.3337543144270414,
+        "max_gap_pt": 1.3852610332137605
+      }
+    },
+    {
+      "scenario": "return-vp387-d150-speed400-hold400-trial-1",
+      "distance": 150,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 1.4742066467042387,
+        "max_gap_pt": 4.571572252652967
+      },
+      "current_candidate": {
+        "rms_pt": 0.8819251073966761,
+        "max_gap_pt": 3.192610798510197
+      }
+    },
+    {
+      "scenario": "return-vp387-d150-speed400-hold400-trial-2",
+      "distance": 150,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 1.4991765488647222,
+        "max_gap_pt": 4.650896057079915
+      },
+      "current_candidate": {
+        "rms_pt": 0.8987067581358795,
+        "max_gap_pt": 3.0800936475608527
+      }
+    },
+    {
+      "scenario": "return-vp387-d150-speed400-hold400-trial-3",
+      "distance": 150,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 1.3452216617117931,
+        "max_gap_pt": 4.085457364016971
+      },
+      "current_candidate": {
+        "rms_pt": 0.7555988442221094,
+        "max_gap_pt": 2.772024215314211
+      }
+    },
+    {
+      "scenario": "return-vp387-d200-speed400-hold400-trial-1",
+      "distance": 200,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.926778633979604,
+        "max_gap_pt": 5.946321128799454
+      },
+      "current_candidate": {
+        "rms_pt": 1.5901393621318152,
+        "max_gap_pt": 4.509493285546533
+      }
+    },
+    {
+      "scenario": "return-vp387-d200-speed400-hold400-trial-2",
+      "distance": 200,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.9375521074956614,
+        "max_gap_pt": 5.990385290959168
+      },
+      "current_candidate": {
+        "rms_pt": 1.600401596524616,
+        "max_gap_pt": 4.535864512690502
+      }
+    },
+    {
+      "scenario": "return-vp387-d200-speed400-hold400-trial-3",
+      "distance": 200,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.9287280896536363,
+        "max_gap_pt": 5.959268795367542
+      },
+      "current_candidate": {
+        "rms_pt": 1.5919434512060016,
+        "max_gap_pt": 4.512552163868115
+      }
+    },
+    {
+      "scenario": "return-vp387-d25-speed400-hold400-trial-1",
+      "distance": 25,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.5456023234510059,
+        "max_gap_pt": 1.8266972284136909
+      },
+      "current_candidate": {
+        "rms_pt": 0.3392476747361514,
+        "max_gap_pt": 1.1444462426334097
+      }
+    },
+    {
+      "scenario": "return-vp387-d25-speed400-hold400-trial-2",
+      "distance": 25,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.5238449086990145,
+        "max_gap_pt": 1.832693018103838
+      },
+      "current_candidate": {
+        "rms_pt": 0.31816854481479884,
+        "max_gap_pt": 1.1511621862042771
+      }
+    },
+    {
+      "scenario": "return-vp387-d25-speed400-hold400-trial-3",
+      "distance": 25,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.5558260880406617,
+        "max_gap_pt": 1.9881876897065043
+      },
+      "current_candidate": {
+        "rms_pt": 0.34843860619372036,
+        "max_gap_pt": 1.2583748149759355
+      }
+    },
+    {
+      "scenario": "return-vp387-d300-speed400-hold400-trial-1",
+      "distance": 300,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 2.057856743222512,
+        "max_gap_pt": 6.4278175003458955
+      },
+      "current_candidate": {
+        "rms_pt": 2.777084001167569,
+        "max_gap_pt": 8.061270450032069
+      }
+    },
+    {
+      "scenario": "return-vp387-d300-speed400-hold400-trial-2",
+      "distance": 300,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 2.039601771435601,
+        "max_gap_pt": 6.520628194979558
+      },
+      "current_candidate": {
+        "rms_pt": 2.761290906963091,
+        "max_gap_pt": 8.031419684209126
+      }
+    },
+    {
+      "scenario": "return-vp387-d300-speed400-hold400-trial-3",
+      "distance": 300,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.9313621176794449,
+        "max_gap_pt": 6.202368423639641
+      },
+      "current_candidate": {
+        "rms_pt": 2.651825297588647,
+        "max_gap_pt": 7.711903023823382
+      }
+    },
+    {
+      "scenario": "return-vp387-d400-speed400-hold400-trial-1",
+      "distance": 400,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 1.525237991183186,
+        "max_gap_pt": 4.982588371879899
+      },
+      "current_candidate": {
+        "rms_pt": 3.7191340310956034,
+        "max_gap_pt": 10.985864192212375
+      }
+    },
+    {
+      "scenario": "return-vp387-d400-speed400-hold400-trial-2",
+      "distance": 400,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 1.5163688707195093,
+        "max_gap_pt": 4.9485097860766984
+      },
+      "current_candidate": {
+        "rms_pt": 3.7090910932980936,
+        "max_gap_pt": 10.951765167478413
+      }
+    },
+    {
+      "scenario": "return-vp387-d400-speed400-hold400-trial-3",
+      "distance": 400,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 1.2992559877209027,
+        "max_gap_pt": 4.276876672815277
+      },
+      "current_candidate": {
+        "rms_pt": 3.459924625050188,
+        "max_gap_pt": 10.279269532594455
+      }
+    },
+    {
+      "scenario": "return-vp387-d50-speed400-hold400-trial-1",
+      "distance": 50,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.5903347154320849,
+        "max_gap_pt": 2.1716034429137263
+      },
+      "current_candidate": {
+        "rms_pt": 0.2046420434096044,
+        "max_gap_pt": 0.7536266383199326
+      }
+    },
+    {
+      "scenario": "return-vp387-d50-speed400-hold400-trial-2",
+      "distance": 50,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.49442565957346335,
+        "max_gap_pt": 1.9589063250042233
+      },
+      "current_candidate": {
+        "rms_pt": 0.1823798882551614,
+        "max_gap_pt": 0.7424545860814931
+      }
+    },
+    {
+      "scenario": "return-vp387-d50-speed400-hold400-trial-3",
+      "distance": 50,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.6835768793807506,
+        "max_gap_pt": 2.5019975223000888
+      },
+      "current_candidate": {
+        "rms_pt": 0.25161752429260886,
+        "max_gap_pt": 0.8957670398201412
+      }
+    },
+    {
+      "scenario": "return-vp387-d500-speed400-hold400-trial-1",
+      "distance": 500,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.4751845518610952,
+        "max_gap_pt": 3.0945131684077865
+      },
+      "current_candidate": {
+        "rms_pt": 4.345511410120945,
+        "max_gap_pt": 13.105143272240767
+      }
+    },
+    {
+      "scenario": "return-vp387-d500-speed400-hold400-trial-2",
+      "distance": 500,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.3993800881581734,
+        "max_gap_pt": 2.5232247943986295
+      },
+      "current_candidate": {
+        "rms_pt": 4.102655111027466,
+        "max_gap_pt": 12.430156636764977
+      }
+    },
+    {
+      "scenario": "return-vp387-d500-speed400-hold400-trial-3",
+      "distance": 500,
+      "viewport": 383.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.38076684937794414,
+        "max_gap_pt": 3.1494313109852783
+      },
+      "current_candidate": {
+        "rms_pt": 4.159516810266387,
+        "max_gap_pt": 12.518967519926136
+      }
+    },
+    {
+      "scenario": "return-vp387-d600-speed400-hold400-trial-1",
+      "distance": 600,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.3841281625571407,
+        "max_gap_pt": 3.593459332990392
+      },
+      "current_candidate": {
+        "rms_pt": 5.923251877393645,
+        "max_gap_pt": 18.332787278737214
+      }
+    },
+    {
+      "scenario": "return-vp387-d600-speed400-hold400-trial-2",
+      "distance": 600,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.4450168169588827,
+        "max_gap_pt": 3.31721044527427
+      },
+      "current_candidate": {
+        "rms_pt": 5.748722982323008,
+        "max_gap_pt": 17.733571096312602
+      }
+    },
+    {
+      "scenario": "return-vp387-d600-speed400-hold400-trial-3",
+      "distance": 600,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.3944198324754441,
+        "max_gap_pt": 3.3665632296529395
+      },
+      "current_candidate": {
+        "rms_pt": 5.8403445547876895,
+        "max_gap_pt": 18.074892558486226
+      }
+    },
+    {
+      "scenario": "return-vp387-d700-speed400-hold400-trial-1",
+      "distance": 700,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.5922247297242154,
+        "max_gap_pt": 3.702821717819347
+      },
+      "current_candidate": {
+        "rms_pt": 7.546117293294722,
+        "max_gap_pt": 23.981896942225447
+      }
+    },
+    {
+      "scenario": "return-vp387-d700-speed400-hold400-trial-2",
+      "distance": 700,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.6092045526595391,
+        "max_gap_pt": 3.704508347295075
+      },
+      "current_candidate": {
+        "rms_pt": 7.525281052373919,
+        "max_gap_pt": 23.852268901327804
+      }
+    },
+    {
+      "scenario": "return-vp387-d700-speed400-hold400-trial-3",
+      "distance": 700,
+      "viewport": 383.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.6067031117125505,
+        "max_gap_pt": 3.6079787052951247
+      },
+      "current_candidate": {
+        "rms_pt": 7.519300542246958,
+        "max_gap_pt": 23.891743713954156
+      }
+    },
+    {
+      "scenario": "return-vp774-d100-speed400-hold400-trial-1",
+      "distance": 100,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.7767248063138779,
+        "max_gap_pt": 2.409874651142829
+      },
+      "current_candidate": {
+        "rms_pt": 0.4326144990975615,
+        "max_gap_pt": 1.731950927820609
+      }
+    },
+    {
+      "scenario": "return-vp774-d100-speed400-hold400-trial-2",
+      "distance": 100,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.2943101531767143,
+        "max_gap_pt": 3.8788383435728093
+      },
+      "current_candidate": {
+        "rms_pt": 0.4039520002914354,
+        "max_gap_pt": 1.6965580943757335
+      }
+    },
+    {
+      "scenario": "return-vp774-d100-speed400-hold400-trial-3",
+      "distance": 100,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.9488238494017458,
+        "max_gap_pt": 3.2293806599333887
+      },
+      "current_candidate": {
+        "rms_pt": 0.36348647385295385,
+        "max_gap_pt": 1.4667838735244416
+      }
+    },
+    {
+      "scenario": "return-vp774-d150-speed400-hold400-trial-1",
+      "distance": 150,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 1.2045542555522002,
+        "max_gap_pt": 3.826808962245856
+      },
+      "current_candidate": {
+        "rms_pt": 0.4516756868911274,
+        "max_gap_pt": 1.770238893160439
+      }
+    },
+    {
+      "scenario": "return-vp774-d150-speed400-hold400-trial-2",
+      "distance": 150,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 1.2104214796652213,
+        "max_gap_pt": 3.8367115335198534
+      },
+      "current_candidate": {
+        "rms_pt": 0.4583062537787056,
+        "max_gap_pt": 1.7898740205509682
+      }
+    },
+    {
+      "scenario": "return-vp774-d150-speed400-hold400-trial-3",
+      "distance": 150,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 1.0327519739584583,
+        "max_gap_pt": 3.2467868708825556
+      },
+      "current_candidate": {
+        "rms_pt": 0.53159672540184,
+        "max_gap_pt": 2.315358908815732
+      }
+    },
+    {
+      "scenario": "return-vp774-d200-speed400-hold400-trial-1",
+      "distance": 200,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.5316638551891109,
+        "max_gap_pt": 4.819612178407837
+      },
+      "current_candidate": {
+        "rms_pt": 0.5092946167776746,
+        "max_gap_pt": 2.5791457973623153
+      }
+    },
+    {
+      "scenario": "return-vp774-d200-speed400-hold400-trial-2",
+      "distance": 200,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.7697212064161527,
+        "max_gap_pt": 5.533010539563087
+      },
+      "current_candidate": {
+        "rms_pt": 0.5671604108784761,
+        "max_gap_pt": 2.477599713822542
+      }
+    },
+    {
+      "scenario": "return-vp774-d200-speed400-hold400-trial-3",
+      "distance": 200,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.6573496367476874,
+        "max_gap_pt": 5.226556172133627
+      },
+      "current_candidate": {
+        "rms_pt": 0.5184344758263882,
+        "max_gap_pt": 2.5244424688978597
+      }
+    },
+    {
+      "scenario": "return-vp774-d25-speed400-hold400-trial-1",
+      "distance": 25,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.524965282782173,
+        "max_gap_pt": 1.8387330995900344
+      },
+      "current_candidate": {
+        "rms_pt": 0.31126415946915753,
+        "max_gap_pt": 1.1322070240272488
+      }
+    },
+    {
+      "scenario": "return-vp774-d25-speed400-hold400-trial-2",
+      "distance": 25,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.5214129844183015,
+        "max_gap_pt": 1.8283437133086458
+      },
+      "current_candidate": {
+        "rms_pt": 0.3079120032546869,
+        "max_gap_pt": 1.1205524617627463
+      }
+    },
+    {
+      "scenario": "return-vp774-d25-speed400-hold400-trial-3",
+      "distance": 25,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.4882736460203654,
+        "max_gap_pt": 1.7062529078194917
+      },
+      "current_candidate": {
+        "rms_pt": 0.2777583811299367,
+        "max_gap_pt": 0.9315404973000394
+      }
+    },
+    {
+      "scenario": "return-vp774-d300-speed400-hold400-trial-1",
+      "distance": 300,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.6866300151212146,
+        "max_gap_pt": 5.429695760993823
+      },
+      "current_candidate": {
+        "rms_pt": 0.7267740278085864,
+        "max_gap_pt": 4.004458408388274
+      }
+    },
+    {
+      "scenario": "return-vp774-d300-speed400-hold400-trial-2",
+      "distance": 300,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.6149223917342048,
+        "max_gap_pt": 5.237100808089828
+      },
+      "current_candidate": {
+        "rms_pt": 0.7023637180311973,
+        "max_gap_pt": 3.855832686111029
+      }
+    },
+    {
+      "scenario": "return-vp774-d300-speed400-hold400-trial-3",
+      "distance": 300,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.5035796089413271,
+        "max_gap_pt": 4.883247712546009
+      },
+      "current_candidate": {
+        "rms_pt": 0.7010492435388346,
+        "max_gap_pt": 3.3747179724473426
+      }
+    },
+    {
+      "scenario": "return-vp774-d400-speed400-hold400-trial-1",
+      "distance": 400,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.6829517144719057,
+        "max_gap_pt": 2.359818460010743
+      },
+      "current_candidate": {
+        "rms_pt": 0.8178100559649697,
+        "max_gap_pt": 4.381353196083012
+      }
+    },
+    {
+      "scenario": "return-vp774-d400-speed400-hold400-trial-2",
+      "distance": 400,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.874588190285354,
+        "max_gap_pt": 3.030684248341913
+      },
+      "current_candidate": {
+        "rms_pt": 0.7440997782062291,
+        "max_gap_pt": 5.313689839859563
+      }
+    },
+    {
+      "scenario": "return-vp774-d400-speed400-hold400-trial-3",
+      "distance": 400,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.6046348151011223,
+        "max_gap_pt": 2.5713446934707633
+      },
+      "current_candidate": {
+        "rms_pt": 0.8146282999520748,
+        "max_gap_pt": 4.794841274611969
+      }
+    },
+    {
+      "scenario": "return-vp774-d50-speed400-hold400-trial-1",
+      "distance": 50,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.5260831312240294,
+        "max_gap_pt": 1.9776060140668967
+      },
+      "current_candidate": {
+        "rms_pt": 0.1978813885034035,
+        "max_gap_pt": 0.9113187101938642
+      }
+    },
+    {
+      "scenario": "return-vp774-d50-speed400-hold400-trial-2",
+      "distance": 50,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.5221280241392111,
+        "max_gap_pt": 1.9691180495535399
+      },
+      "current_candidate": {
+        "rms_pt": 0.19994185606269643,
+        "max_gap_pt": 0.9223932193890612
+      }
+    },
+    {
+      "scenario": "return-vp774-d50-speed400-hold400-trial-3",
+      "distance": 50,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 0.4847452429816149,
+        "max_gap_pt": 1.8838546489216554
+      },
+      "current_candidate": {
+        "rms_pt": 0.20330328560260716,
+        "max_gap_pt": 1.0462092086520531
+      }
+    },
+    {
+      "scenario": "return-vp774-d500-speed400-hold400-trial-1",
+      "distance": 500,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.8159722313550798,
+        "max_gap_pt": 3.8028084330341585
+      },
+      "current_candidate": {
+        "rms_pt": 0.9276343153426169,
+        "max_gap_pt": 7.201357172557891
+      }
+    },
+    {
+      "scenario": "return-vp774-d500-speed400-hold400-trial-2",
+      "distance": 500,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.5879703288805884,
+        "max_gap_pt": 3.8282680839886893
+      },
+      "current_candidate": {
+        "rms_pt": 0.8247521355361058,
+        "max_gap_pt": 7.231482502107809
+      }
+    },
+    {
+      "scenario": "return-vp774-d500-speed400-hold400-trial-3",
+      "distance": 500,
+      "viewport": 770.0,
+      "validation": true,
+      "linear": {
+        "rms_pt": 0.7195698888836954,
+        "max_gap_pt": 3.8670135867711224
+      },
+      "current_candidate": {
+        "rms_pt": 0.8917976840373129,
+        "max_gap_pt": 7.277216092734875
+      }
+    },
+    {
+      "scenario": "return-vp774-d600-speed400-hold400-trial-1",
+      "distance": 600,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.2782812978981084,
+        "max_gap_pt": 4.663599956273885
+      },
+      "current_candidate": {
+        "rms_pt": 0.9720046191330602,
+        "max_gap_pt": 9.421413540351097
+      }
+    },
+    {
+      "scenario": "return-vp774-d600-speed400-hold400-trial-2",
+      "distance": 600,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.3363560062502404,
+        "max_gap_pt": 4.432289495986225
+      },
+      "current_candidate": {
+        "rms_pt": 0.9481990133731245,
+        "max_gap_pt": 9.128231075312215
+      }
+    },
+    {
+      "scenario": "return-vp774-d600-speed400-hold400-trial-3",
+      "distance": 600,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.5104626620509178,
+        "max_gap_pt": 4.726895536885564
+      },
+      "current_candidate": {
+        "rms_pt": 0.9033907721517767,
+        "max_gap_pt": 8.381881033364465
+      }
+    },
+    {
+      "scenario": "return-vp774-d700-speed400-hold400-trial-1",
+      "distance": 700,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.8550800429777559,
+        "max_gap_pt": 5.205725696931893
+      },
+      "current_candidate": {
+        "rms_pt": 1.5381448997525846,
+        "max_gap_pt": 10.998057872226582
+      }
+    },
+    {
+      "scenario": "return-vp774-d700-speed400-hold400-trial-2",
+      "distance": 700,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.9135691691151684,
+        "max_gap_pt": 5.334029215384959
+      },
+      "current_candidate": {
+        "rms_pt": 1.4999308407411658,
+        "max_gap_pt": 10.968593882694051
+      }
+    },
+    {
+      "scenario": "return-vp774-d700-speed400-hold400-trial-3",
+      "distance": 700,
+      "viewport": 770.0,
+      "validation": false,
+      "linear": {
+        "rms_pt": 1.7637469822141338,
+        "max_gap_pt": 5.121578689853322
+      },
+      "current_candidate": {
+        "rms_pt": 1.627361985033678,
+        "max_gap_pt": 10.96239172226646
+      }
+    }
+  ]
+}

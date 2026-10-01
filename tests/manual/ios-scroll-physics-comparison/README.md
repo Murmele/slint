@@ -112,3 +112,20 @@ The full-position chart shows actual offsets.
 The top exposure detail reverses the sign of offset so background exposure is positive; no time or distance scale is normalized.
 Both use the same delivered release origin, with individual impacts marked without shifting curves.
 The 20 Hz comparison uses interpolation of the recorded position samples; capture itself runs at the platform's measured display-link rate.
+
+## Reproduce the Held-Return Model Comparison
+
+The committed `report/evidence/return-curves.csv` comes from the UIKit-only campaign on Murmele's `nigel/ios-uikit-scroll-parity-mm` branch.
+It records actual points and seconds, including actual viewport height and reported pan release velocity.
+With NumPy and Matplotlib installed, run:
+
+```sh
+python report/scripts/fit_held_models.py
+python report/scripts/plot_held_models.py
+```
+
+The scripts preserve the declared fitting and held-validation distances.
+Moving releases are excluded from this displacement-only fit.
+The current candidate is replayed without refitting; the displayed-coordinate alternative uses one shared fit.
+Both are offline predictions starting from UIKit's measured release exposure.
+The report keeps the larger-pull improvements and smaller-pull regressions visible.

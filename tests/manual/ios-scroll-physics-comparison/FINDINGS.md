@@ -321,6 +321,54 @@ The higher settings produce clear post-release collisions on both platforms, but
 
 ![Simulator top bounce detail](report/figures/simulator-top-collision-bounce.png)
 
+### Held-Return Models From the New UIKit Captures
+
+The source is [the 96-curve UIKit-only campaign](https://github.com/Murmele/slint/commit/cc987e7d93d841c09f52d416044d2ca6fc35691f).
+The [copied CSV](report/evidence/return-curves.csv) contains the same 18,448 samples, with measured 770- and 383-point viewport heights.
+This check uses the 60 held curves and excludes moving releases.
+All models start at the measured UIKit exposure at release, on the recorded release clock.
+It compares offline predictions, not newly measured Slint behavior.
+
+The current candidate is replayed with its existing raw-travel mapping and parameters.
+A shared spring on displayed exposure is fitted using the declared 36 fitting curves.
+The 24 held validation curves use distances 25, 150, 400, and 500 points.
+The fit searches natural frequency 8–30 per second and damping ratio 1–2 on a coarse grid.
+Initial inward velocity is a single fitted coefficient times release exposure.
+No validation curve supplies fit parameters, and no curve gets a time shift or normalized distance.
+
+The fitted natural frequency is 29 per second, damping ratio 1.8, and initial inward rate 0.1704965 per second.
+These are empirical model parameters, not UIKit private constants.
+The existing raw-coordinate candidate is not refitted in this comparison.
+
+| Held validation metric | Current candidate replay | Shared displayed-coordinate fit |
+| --- | ---: | ---: |
+| Worst absolute position gap | 13.105 pt | 4.983 pt |
+| Mean per-curve RMS | 1.433 pt | 0.867 pt |
+| Curves meeting the 0.5-point full-return limit | 0 / 24 | 0 / 24 |
+
+The worst gaps occur in different cases.
+On the 500-point pull in the 383-point viewport, the gap falls from 13.105 to 3.095 points.
+On the 400-point pull in that viewport, it falls from 10.986 to 4.983 points.
+A 150-point pull in the 770-point viewport gets worse: 1.770 to 3.827 points.
+Only 11 of the 24 validation curves improve in RMS.
+The alternative helps larger pulls but is not a general fix.
+
+![UIKit position and both offline spring models](report/figures/held-return-model-comparison.png)
+
+![Maximum error across all 24 held validation curves](report/figures/held-return-validation-errors.png)
+
+The upper panels show actual exposure in points.
+The lower panels show model exposure minus measured UIKit exposure; negative values mean the model returns too quickly.
+Errors are evaluated over 0–1.5 seconds after release, while the position chart shows the first 0.8 seconds.
+[Per-curve results](report/evidence/held-model-comparison.json) retain all fitting and validation failures.
+
+Reproduce the fit and charts from this directory:
+
+```sh
+python report/scripts/fit_held_models.py
+python report/scripts/plot_held_models.py
+```
+
 ### Reproduce the Figures
 
 Install NumPy and Matplotlib in a local environment, obtain the private capture directories, and run:
