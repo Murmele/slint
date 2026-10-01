@@ -92,6 +92,30 @@ fn apply_friction_scalar(extent_outside: f32, abs_delta: f32, gamma: f32) -> f32
     }
 }
 
+#[cfg(any(target_os = "ios", test))]
+pub(super) fn rubber_band_move_axis(pos: f32, delta: f32, min_pos: f32, viewport: f32) -> f32 {
+    if viewport <= 0. {
+        return pos + delta;
+    }
+    let uncompress =
+        |exposure: f32| exposure * viewport / (0.55 * (viewport - exposure).max(0.001));
+    let compress = |distance: f32| 0.55 * distance * viewport / (viewport + 0.55 * distance);
+    let raw = if pos > 0. {
+        uncompress(pos)
+    } else if pos < min_pos {
+        min_pos - uncompress(min_pos - pos)
+    } else {
+        pos
+    } + delta;
+    if raw > 0. {
+        compress(raw)
+    } else if raw < min_pos {
+        min_pos - compress(min_pos - raw)
+    } else {
+        raw
+    }
+}
+
 /// Rubber-bands a proposed drag `delta` along one axis, mirroring Flutter's
 /// `BouncingScrollPhysics.applyPhysicsToUserOffset`
 /// (`scroll_physics.dart`, Copyright 2014 The Flutter Authors, BSD-style license,
@@ -293,6 +317,24 @@ mod tests {
                 let result = apply_friction_axis(10., delta, -100., viewport);
                 assert!(result.is_finite(), "viewport {viewport}, delta {delta}: {result}");
                 assert_eq!(result, delta);
+            }
+        }
+    }
+    #[test]
+    fn rubber_band_paths_do_not_depend_on_move_batching() {
+        for start in [0., -100.] {
+            for distance in [-600., -190., 190., 600.] {
+                let single = rubber_band_move_axis(start, distance, -100., 774.);
+                for count in [2, 10, 100] {
+                    let mut stepped = start;
+                    for _ in 0..count {
+                        stepped =
+                            rubber_band_move_axis(stepped, distance / count as f32, -100., 774.);
+                    }
+                    assert!((single - stepped).abs() < 0.003, "{single} != {stepped}");
+                    let returned = rubber_band_move_axis(stepped, -distance, -100., 774.);
+                    assert!((returned - start).abs() < 0.003, "{start} != {returned}");
+                }
             }
         }
     }
