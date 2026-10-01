@@ -1,0 +1,16 @@
+{
+  "repository": "https://github.com/Murmele/slint",
+  "upstream_branch": "mm/flickable-scroll-animation-v2",
+  "upstream_commit": "bdbec1e4372d2d13f0782fc1bcea5aa6bffcfac7",
+  "local_branch": "nigel/android-aosp-murmele",
+  "local_commit": "406a18d41a299d46d7a75c2bddd6eb4c58b122f2",
+  "build": "Release",
+  "style": "material",
+  "renderer": "skia",
+  "device_model": "Samsung Galaxy A34 SM-A346B",
+  "android_version": "16",
+  "density": 2.8125,
+  "reference": "Bundled Android 16 AOSP OverScroller; installed Android touch recognition and VelocityTracker",
+  "physics_modifications": "None. Opt-in release estimate logging only.",
+  "apk_sha256": "a869de360c3657799bbb54132fe36faca1d81ac13ac7c32719e06ff1a18f005a"
+}

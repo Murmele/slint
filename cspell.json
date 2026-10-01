@@ -383,6 +383,8 @@
     "cspell.json",
     "LICENSES",
     "examples/*/lang/**",
+    "internal/backends/android-activity/java/AospOverScroller.java",
+    "tests/manual/android-scroll-physics-comparison/evidence/**",
     "internal/compiler/fuzz/README.md",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
@@ -403,6 +405,13 @@
     "**/node_modules/**"
   ],
   "overrides": [
+    {
+      "filename": [
+        "internal/backends/android-activity/**",
+        "tests/manual/android-scroll-physics-comparison/**"
+      ],
+      "words": ["aosp", "aospscrollcomparison", "Scroller", "logcat", "screencap", "Murmele", "androidwindowadapter", "javahelper", "polyfit", "interp"]
+    },
     {
       "filename": "tools/figma-inspector/**",
       "words": [

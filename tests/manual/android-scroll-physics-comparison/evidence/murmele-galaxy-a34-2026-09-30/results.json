@@ -1,0 +1,203 @@
+{
+  "density": 2.8125,
+  "results": [
+    {
+      "case": "slow",
+      "trial": 1,
+      "requested_duration_ms": 800,
+      "delivery": {
+        "touch_samples": 97,
+        "historical_samples": 95,
+        "history_exercised": true,
+        "frames": 687
+      },
+      "contact_ms": 805,
+      "native_release_dp_s": 150.04444444444445,
+      "slint_release_dp_s": 129.39848,
+      "velocity_relative_error": 0.13759899289099525,
+      "post_release_travel_dp": {
+        "aosp": 7.110700000000179,
+        "slint": 6.067000000000007
+      },
+      "max_post_release_curve_error_dp": 1.4632999999994354,
+      "last_movement_after_release_s": {
+        "aosp": 0.113686538,
+        "slint": 0.138624692
+      },
+      "median_frame_interval_ms": 8.326653499999999,
+      "parity": {
+        "release_velocity": false,
+        "post_release_travel": true,
+        "stop_time": true,
+        "position_curve": true
+      },
+      "delivery_passed": true,
+      "parity_passed": false
+    },
+    {
+      "case": "slow",
+      "trial": 2,
+      "requested_duration_ms": 800,
+      "delivery": {
+        "touch_samples": 96,
+        "historical_samples": 94,
+        "history_exercised": true,
+        "frames": 691
+      },
+      "contact_ms": 802,
+      "native_release_dp_s": 150.04444444444445,
+      "slint_release_dp_s": 159.37836,
+      "velocity_relative_error": 0.06220767180094773,
+      "post_release_travel_dp": {
+        "aosp": 7.110700000000179,
+        "slint": 9.421500000000378
+      },
+      "max_post_release_curve_error_dp": 2.814100000000508,
+      "last_movement_after_release_s": {
+        "aosp": 0.119943693,
+        "slint": 0.153401308
+      },
+      "median_frame_interval_ms": 8.3225,
+      "parity": {
+        "release_velocity": true,
+        "post_release_travel": true,
+        "stop_time": true,
+        "position_curve": true
+      },
+      "delivery_passed": true,
+      "parity_passed": true
+    },
+    {
+      "case": "short-hard",
+      "trial": 1,
+      "requested_duration_ms": 80,
+      "delivery": {
+        "touch_samples": 10,
+        "historical_samples": 8,
+        "history_exercised": true,
+        "frames": 603
+      },
+      "contact_ms": 82,
+      "native_release_dp_s": 1501.8666666666666,
+      "slint_release_dp_s": 1532.7386,
+      "velocity_relative_error": 0.020555708451704555,
+      "post_release_travel_dp": {
+        "aosp": 393.60000000000036,
+        "slint": 419.4422999999997
+      },
+      "max_post_release_curve_error_dp": 25.84229999999934,
+      "last_movement_after_release_s": {
+        "aosp": 0.738373923,
+        "slint": 0.771850538
+      },
+      "median_frame_interval_ms": 8.325308,
+      "parity": {
+        "release_velocity": true,
+        "post_release_travel": true,
+        "stop_time": true,
+        "position_curve": true
+      },
+      "delivery_passed": true,
+      "parity_passed": true
+    },
+    {
+      "case": "short-hard",
+      "trial": 2,
+      "requested_duration_ms": 80,
+      "delivery": {
+        "touch_samples": 9,
+        "historical_samples": 7,
+        "history_exercised": true,
+        "frames": 604
+      },
+      "contact_ms": 84,
+      "native_release_dp_s": 1502.2222222222222,
+      "slint_release_dp_s": 1522.9502,
+      "velocity_relative_error": 0.01379821005917163,
+      "post_release_travel_dp": {
+        "aosp": 393.60010000000057,
+        "slint": 415.4448000000002
+      },
+      "max_post_release_curve_error_dp": 27.727600000000166,
+      "last_movement_after_release_s": {
+        "aosp": 0.738164923,
+        "slint": 0.763267384
+      },
+      "median_frame_interval_ms": 8.324846,
+      "parity": {
+        "release_velocity": true,
+        "post_release_travel": true,
+        "stop_time": true,
+        "position_curve": true
+      },
+      "delivery_passed": true,
+      "parity_passed": true
+    },
+    {
+      "case": "long-fast",
+      "trial": 1,
+      "requested_duration_ms": 180,
+      "delivery": {
+        "touch_samples": 23,
+        "historical_samples": 21,
+        "history_exercised": true,
+        "frames": 624
+      },
+      "contact_ms": 187,
+      "native_release_dp_s": 1998.9333333333334,
+      "slint_release_dp_s": 2022.0167,
+      "velocity_relative_error": 0.01154784218249725,
+      "post_release_travel_dp": {
+        "aosp": 646.7555000000002,
+        "slint": 675.3550000000005
+      },
+      "max_post_release_curve_error_dp": 38.52939999999944,
+      "last_movement_after_release_s": {
+        "aosp": 0.913638384,
+        "slint": 0.938578461
+      },
+      "median_frame_interval_ms": 8.325231,
+      "parity": {
+        "release_velocity": true,
+        "post_release_travel": true,
+        "stop_time": true,
+        "position_curve": true
+      },
+      "delivery_passed": true,
+      "parity_passed": true
+    },
+    {
+      "case": "long-fast",
+      "trial": 2,
+      "requested_duration_ms": 180,
+      "delivery": {
+        "touch_samples": 22,
+        "historical_samples": 20,
+        "history_exercised": true,
+        "frames": 622
+      },
+      "contact_ms": 183,
+      "native_release_dp_s": 1998.9333333333334,
+      "slint_release_dp_s": 1944.2546,
+      "velocity_relative_error": 0.02735395544290292,
+      "post_release_travel_dp": {
+        "aosp": 646.7554,
+        "slint": 632.7096000000001
+      },
+      "max_post_release_curve_error_dp": 38.15530000000035,
+      "last_movement_after_release_s": {
+        "aosp": 0.911946385,
+        "slint": 0.911946385
+      },
+      "median_frame_interval_ms": 8.320923,
+      "parity": {
+        "release_velocity": true,
+        "post_release_travel": true,
+        "stop_time": true,
+        "position_curve": true
+      },
+      "delivery_passed": true,
+      "parity_passed": true
+    }
+  ]
+}
