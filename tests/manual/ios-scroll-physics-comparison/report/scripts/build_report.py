@@ -623,7 +623,9 @@ y = text(
     "In the eight phone collisions, Slint peaks earlier and settles 74-112 ms earlier than UIKit. "
     "Its fitted approach speed is higher, yet seven of eight peaks expose less background. "
     "The second 4500-setting repeat has nearly equal peaks but still different return timing. "
-    "Both approach and collision response therefore need attention.",
+    "Both approach and collision response therefore need attention. Native phone release offsets "
+    "range from 458 to 523 points; Slint releases at 458. The shared gesture does not force equal "
+    "release poses or incoming velocities. An equal-state control is needed to isolate spring coefficients.",
     margin,
     y,
 )

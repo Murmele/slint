@@ -296,6 +296,11 @@ Impact markers are separate for each list; neither curve is shifted to align col
 
 
 All phone collisions at settings 1500 and above occur after release on both sides.
+The phone's recorded native release offsets range from 458 to 523 points, while Slint releases at 458 points.
+The fast paths therefore also retain different amounts of movement before release.
+The shared gesture is controlled, but release pose and incoming velocity are not forced equal.
+Full-flight timing differences include that pan-entry difference.
+An additional equal-state collision control would be needed to isolate spring coefficients.
 Slint peaks earlier and settles 74–112 ms earlier than UIKit in those eight phone collisions.
 Slint's fitted pre-impact speeds are higher, yet seven of the eight exposure peaks are smaller.
 One 4500-setting repeat has nearly equal exposure peaks while its timing still differs.
