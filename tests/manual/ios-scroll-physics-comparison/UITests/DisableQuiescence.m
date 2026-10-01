@@ -84,10 +84,10 @@ BOOL synthesizePanProbe(pid_t processID, double width, double height, const doub
                                      times, xOffsets, yOffsets, pointCount, holdDuration);
 }
 
-BOOL synthesizeOverscrollPull(pid_t processID, double width, double height, double distance)
+BOOL synthesizeOverscrollPull(pid_t processID, double width, double height, double distance,
+                              double duration, double holdDuration)
 {
-    const double duration = MAX(0.5, distance / 400.0);
-    const int count = (int)ceil(duration * 60);
+    const int count = MAX(1, (int)ceil(duration * 60));
     double times[count], xOffsets[count], yOffsets[count];
     for (int point = 0; point < count; point++) {
         double progress = (point + 1.0) / count;
@@ -96,5 +96,5 @@ BOOL synthesizeOverscrollPull(pid_t processID, double width, double height, doub
         yOffsets[point] = distance * progress;
     }
     return synthesizePanProbeAtPoint(processID, CGPointMake(width * 0.20, height * 0.18),
-                                     times, xOffsets, yOffsets, count, 0.40);
+                                     times, xOffsets, yOffsets, count, holdDuration);
 }

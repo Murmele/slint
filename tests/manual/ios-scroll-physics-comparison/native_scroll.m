@@ -527,6 +527,9 @@ void record_slint_drag(void)
                                                                 inDomains:NSUserDomainMask].firstObject;
         NSData *data = [NSJSONSerialization dataWithJSONObject:record options:0 error:nil];
         [data writeToURL:[directory URLByAppendingPathComponent:@"viewport-geometry.json"] atomically:YES];
+        NSString *scenarioGeometry =
+                [NSString stringWithFormat:@"geometry-%@.json", self.scroll.scenario];
+        [data writeToURL:[directory URLByAppendingPathComponent:scenarioGeometry] atomically:YES];
         self.initialPositionApplied = YES;
     }
 }

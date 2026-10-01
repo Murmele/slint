@@ -40,3 +40,42 @@ temporary checkout location.
 
 See [FINDINGS.md](FINDINGS.md) for the measurements collected on the original
 iPhone 13 Pro Max investigation.
+
+## Capturing Return Curves
+
+`testReturnCurveHeldPulls` and `testReturnCurveMovingReleases` record UIKit's return after a pull from the top edge.
+Slint receives no touches in these tests, so they check only UIKit.
+They run at two viewport lengths, set through `VIEWPORT_HEIGHT`, so a fit can separate pull distance from viewport length.
+Each case repeats three times; the full run launches the app about 100 times and takes about 15 minutes.
+
+1. Run both tests in Release on the attached iPhone:
+
+   ```sh
+   xcodebuild test -project NativeSlintScroll.xcodeproj -scheme NativeSlintScroll \
+       -configuration Release -destination "platform=iOS,id=$DEVICE_ID" \
+       -only-testing:NativeSlintScrollUITests/ScrollComparisonTests/testReturnCurveHeldPulls \
+       -only-testing:NativeSlintScrollUITests/ScrollComparisonTests/testReturnCurveMovingReleases
+   ```
+
+   Prefix the command with `TEST_RUNNER_RETURN_CURVE_REPEATS=1` for a quick smoke run.
+2. Copy the app's `Documents` folder from the phone:
+
+   ```sh
+   xcrun devicectl device copy from --device "$DEVICE_ID" \
+       --domain-type appDataContainer --domain-identifier dev.slint.native-scroll-prototype \
+       --source Documents --destination captures
+   ```
+
+3. Extract the return curves:
+
+   ```sh
+   python3 extract_return_curves.py captures report/evidence/return-curves.csv
+   ```
+
+   The script prints one line per trace, with exposure at release, peak, release velocity, and settle time.
+   Check that every case appears before committing the CSV.
+4. Commit only `report/evidence/return-curves.csv` to the branch you tested, and push it.
+   Put the device model, iOS version, and tested commit in the commit message.
+   List any failed or missing cases there too, instead of rerunning only the passing ones.
+   Leave `captures/` and `.xcresult` bundles out; `.gitignore` excludes `captures/`.
+   Don't change the fit and validation split in `report/evidence/PREDICTIONS.md`.

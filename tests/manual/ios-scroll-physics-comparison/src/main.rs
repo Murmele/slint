@@ -9,6 +9,7 @@ slint::slint! {
     export component Comparison inherits Window {
         title: "UIKit over Slint";
         background: #f4f6fa;
+        in property <length> list-height: root.height - 148px;
         out property <float> scroll-offset: -list.content-y / 1px;
         out property <float> viewport-x: (list.x + (list.width - list.visible-width) / 2) / 1px;
         out property <float> viewport-y: (list.y + (list.height - list.visible-height) / 2) / 1px;
@@ -21,7 +22,7 @@ slint::slint! {
         set-scroll-offset(offset) => { list.content-y = -offset * 1px; }
         list := ScrollView {
             x: 8px; y: 102px;
-            width: root.width - 16px; height: root.height - 148px;
+            width: root.width - 16px; height: root.list-height;
             content-width: self.width - 12px; content-height: 1000 * 72px;
             horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
             scrolled => { root.scroll-moved(); }
@@ -107,6 +108,9 @@ unsafe extern "C" {
 
 fn main() {
     let app = Comparison::new().unwrap();
+    if let Some(height) = std::env::var("VIEWPORT_HEIGHT").ok().and_then(|h| h.parse().ok()) {
+        app.set_list_height(height);
+    }
     APP.with(|slot| *slot.borrow_mut() = Some(app.as_weak()));
     app.on_scroll_moved(|| unsafe { record_slint_drag() });
     let weak = app.as_weak();

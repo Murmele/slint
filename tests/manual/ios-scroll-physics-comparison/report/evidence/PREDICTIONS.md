@@ -48,3 +48,22 @@ Both variants run the 200- and 600-point paths twice.
 The hypothesis is that a stale animation tick contributes to the early release error.
 A positive measured clock age is required evidence for that hypothesis; changing the clock must improve the recorded curve to justify keeping it.
 Both early and later return errors remain visible, without shifting recorded traces.
+
+## Third Round: Return Curves for Fitting
+
+This round records UIKit only, to fit spring-back models offline from `return-curves.csv`.
+Two candidates are compared:
+
+1. A linear spring on the displayed exposure.
+   Stiffness, damping, and a starting velocity that depends on the exposure at release are fitted.
+2. The spring-coordinate candidate, refitted: a spring on the raw drag distance, mapped through the rubber-band curve.
+
+Held pulls cover 25–700 points at viewport lengths 774 and 387 points.
+Moving releases cover 100, 300, and 600 points at 400 and 1,200 points per second, without a hold.
+Every case runs three times.
+
+The fit uses held pulls of 50, 100, 200, 300, 600, and 700 points.
+Held pulls of 25, 150, 400, and 500 points and all moving releases are validation paths.
+Candidate 1 predicts that the same exposure at release returns identically at both viewport lengths.
+Candidate 2 predicts that the shorter viewport returns differently, because its rubber-band curve differs.
+Neither candidate is matched unless the maximum gap stays at most 0.5 points in every validation trace.

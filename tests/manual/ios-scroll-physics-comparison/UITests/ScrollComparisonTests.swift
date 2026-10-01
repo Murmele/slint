@@ -17,7 +17,8 @@ final class ScrollComparisonTests: XCTestCase {
         inputTrace: Bool = false,
         traceSaveDelayMs: Int = 250,
         nativeOnlyInput: Bool = false,
-        physicsVariant: String = "baseline"
+        physicsVariant: String = "baseline",
+        viewportHeight: Double? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["SLINT_BACKEND"] = "winit-skia"
@@ -26,6 +27,9 @@ final class ScrollComparisonTests: XCTestCase {
         app.launchEnvironment["SLINT_IOS_SCROLL_EXPERIMENT"] = physicsVariant
         if let startOffset {
             app.launchEnvironment["START_OFFSET"] = String(startOffset)
+        }
+        if let viewportHeight {
+            app.launchEnvironment["VIEWPORT_HEIGHT"] = String(viewportHeight)
         }
         if let fromBottomDistance {
             app.launchEnvironment["START_FROM_BOTTOM"] = "1"
@@ -453,41 +457,109 @@ final class ScrollComparisonTests: XCTestCase {
                                    physicsVariant: String = "baseline") {
         for distance in distances {
             for trial in 1...repeats {
-                let name = "overscroll-\(physicsVariant)-d\(Int(distance))-trial-\(trial)"
-                let app = launch(scenario: name, startOffset: 0, inputTrace: true,
-                                 traceSaveDelayMs: 2_200, physicsVariant: physicsVariant)
-                let processID = (app.value(forKey: "processID") as! NSNumber).int32Value
-                XCTAssertTrue(synthesizeOverscrollPull(
-                    processID, app.frame.width, app.frame.height, distance
-                ), "Failed to synthesize the pull")
-                let saved = expectation(description: "Save overscroll return")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) { saved.fulfill() }
-                wait(for: [saved], timeout: 5)
-                let metrics = app.staticTexts["Scroll comparison metrics"].value as? String ?? ""
-                func value(_ key: String) -> Double? {
-                    let expression = try! NSRegularExpression(pattern: "\(key)=([-0-9.]+)")
-                    let range = NSRange(metrics.startIndex..., in: metrics)
-                    guard let match = expression.firstMatch(in: metrics, range: range),
-                          let number = Range(match.range(at: 1), in: metrics) else { return nil }
-                    return Double(metrics[number])
+                captureOverscrollPull(
+                    name: "overscroll-\(physicsVariant)-d\(Int(distance))-trial-\(trial)",
+                    distance: distance,
+                    duration: max(0.5, distance / 400),
+                    holdDuration: 0.40,
+                    physicsVariant: physicsVariant)
+            }
+        }
+    }
+
+    /// Pulls down from the top by `distance` points over `duration` seconds,
+    /// holds for `holdDuration` seconds, releases, and saves the traces after the return.
+    /// With `nativeOnlyInput`, Slint receives no touches and only UIKit is checked.
+    private func captureOverscrollPull(
+        name: String,
+        distance: Double,
+        duration: Double,
+        holdDuration: Double,
+        physicsVariant: String = "baseline",
+        nativeOnlyInput: Bool = false,
+        viewportHeight: Double? = nil
+    ) {
+        let app = launch(scenario: name, startOffset: 0, inputTrace: true,
+                         traceSaveDelayMs: 2_200, nativeOnlyInput: nativeOnlyInput,
+                         physicsVariant: physicsVariant, viewportHeight: viewportHeight)
+        let processID = (app.value(forKey: "processID") as! NSNumber).int32Value
+        XCTAssertTrue(synthesizeOverscrollPull(
+            processID, app.frame.width, app.frame.height, distance, duration, holdDuration
+        ), "Failed to synthesize the pull")
+        let saved = expectation(description: "Save overscroll return")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) { saved.fulfill() }
+        wait(for: [saved], timeout: 5)
+        let metrics = app.staticTexts["Scroll comparison metrics"].value as? String ?? ""
+        func value(_ key: String) -> Double? {
+            let expression = try! NSRegularExpression(pattern: "\(key)=([-0-9.]+)")
+            let range = NSRange(metrics.startIndex..., in: metrics)
+            guard let match = expression.firstMatch(in: metrics, range: range),
+                  let number = Range(match.range(at: 1), in: metrics) else { return nil }
+            return Double(metrics[number])
+        }
+        guard let nativePeak = value("UIKitPeakOverscroll"),
+              let slintPeak = value("SlintPeakOverscroll"),
+              let nativeOffset = value("UIKit"), let slintOffset = value("Slint") else {
+            XCTFail("Missing overscroll metrics: \(metrics)")
+            app.terminate()
+            return
+        }
+        XCTAssertGreaterThan(nativePeak, 2, "UIKit did not receive the pull")
+        XCTAssertLessThanOrEqual(abs(nativeOffset), 0.5, "UIKit did not return to the top")
+        if !nativeOnlyInput {
+            XCTAssertGreaterThan(slintPeak, 2, "Slint did not receive the pull")
+            XCTAssertLessThanOrEqual(abs(slintOffset), 0.5, "Slint did not return to the top")
+        }
+        XCTContext.runActivity(named: "\(name): \(metrics)") { _ in }
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        app.terminate()
+    }
+
+    private let returnCurveViewports = [774.0, 387.0]
+
+    private var returnCurveRepeats: Int {
+        ProcessInfo.processInfo.environment["RETURN_CURVE_REPEATS"].flatMap(Int.init) ?? 3
+    }
+
+    private func captureReturnCurve(viewport: Double, distance: Double, speed: Double,
+                                    holdDuration: Double, trial: Int) {
+        let name = "return-vp\(Int(viewport))-d\(Int(distance))-speed\(Int(speed))"
+            + "-hold\(Int(holdDuration * 1_000))-trial-\(trial)"
+        captureOverscrollPull(
+            name: name,
+            distance: distance,
+            duration: holdDuration > 0 ? max(0.5, distance / speed) : distance / speed,
+            holdDuration: holdDuration,
+            nativeOnlyInput: true,
+            viewportHeight: viewport)
+    }
+
+    /// UIKit return curves after a held pull, for fitting the spring-back model.
+    /// See README.md for extracting the traces.
+    func testReturnCurveHeldPulls() {
+        for viewport in returnCurveViewports {
+            for distance in [25.0, 50, 100, 150, 200, 300, 400, 500, 600, 700] {
+                for trial in 1...returnCurveRepeats {
+                    captureReturnCurve(viewport: viewport, distance: distance, speed: 400,
+                                       holdDuration: 0.40, trial: trial)
                 }
-                guard let nativePeak = value("UIKitPeakOverscroll"),
-                      let slintPeak = value("SlintPeakOverscroll"),
-                      let nativeOffset = value("UIKit"), let slintOffset = value("Slint") else {
-                    XCTFail("Missing overscroll metrics: \(metrics)")
-                    app.terminate()
-                    continue
+            }
+        }
+    }
+
+    /// UIKit return curves after releasing a pull while the finger still moves.
+    func testReturnCurveMovingReleases() {
+        for viewport in returnCurveViewports {
+            for distance in [100.0, 300, 600] {
+                for speed in [400.0, 1_200] {
+                    for trial in 1...returnCurveRepeats {
+                        captureReturnCurve(viewport: viewport, distance: distance, speed: speed,
+                                           holdDuration: 0, trial: trial)
+                    }
                 }
-                XCTAssertGreaterThan(nativePeak, 2, "UIKit did not receive the pull")
-                XCTAssertGreaterThan(slintPeak, 2, "Slint did not receive the pull")
-                XCTAssertLessThanOrEqual(abs(nativeOffset), 0.5, "UIKit did not return to the top")
-                XCTAssertLessThanOrEqual(abs(slintOffset), 0.5, "Slint did not return to the top")
-                XCTContext.runActivity(named: "\(name): \(metrics)") { _ in }
-                let attachment = XCTAttachment(screenshot: app.screenshot())
-                attachment.name = name
-                attachment.lifetime = .keepAlways
-                add(attachment)
-                app.terminate()
             }
         }
     }
