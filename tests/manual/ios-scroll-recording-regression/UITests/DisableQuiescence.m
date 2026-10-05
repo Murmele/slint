@@ -1,6 +1,6 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: MIT
-// cspell:ignore instancetype nonatomic
+// cspell:ignore NSUInteger autoreleasing evaluatedObject instancetype nonatomic
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
@@ -97,4 +97,35 @@ BOOL synthesizeOverscrollPull(pid_t processID, double width, double height, doub
     }
     return synthesizePanProbeAtPoint(processID, CGPointMake(width * 0.20, height * 0.18),
                                      times, xOffsets, yOffsets, count, holdDuration);
+}
+
+
+BOOL synthesizeRecordedSequence(pid_t processID, double width, double height,
+    const double *times, const double *xs, const double *ys,
+    const int *starts, const int *counts, int gestureCount)
+{
+    NSTimeInterval wallStart = NSProcessInfo.processInfo.systemUptime;
+    for (int gesture = 0; gesture < gestureCount; ++gesture) {
+        int start = starts[gesture], count = counts[gesture];
+        double remaining = wallStart + times[start] - NSProcessInfo.processInfo.systemUptime;
+        if (remaining > 0) [NSThread sleepForTimeInterval:remaining];
+        XCSynthesizedEventRecord *record = [[XCSynthesizedEventRecord alloc]
+            initWithName:@"Recorded gesture in sequential replay"
+            interfaceOrientation:UIInterfaceOrientationPortrait];
+        record.targetProcessID = processID;
+        CGPoint point = CGPointMake(xs[start] * width / 428., ys[start] * height / 926.);
+        XCPointerEventPath *path = [[XCPointerEventPath alloc] initForTouchAtPoint:point offset:0];
+        for (int i = start + 1; i < start + count; ++i) {
+            point = CGPointMake(xs[i] * width / 428., ys[i] * height / 926.);
+            [path moveToPoint:point atOffset:times[i] - times[start]];
+        }
+        [path liftUpAtOffset:times[start + count - 1] - times[start]];
+        [record addPointerEventPath:path];
+        NSError *error = nil;
+        if (![record synthesizeWithError:&error]) {
+            NSLog(@"Recorded gesture injection failed: %@", error);
+            return NO;
+        }
+    }
+    return YES;
 }

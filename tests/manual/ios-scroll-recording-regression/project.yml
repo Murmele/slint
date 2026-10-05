@@ -25,7 +25,7 @@ targets:
     type: bundle.ui-testing
     platform: iOS
     deploymentTarget: "16.6"
-    sources: [UITests]
+    sources: [UITests, full-sequence.json]
     dependencies:
       - target: NativeSlintScroll
     settings:

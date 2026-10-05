@@ -1,6 +1,6 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: MIT
-// cspell:ignore Autoresizing fabs instancetype nonatomic NSEC NSUTF Subview Subviews subviews uikit
+// cspell:ignore NSUInteger autoreleasing evaluatedObject Autoresizing fabs instancetype nonatomic NSEC NSUTF Subview Subviews subviews uikit
 
 #import <UIKit/UIKit.h>
 #import <UIKit/UIGestureRecognizerSubclass.h>
@@ -52,6 +52,9 @@ extern SlintScrollGeometry slint_scroll_geometry(void);
 @property (nonatomic) BOOL hasLoggedPanState;
 @property (nonatomic, copy) NSString *scenario;
 @property (nonatomic, strong) NSMutableArray<NSArray<NSNumber *> *> *regressionSamples;
+@property (nonatomic, strong) NSMutableArray<NSMutableDictionary *> *regressionSegments;
+@property (nonatomic, strong) NSMutableSet<NSNumber *> *regressionTouches;
+@property (nonatomic) NSUInteger regressionMaxTouches;
 @property (nonatomic) CFTimeInterval regressionReleaseTime;
 @property (nonatomic) CGFloat regressionReleaseNative;
 @property (nonatomic) CGFloat regressionReleaseSlint;
@@ -242,6 +245,9 @@ void record_slint_drag(void)
         self.hasLoggedPanState = NO;
     }
     self.regressionSamples = [NSMutableArray new];
+    self.regressionSegments = [NSMutableArray new];
+    self.regressionTouches = [NSMutableSet new];
+    self.regressionMaxTouches = 0;
     self.regressionReleaseTime = 0;
     self.startTime = CACurrentMediaTime();
     self.hasPreviousSample = NO;
@@ -299,6 +305,35 @@ void record_slint_drag(void)
     self.previousSlintOffset = slintOffset;
     self.hasPreviousSample = YES;
 }
+
+- (NSDictionary *)outcomeForSegment:(NSDictionary *)segment until:(double)end
+{
+    double origin = [segment[@"release_time"] doubleValue];
+    NSArray *post = [self.regressionSamples filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) {
+        double t = [object[0] doubleValue]; return t >= origin && t < end;
+    }]];
+    if (post.count < 2) return @{};
+    NSArray *last = post.lastObject;
+    double finalNative = [last[1] doubleValue], finalSlint = [last[2] doubleValue];
+    double nativeMin = finalNative, nativeMax = finalNative, slintMin = finalSlint, slintMax = finalSlint;
+    double native01 = 0, slint01 = 0, native1 = 0, slint1 = 0;
+    for (NSUInteger i = 0; i < post.count; ++i) {
+        NSArray *sample = post[i]; double n = [sample[1] doubleValue], s = [sample[2] doubleValue];
+        double next = i + 1 < post.count ? [post[i + 1][0] doubleValue] : [sample[0] doubleValue];
+        nativeMin = MIN(nativeMin, n); nativeMax = MAX(nativeMax, n);
+        slintMin = MIN(slintMin, s); slintMax = MAX(slintMax, s);
+        if (fabs(n - finalNative) > 0.1) native01 = next - origin;
+        if (fabs(s - finalSlint) > 0.1) slint01 = next - origin;
+        if (fabs(n - finalNative) > 1) native1 = next - origin;
+        if (fabs(s - finalSlint) > 1) slint1 = next - origin;
+    }
+    return @{@"uikit_post_range_pt": @(nativeMax - nativeMin), @"slint_post_range_pt": @(slintMax - slintMin),
+        @"uikit_post_travel_pt": @(finalNative - [segment[@"release_native"] doubleValue]),
+        @"slint_post_travel_pt": @(finalSlint - [segment[@"release_slint"] doubleValue]),
+        @"uikit_settle_01_s": @(native01), @"slint_settle_01_s": @(slint01),
+        @"uikit_settle_1_s": @(native1), @"slint_settle_1_s": @(slint1)};
+}
+
 - (void)saveTraceForGeneration:(NSInteger)generation
 {
     if (self.saveGeneration != generation)
@@ -343,7 +378,15 @@ void record_slint_drag(void)
             @"uikit_final_range_pt": @(nativeFinalMax - nativeFinalMin),
             @"slint_final_range_pt": @(slintFinalMax - slintFinalMin), @"max_frame_gap_ms": @(maxGap * 1000)
         };
-        NSData *data = [NSJSONSerialization dataWithJSONObject:result options:0 error:nil];
+        NSMutableDictionary *combined = [result mutableCopy];
+        NSMutableArray *segments = [NSMutableArray new];
+        for (NSUInteger i = 0; i < self.regressionSegments.count; ++i) {
+            double end = i + 1 < self.regressionSegments.count ? [self.regressionSegments[i + 1][@"press_time"] doubleValue] : finalTime + 0.001;
+            [segments addObject:[self outcomeForSegment:self.regressionSegments[i] until:end]];
+        }
+        combined[@"segments"] = segments;
+        combined[@"max_simultaneous_touches"] = @(self.regressionMaxTouches);
+        NSData *data = [NSJSONSerialization dataWithJSONObject:combined options:0 error:nil];
         NSString *json = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         self.metricsLabel.accessibilityValue = [self.metricsLabel.accessibilityValue stringByAppendingFormat:@", Regression=%@", json];
         NSURL *directory = [[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
@@ -376,11 +419,16 @@ void record_slint_drag(void)
     if (phase == 0) {
         ++self.saveGeneration;
         [self startTrace];
+        [self.regressionSegments addObject:[@{@"press_time": @(CACurrentMediaTime())} mutableCopy]];
     }
     self.eventBatch++;
     if (phase == 1)
         self.deliveredMoveBatches++;
     for (UITouch *touch in touches) {
+        NSNumber *identity = @((uintptr_t)(__bridge void *)touch);
+        if (touch.phase == UITouchPhaseBegan) [self.regressionTouches addObject:identity];
+        if (touch.phase == UITouchPhaseEnded || touch.phase == UITouchPhaseCancelled) [self.regressionTouches removeObject:identity];
+        self.regressionMaxTouches = MAX(self.regressionMaxTouches, self.regressionTouches.count);
         CGPoint location = [touch locationInView:self.window];
         CGPoint previousLocation = [touch previousLocationInView:self.window];
         if (phase == 0)
@@ -423,6 +471,9 @@ void record_slint_drag(void)
         self.regressionReleaseTime = CACurrentMediaTime();
         self.regressionReleaseNative = self.contentOffset.y;
         self.regressionReleaseSlint = slint_scroll_offset();
+        self.regressionSegments.lastObject[@"release_time"] = @(self.regressionReleaseTime);
+        self.regressionSegments.lastObject[@"release_native"] = @(self.regressionReleaseNative);
+        self.regressionSegments.lastObject[@"release_slint"] = @(self.regressionReleaseSlint);
         NSInteger generation = ++self.saveGeneration;
         int64_t delay = (int64_t)(self.traceSaveDelay * NSEC_PER_SEC);
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, delay), dispatch_get_main_queue(),
