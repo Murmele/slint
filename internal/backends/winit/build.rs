@@ -4,6 +4,11 @@
 use cfg_aliases::cfg_aliases;
 
 fn main() {
+    println!("cargo:rustc-check-cfg=cfg(slint_winit_touch_timestamps)");
+    println!("cargo:rerun-if-env-changed=SLINT_WINIT_TOUCH_TIMESTAMPS");
+    if std::env::var("SLINT_WINIT_TOUCH_TIMESTAMPS").as_deref() == Ok("1") {
+        println!("cargo:rustc-cfg=slint_winit_touch_timestamps");
+    }
     // Setup cfg aliases
     cfg_aliases! {
        ios_and_friends: { all(target_vendor = "apple", not(target_os = "macos"))},

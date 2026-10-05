@@ -51,6 +51,7 @@ impl<const NATIVE_IOS: bool> VelocityTracker for IOsVelocityTracker<NATIVE_IOS> 
 }
 
 impl<const NATIVE_IOS: bool> VelocityEstimator for IOsVelocityTracker<NATIVE_IOS> {
+    const EXPIRES_WHEN_IDLE: bool = !NATIVE_IOS;
     fn estimate_velocity_internal(&self) -> Option<VelocityEstimate> {
         let velocity = self.blended_velocity(WEIGHTS);
         Some(VelocityEstimate {
@@ -75,6 +76,33 @@ mod tests_ios_velocity_tracker {
     use super::super::Velocity;
     use super::*;
     use core::time::Duration;
+
+    #[test]
+    fn native_ios_retains_velocity_without_new_samples_but_other_targets_expire() {
+        let mut native = IOsVelocityTracker::<true>::default();
+        let mut legacy = IOsVelocityTracker::<false>::default();
+        for (millis, delta) in [(0, 0.), (10, 5.), (20, 5.), (30, 5.)] {
+            native.push(Instant::from_millis(millis), LogicalVector::new(0., delta));
+            legacy.push(Instant::from_millis(millis), LogicalVector::new(0., delta));
+        }
+        crate::animations::update_animations(Instant::from_millis(330));
+        let estimate = native.estimate_velocity().unwrap();
+        assert_eq!(estimate.velocity.y, 500.);
+        assert_eq!(estimate.threshold_velocity.y, 500.);
+        assert!(legacy.estimate_velocity().is_none());
+    }
+
+    #[test]
+    fn native_ios_stationary_samples_close_the_release_gate() {
+        let mut tracker = IOsVelocityTracker::<true>::default();
+        for (millis, delta) in [(0, 0.), (10, 5.), (20, 5.), (30, 5.), (80, 0.), (130, 0.)] {
+            tracker.push(Instant::from_millis(millis), LogicalVector::new(0., delta));
+        }
+        crate::animations::update_animations(Instant::from_millis(430));
+        let estimate = tracker.estimate_velocity().unwrap();
+        assert_eq!(estimate.threshold_velocity.y, 0.);
+        assert!(!estimate.can_flick(estimate.velocity.y, estimate.threshold_velocity.y, 250.));
+    }
 
     #[test]
     fn estimate_velocity_is_none_when_empty() {

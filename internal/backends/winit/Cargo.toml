@@ -87,6 +87,7 @@ unstable-wgpu-30 = [
 default = []
 
 [dependencies]
+log = { workspace = true }
 i-slint-core = { workspace = true, features = ["default"] }
 i-slint-core-macros = { workspace = true, features = ["default"] }
 i-slint-common = { workspace = true, features = ["default"] }

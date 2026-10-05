@@ -15,6 +15,7 @@ static NSMutableString *hidTrace;
 static uint64_t dispatchID, ingressID, activeIngress;
 static atomic_ulong digitizerNodes;
 static atomic_ulong serializationErrors;
+extern void handle_comparison_event(UIEvent *event, BOOL forward);
 static dispatch_queue_t traceQueue;
 static char traceQueueKey;
 static const void *(*copyEvent)(CFAllocatorRef, const void *);
@@ -138,7 +139,8 @@ static void recordState(NSString *stage, UIEvent *event)
             CGPoint point = [touch locationInView:nil];
             [touches addObject:@{@"identity": [NSString stringWithFormat:@"%p", touch],
                 @"timestamp": @(touch.timestamp), @"phase": @(touch.phase),
-                @"x": @(point.x), @"y": @(point.y)}];
+                @"x": @(point.x), @"y": @(point.y),
+                @"view_class": touch.view ? NSStringFromClass(touch.view.class) : NSNull.null}];
         }
         state[@"touches"] = touches;
     }
@@ -167,19 +169,31 @@ static void probeHIDHandler(id application, SEL selector, const void *event)
         [self slint_probe_sendEvent:event];
         return;
     }
-    ++dispatchID;
-    record_hid_object(event, "ui_event_before_dispatch");
-    recordState(@"send_before", event);
-    uint64_t start = mach_absolute_time();
+    uint64_t start = 0;
+    if (hidTrace) {
+        ++dispatchID;
+        record_hid_object(event, "ui_event_before_dispatch");
+        recordState(@"send_before", event);
+        start = mach_absolute_time();
+    }
+    handle_comparison_event(event, NO);
     [self slint_probe_sendEvent:event];
-    recordState(@"send_after", event);
-    appendRecord(@{@"kind": @"dispatch_duration", @"dispatch_id": @(dispatchID),
-        @"duration_ms": @(secondsForTicks(mach_absolute_time() - start) * 1000)});
+    handle_comparison_event(event, YES);
+    if (hidTrace) {
+        recordState(@"send_after", event);
+        appendRecord(@{@"kind": @"dispatch_duration", @"dispatch_id": @(dispatchID),
+            @"duration_ms": @(secondsForTicks(mach_absolute_time() - start) * 1000)});
+    }
 }
 @end
 
 void install_hid_trace(void)
 {
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        method_exchangeImplementations(class_getInstanceMethod(UIApplication.class, @selector(sendEvent:)),
+            class_getInstanceMethod(UIApplication.class, @selector(slint_probe_sendEvent:)));
+    });
     if (![NSProcessInfo.processInfo.environment[@"HID_TRACE"] isEqualToString:@"1"] || hidTrace) return;
     hidTrace = [NSMutableString new];
     traceQueue = dispatch_queue_create("dev.slint.hid-capture", DISPATCH_QUEUE_SERIAL);
@@ -225,8 +239,6 @@ void install_hid_trace(void)
         @"get_integer": @(getInteger != NULL), @"raw_data": @(createData != NULL),
         @"timebase_numer": @(timebase.numer), @"timebase_denom": @(timebase.denom),
         @"hid_methods": hidMethods});
-    method_exchangeImplementations(class_getInstanceMethod(application, @selector(sendEvent:)),
-        class_getInstanceMethod(application, @selector(slint_probe_sendEvent:)));
 }
 
 void save_hid_trace(const char *directory, const char *scenario)
@@ -253,3 +265,9 @@ void record_hid_marker(NSString *name, NSDictionary *values)
 }
 
 NSUInteger hid_serialization_error_count(void) { return atomic_load(&serializationErrors); }
+
+void record_slint_render(bool after, uint64_t context_ns, uint64_t tick_ns, float offset)
+{
+    record_hid_marker(after ? @"slint_render_after" : @"slint_render_before",
+        @{@"context_ns": @(context_ns), @"animation_tick_ns": @(tick_ns), @"offset": finiteNumber(offset)});
+}

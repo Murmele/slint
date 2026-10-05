@@ -51,8 +51,7 @@ use num_traits::Float;
 
 // https://github.com/flutter/flutter/blob/d6bed8ff6135cdd414f14edc3063f761d47ca846/packages/flutter/lib/src/gestures/velocity_tracker.dart#L142-L145
 //
-// Shared by every tracking strategy: if the caller hasn't pushed a new
-// sample within this long, the pointer is considered to have stopped.
+// Trackers that expire idle samples consider the pointer stopped after this interval.
 const ASSUME_POINTER_MOVE_STOPPED: Duration = Duration::from_millis(40);
 
 /// Logical pixels per second. Always `f32`: with an integer `Coord`, a rate would be
@@ -77,18 +76,21 @@ impl VelocityEstimate {
 }
 
 trait VelocityEstimator {
+    const EXPIRES_WHEN_IDLE: bool = true;
     fn estimate_velocity_internal(&self) -> Option<VelocityEstimate>;
 }
 
 // VelocityEstimator stays module-private on purpose: it seals VelocityTracker so only the
-// trackers defined in this module can implement it, while estimate_velocity()'s timeout check
-// below remains the only entry point external callers get.
+// trackers defined in this module can implement it.
 #[allow(private_bounds)]
 pub(crate) trait VelocityTracker: VelocityEstimator {
     fn push(&mut self, time: Instant, position_delta: LogicalVector);
     fn last_time(&self) -> Option<Instant>;
     fn estimate_velocity(&self) -> Option<VelocityEstimate> {
-        if crate::animations::current_tick() - self.last_time()? > ASSUME_POINTER_MOVE_STOPPED {
+        let last_time = self.last_time()?;
+        if Self::EXPIRES_WHEN_IDLE
+            && crate::animations::current_tick() - last_time > ASSUME_POINTER_MOVE_STOPPED
+        {
             return None;
         }
         self.estimate_velocity_internal()

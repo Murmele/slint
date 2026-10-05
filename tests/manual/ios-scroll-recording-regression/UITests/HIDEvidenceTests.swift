@@ -47,9 +47,27 @@ final class HIDEvidenceTests: XCTestCase {
         ])
     }
 
-    private func capture(_ cases: [(String, [Double], [Double], Double)]) throws {
+    func testFocusedTimingAndHoldFix() throws {
+        let baseTimes = [0.08, 0.12, 0.16, 0.20]
+        let baseY = [0.0, -20.0, -40.0, -60.0]
+        let stage = ProcessInfo.processInfo.environment["SCROLL_FIX_STAGE"] ?? "after"
+        try capture([
+            ("timing-\(stage)-fast", [0.08, 0.188, 0.196, 0.204], [0, -86.4, -87.2, -88], 0),
+            ("timing-\(stage)-short", [0.054258, 0.058425, 0.070955, 0.075122, 0.079270],
+                [-15, -20, -28.334, -30.667, -32.667], 0),
+            ("timing-\(stage)-hold", baseTimes, baseY, 0.3),
+            ("timing-\(stage)-jitter", baseTimes + [0.25, 0.30, 0.35, 0.40, 0.45, 0.50],
+                baseY + [-60 + 1.0/3, -60, -60 + 1.0/3, -60, -60 + 1.0/3, -60], 0.016667),
+            ("timing-\(stage)-reversal", [0.08, 0.38, 0.42999, 0.43, 0.47999, 0.48],
+                [0, -240, -240, -225, -225, -210], 0.016667),
+            ("timing-\(stage)-near-zero", [0.08, 0.58, 0.62999, 0.63, 0.67999, 0.68],
+                [0, 95, 95, 80, 80, 65], 0.016667)
+        ], repeats: 1)
+    }
+
+    private func capture(_ cases: [(String, [Double], [Double], Double)], repeats: Int = 2) throws {
         for (name, times, y, hold) in cases {
-            for trial in 1...2 {
+            for trial in 1...repeats {
                 let scenario = "\(name)-trial\(trial)"
                 let app = XCUIApplication()
                 app.launchEnvironment = ["SLINT_BACKEND": "winit-skia", "SLINT_STYLE": "cupertino",

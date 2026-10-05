@@ -3,7 +3,6 @@
 // cspell:ignore NSUInteger autoreleasing evaluatedObject Autoresizing fabs instancetype nonatomic NSEC NSUTF Subview Subviews subviews uikit
 
 #import <UIKit/UIKit.h>
-#import <UIKit/UIGestureRecognizerSubclass.h>
 
 extern float slint_scroll_offset(void);
 extern float slint_animation_clock_lag_ms(void);
@@ -21,13 +20,6 @@ typedef struct {
 extern SlintScrollGeometry slint_scroll_geometry(void);
 
 @class ForwardingScrollView;
-
-@interface PassiveTouchForwarder : UIGestureRecognizer <UIGestureRecognizerDelegate>
-- (instancetype)initWithHost:(UIView *)host scrollView:(ForwardingScrollView *)scrollView;
-@property (nonatomic, weak) UIView *host;
-@property (nonatomic) BOOL nativeOnlyInput;
-@property (nonatomic, weak) ForwardingScrollView *scrollView;
-@end
 
 @interface ForwardingScrollView : UIScrollView
 @property (nonatomic, weak) UILabel *metricsLabel;
@@ -53,6 +45,9 @@ extern SlintScrollGeometry slint_scroll_geometry(void);
 @property (nonatomic) NSUInteger deliveredMoveSamples;
 @property (nonatomic) CGPoint pressLocation;
 @property (nonatomic) BOOL inputTracingEnabled;
+@property (nonatomic) BOOL nativeOnlyInput;
+@property (nonatomic, weak) UIView *slintHost;
+@property (nonatomic, strong) NSMutableSet<NSNumber *> *comparisonTouches;
 @property (nonatomic) BOOL uniqueTraceFiles;
 @property (nonatomic) NSTimeInterval traceSaveDelay;
 @property (nonatomic) UIGestureRecognizerState lastLoggedPanState;
@@ -77,60 +72,51 @@ NSDictionary *hid_trace_view_state(void)
     ForwardingScrollView *view = recordingScrollView;
     return @{@"pan_state": @(view.panGestureRecognizer.state),
         @"pan_velocity_y": @([view.panGestureRecognizer velocityInView:view].y),
+        @"pan_translation_y": @([view.panGestureRecognizer translationInView:view].y),
         @"uikit_offset": @(view.contentOffset.y), @"slint_offset": @(slint_scroll_offset())};
+}
+
+void handle_comparison_event(UIEvent *event, BOOL forward)
+{
+    ForwardingScrollView *view = recordingScrollView;
+    if (!view || event.type != UIEventTypeTouches) return;
+    for (NSInteger phase = 0; phase < 4; ++phase) {
+        NSMutableSet<UITouch *> *touches = [NSMutableSet new];
+        UITouchPhase nativePhase = phase == 2 ? UITouchPhaseEnded
+                : phase == 3 ? UITouchPhaseCancelled : (UITouchPhase)phase;
+        for (UITouch *touch in event.allTouches) {
+            NSNumber *identity = @((uintptr_t)(__bridge void *)touch);
+            if (touch.phase == UITouchPhaseBegan
+                    && CGRectContainsPoint(view.bounds, [touch locationInView:view]))
+                [view.comparisonTouches addObject:identity];
+            if (touch.phase == nativePhase && [view.comparisonTouches containsObject:identity])
+                [touches addObject:touch];
+        }
+        if (!touches.count) continue;
+        if (!forward) {
+            if (phase == 2)
+                view.nativeReleaseVelocity = [view.panGestureRecognizer velocityInView:view].y;
+            [view recordTouches:touches event:event phase:phase];
+        } else {
+            if (!view.nativeOnlyInput) {
+                switch (phase) {
+                case 0: [view.slintHost touchesBegan:touches withEvent:event]; break;
+                case 1: [view.slintHost touchesMoved:touches withEvent:event]; break;
+                case 2: [view.slintHost touchesEnded:touches withEvent:event]; break;
+                case 3: [view.slintHost touchesCancelled:touches withEvent:event]; break;
+                }
+            }
+            if (phase == 2 || phase == 3)
+                for (UITouch *touch in touches)
+                    [view.comparisonTouches removeObject:@((uintptr_t)(__bridge void *)touch)];
+        }
+    }
 }
 
 void record_slint_drag(void)
 {
     [recordingScrollView recordSlintDrag];
 }
-
-@implementation PassiveTouchForwarder
-- (instancetype)initWithHost:(UIView *)host scrollView:(ForwardingScrollView *)scrollView
-{
-    self = [super initWithTarget:nil action:nil];
-    if (!self)
-        return nil;
-    self.host = host;
-    self.nativeOnlyInput = [NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue];
-    self.scrollView = scrollView;
-    self.delegate = self;
-    self.cancelsTouchesInView = NO;
-    return self;
-}
-- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    [self.scrollView recordTouches:touches event:event phase:0];
-    if (!self.nativeOnlyInput)
-        [self.host touchesBegan:touches withEvent:event];
-}
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    [self.scrollView recordTouches:touches event:event phase:1];
-    if (!self.nativeOnlyInput)
-        [self.host touchesMoved:touches withEvent:event];
-}
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    self.scrollView.nativeReleaseVelocity =
-            [self.scrollView.panGestureRecognizer velocityInView:self.scrollView].y;
-    [self.scrollView recordTouches:touches event:event phase:2];
-    if (!self.nativeOnlyInput)
-        [self.host touchesEnded:touches withEvent:event];
-}
-- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    [self.scrollView recordTouches:touches event:event phase:3];
-    if (!self.nativeOnlyInput)
-        [self.host touchesCancelled:touches withEvent:event];
-}
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
-        shouldRecognizeSimultaneouslyWithGestureRecognizer:
-                (UIGestureRecognizer *)otherGestureRecognizer
-{
-    return YES;
-}
-@end
 
 @implementation ForwardingScrollView
 - (NSString *)panStateName:(UIGestureRecognizerState)state
@@ -189,6 +175,7 @@ void record_slint_drag(void)
 }
 - (void)recordPan:(UIPanGestureRecognizer *)recognizer
 {
+    record_hid_marker(@"pan_action", hid_trace_view_state());
     if (!self.inputTracingEnabled || !self.inputTrace)
         return;
     CGPoint location = [recognizer locationInView:self.window];
@@ -278,6 +265,12 @@ void record_slint_drag(void)
 }
 - (void)sample:(CADisplayLink *)link
 {
+    CALayer *presentation = self.layer.presentationLayer;
+    record_hid_marker(@"display_sample", @{@"display_timestamp": @(link.timestamp),
+        @"display_target_timestamp": @(link.targetTimestamp),
+        @"native_model_offset": @(self.contentOffset.y),
+        @"native_presentation_offset": presentation ? @(presentation.bounds.origin.y) : NSNull.null,
+        @"slint_property_offset": @(slint_scroll_offset())});
     CFTimeInterval now = CACurrentMediaTime();
     CGFloat nativeOffset = self.contentOffset.y;
     CGFloat slintOffset = slint_scroll_offset();
@@ -401,6 +394,7 @@ void record_slint_drag(void)
             [segments addObject:[self outcomeForSegment:self.regressionSegments[i] until:end]];
         }
         combined[@"segments"] = segments;
+        combined[@"release_gap_pt"] = @(self.regressionReleaseSlint - self.regressionReleaseNative);
         combined[@"max_simultaneous_touches"] = @(self.regressionMaxTouches);
         combined[@"hid_digitizer_nodes"] = @(hid_digitizer_node_count());
         combined[@"hid_serialization_errors"] = @(hid_serialization_error_count());
@@ -563,8 +557,9 @@ void record_slint_drag(void)
     NSString *traceSaveDelay = NSProcessInfo.processInfo.environment[@"TRACE_SAVE_DELAY_MS"];
     self.scroll.traceSaveDelay = traceSaveDelay.length > 0 ? traceSaveDelay.doubleValue / 1000 : 5;
     [self.scroll.panGestureRecognizer addTarget:self.scroll action:@selector(recordPan:)];
-    [self.scroll addGestureRecognizer:[[PassiveTouchForwarder alloc] initWithHost:host
-                                                                       scrollView:self.scroll]];
+    self.scroll.slintHost = host;
+    self.scroll.comparisonTouches = [NSMutableSet new];
+    self.scroll.nativeOnlyInput = [NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue];
     [self addSubview:self.scroll];
     NSMutableArray *rows = [NSMutableArray arrayWithCapacity:1000];
     for (NSInteger row = 0; row < 1000; row++) {
@@ -603,6 +598,11 @@ void record_slint_drag(void)
     self.scroll.metricsLabel = self.metrics;
     return self;
 }
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
+{
+    record_hid_marker(@"will_begin_dragging", hid_trace_view_state());
+}
+
 - (void)scrollViewWillEndDragging:(UIScrollView *)scrollView
                      withVelocity:(CGPoint)velocity
               targetContentOffset:(inout CGPoint *)targetContentOffset
@@ -655,6 +655,7 @@ void record_slint_drag(void)
         self.scroll.contentOffset = CGPointMake(0, offset);
         set_slint_scroll_offset((float)offset);
         NSDictionary *record = @{
+            @"forwarding_mode": @"events",
             @"slint_viewport": @[@(geometry.x), @(geometry.y), @(geometry.width), @(geometry.height)],
             @"uikit_viewport": @[@(self.scroll.frame.origin.x), @(self.scroll.frame.origin.y),
                                   @(self.scroll.bounds.size.width), @(self.scroll.bounds.size.height)],
