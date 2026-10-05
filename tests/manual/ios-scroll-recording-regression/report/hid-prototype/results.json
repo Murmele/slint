@@ -1,0 +1,126 @@
+[
+  {
+    "run": "Before",
+    "trial": 1,
+    "outcome": {
+      "slint_settle_1_s": 0,
+      "slint_settle_01_s": 0,
+      "slint_final_range_pt": 0,
+      "segments": [
+        {
+          "slint_settle_1_s": 0,
+          "slint_post_travel_pt": 0,
+          "slint_settle_01_s": 0,
+          "uikit_post_range_pt": 76.66666666666697,
+          "slint_post_range_pt": 0,
+          "uikit_settle_01_s": 1.390508124999542,
+          "uikit_post_travel_pt": 76.66666666666697,
+          "uikit_settle_1_s": 1.307100583333522
+        }
+      ],
+      "slint_post_travel_pt": 0,
+      "slint_post_range_pt": 0,
+      "uikit_final_range_pt": 0,
+      "max_frame_gap_ms": 14.91412500035949,
+      "uikit_post_travel_pt": 76.66666666666697,
+      "uikit_settle_1_s": 1.307100583333522,
+      "uikit_post_range_pt": 76.66666666666697,
+      "uikit_settle_01_s": 1.390508124999542,
+      "max_simultaneous_touches": 1,
+      "hid_digitizer_nodes": 97
+    }
+  },
+  {
+    "run": "Before",
+    "trial": 2,
+    "outcome": {
+      "slint_settle_1_s": 0,
+      "slint_settle_01_s": 0,
+      "slint_final_range_pt": 0,
+      "segments": [
+        {
+          "slint_settle_1_s": 0,
+          "slint_post_travel_pt": 0,
+          "slint_settle_01_s": 0,
+          "uikit_post_range_pt": 76.66666666666697,
+          "slint_post_range_pt": 0,
+          "uikit_settle_01_s": 1.3903349166666885,
+          "uikit_post_travel_pt": 76.66666666666697,
+          "uikit_settle_1_s": 1.3070422499986307
+        }
+      ],
+      "slint_post_travel_pt": 0,
+      "slint_post_range_pt": 0,
+      "uikit_final_range_pt": 0,
+      "max_frame_gap_ms": 8.462458332360256,
+      "uikit_post_travel_pt": 76.66666666666697,
+      "uikit_settle_1_s": 1.3070422499986307,
+      "uikit_post_range_pt": 76.66666666666697,
+      "uikit_settle_01_s": 1.3903349166666885,
+      "max_simultaneous_touches": 1,
+      "hid_digitizer_nodes": 92
+    }
+  },
+  {
+    "run": "Prototype",
+    "trial": 1,
+    "outcome": {
+      "slint_settle_1_s": 1.3186424583327607,
+      "slint_settle_01_s": 1.4007593749993248,
+      "slint_final_range_pt": 0,
+      "segments": [
+        {
+          "slint_settle_1_s": 1.3186424583327607,
+          "slint_post_travel_pt": 77.63427734375,
+          "slint_settle_01_s": 1.4007593749993248,
+          "uikit_post_range_pt": 78,
+          "slint_post_range_pt": 77.43603515625,
+          "uikit_settle_01_s": 1.4154536250007368,
+          "uikit_post_travel_pt": 78,
+          "uikit_settle_1_s": 1.3347651666663296
+        }
+      ],
+      "slint_post_travel_pt": 77.63427734375,
+      "slint_post_range_pt": 77.43603515625,
+      "uikit_final_range_pt": 0,
+      "max_frame_gap_ms": 11.965916666667908,
+      "uikit_post_travel_pt": 78,
+      "uikit_settle_1_s": 1.3347651666663296,
+      "uikit_post_range_pt": 78,
+      "uikit_settle_01_s": 1.4154536250007368,
+      "max_simultaneous_touches": 1,
+      "hid_digitizer_nodes": 97
+    }
+  },
+  {
+    "run": "Prototype",
+    "trial": 2,
+    "outcome": {
+      "slint_settle_1_s": 1.344366583332885,
+      "slint_settle_01_s": 1.4265640416651877,
+      "slint_final_range_pt": 0,
+      "segments": [
+        {
+          "slint_settle_1_s": 1.344366583332885,
+          "slint_post_travel_pt": 82.41259765625,
+          "slint_settle_01_s": 1.4265640416651877,
+          "uikit_post_range_pt": 79,
+          "slint_post_range_pt": 82.23876953125,
+          "uikit_settle_01_s": 1.4098765416656533,
+          "uikit_post_travel_pt": 79,
+          "uikit_settle_1_s": 1.3266833333327668
+        }
+      ],
+      "slint_post_travel_pt": 82.41259765625,
+      "slint_post_range_pt": 82.23876953125,
+      "uikit_final_range_pt": 0,
+      "max_frame_gap_ms": 18.23395833343966,
+      "uikit_post_travel_pt": 79,
+      "uikit_settle_1_s": 1.3266833333327668,
+      "uikit_post_range_pt": 79,
+      "uikit_settle_01_s": 1.4098765416656533,
+      "max_simultaneous_touches": 1,
+      "hid_digitizer_nodes": 97
+    }
+  }
+]
