@@ -3,7 +3,12 @@
 // cspell:ignore fobjc
 
 fn main() {
-    cc::Build::new().file("native_scroll.m").flag("-fobjc-arc").compile("native_scroll");
+    cc::Build::new()
+        .files(["native_scroll.m", "../ios-scroll-touch-forwarding.m"])
+        .flag("-fobjc-arc")
+        .compile("native_scroll");
     println!("cargo:rustc-link-lib=framework=UIKit");
     println!("cargo:rerun-if-changed=native_scroll.m");
+    println!("cargo:rerun-if-changed=../ios-scroll-touch-forwarding.m");
+    println!("cargo:rerun-if-changed=../ios-scroll-touch-forwarding.h");
 }

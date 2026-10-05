@@ -3,6 +3,7 @@
 // cspell:ignore NSUInteger autoreleasing evaluatedObject Autoresizing fabs instancetype nonatomic NSEC NSUTF Subview Subviews subviews uikit
 
 #import <UIKit/UIKit.h>
+#import "../ios-scroll-touch-forwarding.h"
 
 extern float slint_scroll_offset(void);
 extern float slint_animation_clock_lag_ms(void);
@@ -45,9 +46,6 @@ extern SlintScrollGeometry slint_scroll_geometry(void);
 @property (nonatomic) NSUInteger deliveredMoveSamples;
 @property (nonatomic) CGPoint pressLocation;
 @property (nonatomic) BOOL inputTracingEnabled;
-@property (nonatomic) BOOL nativeOnlyInput;
-@property (nonatomic, weak) UIView *slintHost;
-@property (nonatomic, strong) NSMutableSet<NSNumber *> *comparisonTouches;
 @property (nonatomic) BOOL uniqueTraceFiles;
 @property (nonatomic) NSTimeInterval traceSaveDelay;
 @property (nonatomic) UIGestureRecognizerState lastLoggedPanState;
@@ -74,43 +72,6 @@ NSDictionary *hid_trace_view_state(void)
         @"pan_velocity_y": @([view.panGestureRecognizer velocityInView:view].y),
         @"pan_translation_y": @([view.panGestureRecognizer translationInView:view].y),
         @"uikit_offset": @(view.contentOffset.y), @"slint_offset": @(slint_scroll_offset())};
-}
-
-void handle_comparison_event(UIEvent *event, BOOL forward)
-{
-    ForwardingScrollView *view = recordingScrollView;
-    if (!view || event.type != UIEventTypeTouches) return;
-    for (NSInteger phase = 0; phase < 4; ++phase) {
-        NSMutableSet<UITouch *> *touches = [NSMutableSet new];
-        UITouchPhase nativePhase = phase == 2 ? UITouchPhaseEnded
-                : phase == 3 ? UITouchPhaseCancelled : (UITouchPhase)phase;
-        for (UITouch *touch in event.allTouches) {
-            NSNumber *identity = @((uintptr_t)(__bridge void *)touch);
-            if (touch.phase == UITouchPhaseBegan
-                    && CGRectContainsPoint(view.bounds, [touch locationInView:view]))
-                [view.comparisonTouches addObject:identity];
-            if (touch.phase == nativePhase && [view.comparisonTouches containsObject:identity])
-                [touches addObject:touch];
-        }
-        if (!touches.count) continue;
-        if (!forward) {
-            if (phase == 2)
-                view.nativeReleaseVelocity = [view.panGestureRecognizer velocityInView:view].y;
-            [view recordTouches:touches event:event phase:phase];
-        } else {
-            if (!view.nativeOnlyInput) {
-                switch (phase) {
-                case 0: [view.slintHost touchesBegan:touches withEvent:event]; break;
-                case 1: [view.slintHost touchesMoved:touches withEvent:event]; break;
-                case 2: [view.slintHost touchesEnded:touches withEvent:event]; break;
-                case 3: [view.slintHost touchesCancelled:touches withEvent:event]; break;
-                }
-            }
-            if (phase == 2 || phase == 3)
-                for (UITouch *touch in touches)
-                    [view.comparisonTouches removeObject:@((uintptr_t)(__bridge void *)touch)];
-        }
-    }
 }
 
 void record_slint_drag(void)
@@ -557,9 +518,15 @@ void record_slint_drag(void)
     NSString *traceSaveDelay = NSProcessInfo.processInfo.environment[@"TRACE_SAVE_DELAY_MS"];
     self.scroll.traceSaveDelay = traceSaveDelay.length > 0 ? traceSaveDelay.doubleValue / 1000 : 5;
     [self.scroll.panGestureRecognizer addTarget:self.scroll action:@selector(recordPan:)];
-    self.scroll.slintHost = host;
-    self.scroll.comparisonTouches = [NSMutableSet new];
-    self.scroll.nativeOnlyInput = [NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue];
+    __weak ForwardingScrollView *weakScroll = self.scroll;
+    install_slint_touch_forwarding(host, self.scroll,
+        [NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue],
+        ^(NSSet<UITouch *> *touches, UIEvent *event, NSInteger phase) {
+            ForwardingScrollView *scroll = weakScroll;
+            if (phase == 2)
+                scroll.nativeReleaseVelocity = [scroll.panGestureRecognizer velocityInView:scroll].y;
+            [scroll recordTouches:touches event:event phase:phase];
+        });
     [self addSubview:self.scroll];
     NSMutableArray *rows = [NSMutableArray arrayWithCapacity:1000];
     for (NSInteger row = 0; row < 1000; row++) {

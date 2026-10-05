@@ -1,6 +1,11 @@
 <!-- cspell:ignore UIKit HID Murmele -->
 # Native Release-Gate Prototype
 
+This is historical evidence captured with the earlier forwarding harness and input timing.
+It doesn't isolate all position and settling differences as engine-curve errors.
+See [the current input-timing report](../input-timing/README.md) for the bounded follow-up and remaining failures.
+
+
 The prototype fixes a reproduced short-flick failure using measured native input and release decisions.
 It is based on Murmele's scrolling engine at `34eca81ab1`.
 The core suite passes all 405 tests.

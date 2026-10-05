@@ -1,6 +1,11 @@
 <!-- cspell:ignore XCTest xcresult UIKit -->
 # Short Flicks and Settling Tails
 
+This is historical evidence captured with the earlier forwarding harness and input timing.
+It doesn't isolate all position and settling differences as engine-curve errors.
+See [the current input-timing report](input-timing/README.md) for the bounded follow-up and remaining failures.
+
+
 The recorded settling-tail discrepancy reproduces as an automated XCTest failure on both engine revisions.
 The newly pulled engine still coasts longer than UIKit near rest.
 Post-release travel mismatches also remain.

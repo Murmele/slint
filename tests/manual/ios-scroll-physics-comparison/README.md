@@ -5,7 +5,8 @@
 # UIKit and Slint Scroll Physics Comparison
 
 This app overlays a translucent UIKit `UIScrollView` on a Slint `ScrollView` with the same geometry and content.
-A passive gesture recognizer forwards UIKit's touches to Slint, so both lists scroll with the same delivered events.
+Application-level forwarding sends the delivered touches to Slint after UIKit processes each event.
+It adds no gesture recognizer to the reference scroll view.
 The app records both content offsets in every display-link callback, and every delivered touch.
 
 Each folder under `cases/` is one scroll situation, with its captured CSV files.

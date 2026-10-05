@@ -47,6 +47,14 @@ final class HIDEvidenceTests: XCTestCase {
         ])
     }
 
+    func testDeliveryTimeFallback() throws {
+        try capture([
+            ("timing-delivery-fast", [0.08, 0.188, 0.196, 0.204], [0, -86.4, -87.2, -88], 0),
+            ("timing-delivery-short", [0.054258, 0.058425, 0.070955, 0.075122, 0.079270],
+                [-15, -20, -28.334, -30.667, -32.667], 0)
+        ], repeats: 1)
+    }
+
     func testFocusedTimingAndHoldFix() throws {
         let baseTimes = [0.08, 0.12, 0.16, 0.20]
         let baseY = [0.0, -20.0, -40.0, -60.0]
@@ -99,6 +107,15 @@ final class HIDEvidenceTests: XCTestCase {
                 XCTAssertLessThanOrEqual(gap, 30, "Recording disrupted frame cadence")
                 let touches = try XCTUnwrap(result["max_simultaneous_touches"] as? NSNumber).intValue
                 XCTAssertEqual(touches, 1)
+                if name.hasPrefix("timing-after-") || name.hasPrefix("timing-delivery-") {
+                    let native = try XCTUnwrap(result["uikit_post_range_pt"] as? NSNumber).doubleValue
+                    let slint = try XCTUnwrap(result["slint_post_range_pt"] as? NSNumber).doubleValue
+                    if native > 5 {
+                        XCTAssertGreaterThan(slint, 5, "Slint discarded a native-accepted release")
+                    } else if native < 0.5 {
+                        XCTAssertLessThan(slint, 0.5, "Slint coasted after a native-rejected release")
+                    }
+                }
                 if name == "hid-gate-accelerating" {
                     let native = try XCTUnwrap(result["uikit_post_range_pt"] as? NSNumber).doubleValue
                     let slint = try XCTUnwrap(result["slint_post_range_pt"] as? NSNumber).doubleValue

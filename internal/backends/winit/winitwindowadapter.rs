@@ -413,8 +413,6 @@ pub struct WinitWindowAdapter {
     window: corelib::api::Window,
     pub(crate) self_weak: Weak<Self>,
     pending_redraw: Cell<bool>,
-    #[cfg(all(target_os = "ios", slint_winit_touch_timestamps))]
-    touch_clock_origin: std::cell::OnceCell<(std::time::Instant, corelib::animations::Instant)>,
     constraints: Cell<corelib::window::LayoutConstraints>,
     /// Indicates if the window is shown, from the perspective of the API user.
     shown: Cell<WindowVisibility>,
@@ -512,8 +510,6 @@ impl WinitWindowAdapter {
             window: corelib::api::Window::new(self_weak.clone() as _),
             self_weak: self_weak.clone(),
             pending_redraw: Default::default(),
-            #[cfg(all(target_os = "ios", slint_winit_touch_timestamps))]
-            touch_clock_origin: Default::default(),
             constraints: Default::default(),
             shown: Default::default(),
             window_level: Default::default(),
@@ -1611,13 +1607,6 @@ impl WinitWindowAdapter {
                 let event_time = {
                     let context = WindowInner::from_pub(self.window()).context();
                     let captured = corelib::animations::Instant::now(context);
-                    #[cfg(slint_winit_touch_timestamps)]
-                    let captured = touch.timestamp.map_or(captured, |timestamp| {
-                        let origin = self
-                            .touch_clock_origin
-                            .get_or_init(|| (std::time::Instant::now(), captured));
-                        map_touch_timestamp(timestamp, *origin)
-                    });
                     Some(captured)
                 };
                 #[cfg(not(target_os = "ios"))]
@@ -2507,42 +2496,4 @@ fn canvas_has_explicit_size_set(canvas: &web_sys::HtmlCanvasElement) -> bool {
 
     computed_style.get_property_value("width").ok().as_deref() != Some("auto")
         || computed_style.get_property_value("height").ok().as_deref() != Some("auto")
-}
-
-#[cfg(any(all(target_os = "ios", slint_winit_touch_timestamps), test))]
-fn map_touch_timestamp(
-    timestamp: std::time::Instant,
-    origin: (std::time::Instant, corelib::animations::Instant),
-) -> corelib::animations::Instant {
-    if timestamp >= origin.0 {
-        origin.1 + timestamp.duration_since(origin.0)
-    } else {
-        origin.1 - origin.0.duration_since(timestamp)
-    }
-}
-
-#[cfg(test)]
-mod touch_timestamp_tests {
-    use super::*;
-
-    #[test]
-    fn capture_clock_mapping_is_independent_of_animation_ticks() {
-        let wall_origin = std::time::Instant::now();
-        let core_origin = corelib::animations::Instant::from_millis(1000);
-        let capture = wall_origin + std::time::Duration::from_millis(16);
-        for tick in [1000, 1008, 1040] {
-            corelib::animations::update_animations(corelib::animations::Instant::from_millis(tick));
-            assert_eq!(
-                map_touch_timestamp(capture, (wall_origin, core_origin)),
-                corelib::animations::Instant::from_millis(1016)
-            );
-        }
-        assert_eq!(
-            map_touch_timestamp(
-                wall_origin - std::time::Duration::from_millis(8),
-                (wall_origin, core_origin)
-            ),
-            corelib::animations::Instant::from_millis(992)
-        );
-    }
 }

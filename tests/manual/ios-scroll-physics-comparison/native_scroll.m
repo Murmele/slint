@@ -3,7 +3,7 @@
 // cspell:ignore Autoresizing fabs instancetype nonatomic NSEC NSJSON NSURL NSUTF Subview Subviews subviews uikit
 
 #import <UIKit/UIKit.h>
-#import <UIKit/UIGestureRecognizerSubclass.h>
+#import "../ios-scroll-touch-forwarding.h"
 
 extern float slint_scroll_offset(void);
 extern float slint_animation_clock_lag_ms(void);
@@ -15,12 +15,6 @@ typedef struct {
 extern SlintScrollGeometry slint_scroll_geometry(void);
 
 @class ForwardingScrollView;
-
-@interface PassiveTouchForwarder : UIGestureRecognizer <UIGestureRecognizerDelegate>
-- (instancetype)initWithHost:(UIView *)host scrollView:(ForwardingScrollView *)scrollView;
-@property (nonatomic, weak) UIView *host;
-@property (nonatomic, weak) ForwardingScrollView *scrollView;
-@end
 
 @interface ForwardingScrollView : UIScrollView
 @property (nonatomic, weak) UILabel *metricsLabel;
@@ -62,52 +56,6 @@ void record_slint_drag(void)
 {
     [recordingScrollView recordSlintDrag];
 }
-
-@implementation PassiveTouchForwarder
-- (instancetype)initWithHost:(UIView *)host scrollView:(ForwardingScrollView *)scrollView
-{
-    self = [super initWithTarget:nil action:nil];
-    if (!self)
-        return nil;
-    self.host = host;
-    self.scrollView = scrollView;
-    self.delegate = self;
-    self.cancelsTouchesInView = NO;
-    return self;
-}
-- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    [self.scrollView recordTouches:touches event:event phase:0];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
-        [self.host touchesBegan:touches withEvent:event];
-}
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    [self.scrollView recordTouches:touches event:event phase:1];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
-        [self.host touchesMoved:touches withEvent:event];
-}
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    self.scrollView.nativeReleaseVelocity =
-            [self.scrollView.panGestureRecognizer velocityInView:self.scrollView].y;
-    [self.scrollView recordTouches:touches event:event phase:2];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
-        [self.host touchesEnded:touches withEvent:event];
-}
-- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
-{
-    [self.scrollView recordTouches:touches event:event phase:3];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
-        [self.host touchesCancelled:touches withEvent:event];
-}
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
-        shouldRecognizeSimultaneouslyWithGestureRecognizer:
-                (UIGestureRecognizer *)otherGestureRecognizer
-{
-    return YES;
-}
-@end
 
 @implementation ForwardingScrollView
 - (NSString *)panStateName:(UIGestureRecognizerState)state
@@ -434,8 +382,15 @@ void record_slint_drag(void)
     NSString *traceSaveDelay = NSProcessInfo.processInfo.environment[@"TRACE_SAVE_DELAY_MS"];
     self.scroll.traceSaveDelay = traceSaveDelay.length > 0 ? traceSaveDelay.doubleValue / 1000 : 5;
     [self.scroll.panGestureRecognizer addTarget:self.scroll action:@selector(recordPan:)];
-    [self.scroll addGestureRecognizer:[[PassiveTouchForwarder alloc] initWithHost:host
-                                                                       scrollView:self.scroll]];
+    __weak ForwardingScrollView *weakScroll = self.scroll;
+    install_slint_touch_forwarding(host, self.scroll,
+        [NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue],
+        ^(NSSet<UITouch *> *touches, UIEvent *event, NSInteger phase) {
+            ForwardingScrollView *scroll = weakScroll;
+            if (phase == 2)
+                scroll.nativeReleaseVelocity = [scroll.panGestureRecognizer velocityInView:scroll].y;
+            [scroll recordTouches:touches event:event phase:phase];
+        });
     [self addSubview:self.scroll];
     NSMutableArray *rows = [NSMutableArray arrayWithCapacity:1000];
     for (NSInteger row = 0; row < 1000; row++) {

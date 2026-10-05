@@ -15,7 +15,6 @@ static NSMutableString *hidTrace;
 static uint64_t dispatchID, ingressID, activeIngress;
 static atomic_ulong digitizerNodes;
 static atomic_ulong serializationErrors;
-extern void handle_comparison_event(UIEvent *event, BOOL forward);
 static dispatch_queue_t traceQueue;
 static char traceQueueKey;
 static const void *(*copyEvent)(CFAllocatorRef, const void *);
@@ -176,9 +175,7 @@ static void probeHIDHandler(id application, SEL selector, const void *event)
         recordState(@"send_before", event);
         start = mach_absolute_time();
     }
-    handle_comparison_event(event, NO);
     [self slint_probe_sendEvent:event];
-    handle_comparison_event(event, YES);
     if (hidTrace) {
         recordState(@"send_after", event);
         appendRecord(@{@"kind": @"dispatch_duration", @"dispatch_id": @(dispatchID),
