@@ -8,6 +8,11 @@
 extern float slint_scroll_offset(void);
 extern float slint_animation_clock_lag_ms(void);
 extern void set_slint_scroll_offset(float offset);
+extern void install_hid_trace(void);
+extern void record_hid_object(id object, const char *source);
+extern void save_hid_trace(const char *directory, const char *scenario);
+extern NSUInteger hid_digitizer_node_count(void);
+extern void record_hid_marker(NSString *name, NSDictionary *values);
 
 typedef struct {
     float x, y, width, height, content_width, content_height;
@@ -64,6 +69,14 @@ extern SlintScrollGeometry slint_scroll_geometry(void);
 @end
 
 static __weak ForwardingScrollView *recordingScrollView;
+
+NSDictionary *hid_trace_view_state(void)
+{
+    ForwardingScrollView *view = recordingScrollView;
+    return @{@"pan_state": @(view.panGestureRecognizer.state),
+        @"pan_velocity_y": @([view.panGestureRecognizer velocityInView:view].y),
+        @"uikit_offset": @(view.contentOffset.y), @"slint_offset": @(slint_scroll_offset())};
+}
 
 void record_slint_drag(void)
 {
@@ -386,6 +399,7 @@ void record_slint_drag(void)
         }
         combined[@"segments"] = segments;
         combined[@"max_simultaneous_touches"] = @(self.regressionMaxTouches);
+        combined[@"hid_digitizer_nodes"] = @(hid_digitizer_node_count());
         NSData *data = [NSJSONSerialization dataWithJSONObject:combined options:0 error:nil];
         NSString *json = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         self.metricsLabel.accessibilityValue = [self.metricsLabel.accessibilityValue stringByAppendingFormat:@", Regression=%@", json];
@@ -396,6 +410,8 @@ void record_slint_drag(void)
     NSString *traceName = self.uniqueTraceFiles
             ? [NSString stringWithFormat:@"%@-%ld", self.scenario, (long)generation]
             : self.scenario;
+    NSString *directory = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+    save_hid_trace(directory.UTF8String, traceName.UTF8String);
     NSString *path =
             [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)
                             .firstObject
@@ -422,9 +438,11 @@ void record_slint_drag(void)
         [self.regressionSegments addObject:[@{@"press_time": @(CACurrentMediaTime())} mutableCopy]];
     }
     self.eventBatch++;
+    record_hid_object(event, "touch_callback_ui_event");
     if (phase == 1)
         self.deliveredMoveBatches++;
     for (UITouch *touch in touches) {
+        record_hid_object(touch, "primary_touch");
         NSNumber *identity = @((uintptr_t)(__bridge void *)touch);
         if (touch.phase == UITouchPhaseBegan) [self.regressionTouches addObject:identity];
         if (touch.phase == UITouchPhaseEnded || touch.phase == UITouchPhaseCancelled) [self.regressionTouches removeObject:identity];
@@ -452,6 +470,7 @@ void record_slint_drag(void)
                 previousLocation:previousLocation];
         [coalescedTouches enumerateObjectsUsingBlock:^(UITouch *sample, NSUInteger index,
                                                        BOOL *__unused stop) {
+            record_hid_object(sample, "coalesced_touch");
             [self appendInputEvent:@"coalesced_sample"
                         callbackTime:CACurrentMediaTime()
                       eventTimestamp:event.timestamp
@@ -585,10 +604,21 @@ void record_slint_drag(void)
               targetContentOffset:(inout CGPoint *)targetContentOffset
 {
     self.scroll.nativeReleaseVelocity = velocity.y;
+    record_hid_marker(@"will_end_dragging", @{@"velocity_pt_per_ms": @(velocity.y),
+        @"target_offset_pt": @(targetContentOffset->y), @"offset_pt": @(scrollView.contentOffset.y)});
 }
 - (void)scrollViewDidScroll:(UIScrollView *__unused)scrollView
 {
     [self.scroll recordContentOffset];
+}
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
+{
+    record_hid_marker(@"did_end_dragging", @{@"will_decelerate": @(decelerate),
+        @"offset_pt": @(scrollView.contentOffset.y)});
+}
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    record_hid_marker(@"did_end_decelerating", @{@"offset_pt": @(scrollView.contentOffset.y)});
 }
 - (void)layoutSubviews
 {
@@ -647,4 +677,5 @@ void install_native_scroll(void *hostPointer)
     NativeScrollPane *pane = [[NativeScrollPane alloc] initWithFrame:host.bounds host:host];
     pane.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [host addSubview:pane];
+    install_hid_trace();
 }

@@ -104,9 +104,25 @@ extern "C" fn set_slint_scroll_offset(offset: f32) {
 unsafe extern "C" {
     fn install_native_scroll(host: *mut std::ffi::c_void);
     fn record_slint_drag();
+    fn record_slint_touch(
+        id: i32,
+        phase: u8,
+        x: f64,
+        y: f64,
+        context_ns: u64,
+        tick_ns: u64,
+        before: bool,
+    );
+}
+
+fn trace_touch(id: i32, phase: u8, x: f64, y: f64, context_ns: u64, tick_ns: u64, before: bool) {
+    unsafe { record_slint_touch(id, phase, x, y, context_ns, tick_ns, before) };
 }
 
 fn main() {
+    if std::env::var("HID_TRACE").as_deref() == Ok("1") {
+        i_slint_backend_winit::set_touch_input_trace(Some(trace_touch));
+    }
     let app = Comparison::new().unwrap();
     if let Some(height) = std::env::var("VIEWPORT_HEIGHT").ok().and_then(|h| h.parse().ok()) {
         app.set_list_height(height);

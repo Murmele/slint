@@ -9,6 +9,7 @@ edition = "2024"
 [workspace]
 
 [dependencies]
+i-slint-backend-winit = { path = "../../../internal/backends/winit", default-features = false, features = ["input-tracing"] }
 slint = { path = "../../../api/rs/slint", default-features = false, features = ["std", "compat-1-18", "unstable-winit-030", "renderer-skia", "renderer-software"] }
 raw-window-handle = "0.6"
 i-slint-core = { path = "../../../internal/core", default-features = false, features = ["std"] }

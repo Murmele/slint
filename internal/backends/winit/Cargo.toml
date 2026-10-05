@@ -20,6 +20,7 @@ path = "lib.rs"
 # Note, these features need to be kept in sync (along with their defaults) in
 # the C++ crate's CMakeLists.txt
 [features]
+input-tracing = []
 image-pixel-format-gray8 = [
   "i-slint-core/image-pixel-format-gray8",
   "i-slint-renderer-femtovg?/image-pixel-format-gray8",
