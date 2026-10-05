@@ -5,11 +5,13 @@ The prototype fixes a reproduced short-flick failure using measured native input
 It is based on Murmele's scrolling engine at `34eca81ab1`.
 The core suite passes all 405 tests.
 Four matching Release phone captures pass, including two native-accepted short-flick regressions.
+See [the review follow-up](REVIEW.md) for subsequent platform isolation, safety changes, and native counterexamples.
 
 ## Evidence and Change
 
 Raw IOHID packet timestamps and positions, UIKit touch values, recognizer state, and release delegates were recorded together.
-The capture also logs Slint's actual touch-dispatch animation ticks.
+The original diagnostic variant also logged Slint's actual touch-dispatch animation ticks.
+That backend diagnostic API was removed during review.
 The UIKit pan estimate matches an 80/20 blend of the latest two primary movement segment velocities.
 Its scroll-release estimate matches a 60/35/5 blend of the latest three.
 All 11 moving gestures in the earlier manual recording match the pan formula within 0.056 pt/s.

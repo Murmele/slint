@@ -10,46 +10,6 @@
 
 extern crate alloc;
 
-/// A touch observer receives the finger ID, Winit phase, logical coordinates,
-/// context time, animation tick, and whether dispatch has started.
-#[cfg(feature = "input-tracing")]
-pub type TouchInputTraceCallback = fn(i32, u8, f64, f64, u64, u64, bool);
-
-#[cfg(feature = "input-tracing")]
-thread_local! {
-    static TOUCH_INPUT_TRACE: core::cell::Cell<Option<TouchInputTraceCallback>> = const { core::cell::Cell::new(None) };
-}
-
-/// Set the current thread's diagnostic touch observer without changing event delivery.
-#[cfg(feature = "input-tracing")]
-pub fn set_touch_input_trace(callback: Option<TouchInputTraceCallback>) {
-    TOUCH_INPUT_TRACE.with(|slot| slot.set(callback));
-}
-
-#[cfg(feature = "input-tracing")]
-pub(crate) fn trace_touch_input(
-    id: i32,
-    phase: u8,
-    x: f64,
-    y: f64,
-    context: &i_slint_core::SlintContext,
-    before: bool,
-) {
-    TOUCH_INPUT_TRACE.with(|slot| {
-        if let Some(callback) = slot.get() {
-            callback(
-                id,
-                phase,
-                x,
-                y,
-                i_slint_core::animations::Instant::now(context).as_nanos(),
-                i_slint_core::animations::current_tick().as_nanos(),
-                before,
-            );
-        }
-    });
-}
-
 use event_loop::{CustomEvent, EventLoopState};
 use i_slint_core::api::EventLoopError;
 use i_slint_core::graphics::RequestedGraphicsAPI;

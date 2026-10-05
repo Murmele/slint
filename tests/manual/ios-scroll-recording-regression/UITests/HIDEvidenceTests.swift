@@ -31,6 +31,22 @@ final class HIDEvidenceTests: XCTestCase {
         ])
     }
 
+    func testReviewSafetyEvidence() throws {
+        try capture([
+            ("hid-review-reversal", [0.08, 0.38, 0.42999, 0.43, 0.47999, 0.48],
+             [0, 120, 120, 105, 105, 90], 0.016667),
+            ("hid-review-near-zero", [0.08, 0.58, 0.62999, 0.63, 0.67999, 0.68],
+             [0, 95, 95, 80, 80, 65], 0.016667)
+        ])
+    }
+
+    func testReviewReversalDirection() throws {
+        try capture([
+            ("hid-review-opposite-direction", [0.08, 0.38, 0.42999, 0.43, 0.47999, 0.48],
+             [0, -240, -240, -225, -225, -210], 0.016667)
+        ])
+    }
+
     private func capture(_ cases: [(String, [Double], [Double], Double)]) throws {
         for (name, times, y, hold) in cases {
             for trial in 1...2 {
@@ -59,6 +75,8 @@ final class HIDEvidenceTests: XCTestCase {
                 let result = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
                 let nodes = try XCTUnwrap(result["hid_digitizer_nodes"] as? NSNumber).intValue
                 XCTAssertGreaterThan(nodes, 0, "No actual HID digitizer data was captured")
+                let errors = try XCTUnwrap(result["hid_serialization_errors"] as? NSNumber).intValue
+                XCTAssertEqual(errors, 0, "HID records failed serialization")
                 let gap = try XCTUnwrap(result["max_frame_gap_ms"] as? NSNumber).doubleValue
                 XCTAssertLessThanOrEqual(gap, 30, "Recording disrupted frame cadence")
                 let touches = try XCTUnwrap(result["max_simultaneous_touches"] as? NSNumber).intValue

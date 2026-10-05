@@ -1602,22 +1602,6 @@ impl WinitWindowAdapter {
                     }
                 };
                 if let Some(finger_id) = finger_id {
-                    #[cfg(feature = "input-tracing")]
-                    let phase_code = match touch.phase {
-                        winit::event::TouchPhase::Started => 0,
-                        winit::event::TouchPhase::Moved => 1,
-                        winit::event::TouchPhase::Ended => 2,
-                        winit::event::TouchPhase::Cancelled => 3,
-                    };
-                    #[cfg(feature = "input-tracing")]
-                    crate::trace_touch_input(
-                        finger_id,
-                        phase_code,
-                        position.x as f64,
-                        position.y as f64,
-                        runtime_window.context(),
-                        true,
-                    );
                     self.dispatch_internal_event(corelib::platform::InternalEvent::Touch {
                         id: finger_id,
                         position,
@@ -1625,15 +1609,6 @@ impl WinitWindowAdapter {
                         event_time: None,
                         history: Default::default(),
                     });
-                    #[cfg(feature = "input-tracing")]
-                    crate::trace_touch_input(
-                        finger_id,
-                        phase_code,
-                        position.x as f64,
-                        position.y as f64,
-                        runtime_window.context(),
-                        false,
-                    );
                 }
             }
             WinitWindowEvent::ScaleFactorChanged { scale_factor, inner_size_writer } => {

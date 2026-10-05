@@ -7,12 +7,18 @@
 #import <mach/mach_time.h>
 #import <dlfcn.h>
 #import <math.h>
+#import <stdatomic.h>
 
 extern NSDictionary *hid_trace_view_state(void);
 
 static NSMutableString *hidTrace;
 static uint64_t dispatchID, ingressID, activeIngress;
-static NSUInteger digitizerNodes;
+static atomic_ulong digitizerNodes;
+static atomic_ulong serializationErrors;
+static dispatch_queue_t traceQueue;
+static char traceQueueKey;
+static const void *(*copyEvent)(CFAllocatorRef, const void *);
+typedef struct { uint64_t dispatch, ingress; double callback; } PacketContext;
 static uint32_t (*getType)(const void *);
 static uint64_t (*getTimestamp)(const void *);
 static CFArrayRef (*getChildren)(const void *);
@@ -22,11 +28,29 @@ static CFDataRef (*createData)(CFAllocatorRef, const void *);
 static void (*originalHIDHandler)(id, SEL, const void *);
 static mach_timebase_info_data_t timebase;
 
+static id finiteNumber(double value)
+{
+    return isfinite(value) ? @(value) : NSNull.null;
+}
+
+static void serializeRecord(NSDictionary *record)
+{
+    @try {
+        NSError *error = nil;
+        NSData *json = [NSJSONSerialization dataWithJSONObject:record options:0 error:&error];
+        if (!json) { atomic_fetch_add(&serializationErrors, 1); return; }
+        [hidTrace appendFormat:@"%@\n", [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding]];
+    } @catch (NSException *exception) {
+        atomic_fetch_add(&serializationErrors, 1);
+    }
+}
+
 static void appendRecord(NSDictionary *record)
 {
     if (!hidTrace) return;
-    NSData *json = [NSJSONSerialization dataWithJSONObject:record options:0 error:nil];
-    if (json) [hidTrace appendFormat:@"%@\n", [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding]];
+    NSDictionary *snapshot = [record copy];
+    if (dispatch_get_specific(&traceQueueKey)) serializeRecord(snapshot);
+    else dispatch_async(traceQueue, ^{ serializeRecord(snapshot); });
 }
 
 static double secondsForTicks(uint64_t ticks)
@@ -34,28 +58,28 @@ static double secondsForTicks(uint64_t ticks)
     return (double)((long double)ticks * timebase.numer / timebase.denom / 1e9L);
 }
 
-static void recordNode(const void *event, NSString *source, NSString *path, NSUInteger depth)
+static void decodeNode(const void *event, NSString *source, NSString *path, NSUInteger depth, PacketContext context)
 {
     if (!event || !getType || !getTimestamp || depth > 8) return;
     uint32_t type = getType(event);
     uint64_t ticks = getTimestamp(event);
     NSMutableDictionary *record = [@{@"kind": @"hid_node", @"source": source,
-        @"dispatch_id": @(dispatchID), @"ingress_id": @(activeIngress), @"path": path,
-        @"callback_seconds": @(CACurrentMediaTime()), @"timestamp_ticks": @(ticks),
+        @"dispatch_id": @(context.dispatch), @"ingress_id": @(context.ingress), @"path": path,
+        @"callback_seconds": @(context.callback), @"timestamp_ticks": @(ticks),
         @"timestamp_seconds": @(secondsForTicks(ticks)), @"type": @(type),
         @"event_pointer": [NSString stringWithFormat:@"%p", event]} mutableCopy];
     if (type == 11 && getFloat && getInteger) {
-        digitizerNodes++;
+        atomic_fetch_add(&digitizerNodes, 1);
         NSMutableArray *fields = [NSMutableArray new];
         for (uint32_t offset = 0; offset < 32; ++offset) {
             uint32_t field = (11 << 16) | offset;
             double value = getFloat(event, field);
             [fields addObject:@{@"field": @(field), @"integer": @(getInteger(event, field)),
-                @"float": isfinite(value) ? @(value) : NSNull.null}];
+                @"float": finiteNumber(value)}];
         }
         record[@"fields"] = fields;
-        record[@"x"] = @(getFloat(event, 11 << 16));
-        record[@"y"] = @(getFloat(event, (11 << 16) + 1));
+        record[@"x"] = finiteNumber(getFloat(event, 11 << 16));
+        record[@"y"] = finiteNumber(getFloat(event, (11 << 16) + 1));
     }
     if (createData && depth == 0) {
         CFDataRef data = createData(kCFAllocatorDefault, event);
@@ -68,10 +92,22 @@ static void recordNode(const void *event, NSString *source, NSString *path, NSUI
     CFArrayRef children = getChildren ? getChildren(event) : NULL;
     if (children) {
         for (CFIndex index = 0; index < CFArrayGetCount(children); ++index) {
-            recordNode(CFArrayGetValueAtIndex(children, index), source,
-                [path stringByAppendingFormat:@"/%ld", (long)index], depth + 1);
+            decodeNode(CFArrayGetValueAtIndex(children, index), source,
+                [path stringByAppendingFormat:@"/%ld", (long)index], depth + 1, context);
         }
     }
+}
+
+static void capturePacket(const void *event, NSString *source)
+{
+    if (!event || !copyEvent) return;
+    PacketContext context = { dispatchID, activeIngress, CACurrentMediaTime() };
+    const void *snapshot = copyEvent(kCFAllocatorDefault, event);
+    if (!snapshot) return;
+    dispatch_async(traceQueue, ^{
+        decodeNode(snapshot, source, @"root", 0, context);
+        CFRelease(snapshot);
+    });
 }
 
 void record_hid_object(id object, const char *source)
@@ -80,7 +116,7 @@ void record_hid_object(id object, const char *source)
     SEL selector = NSSelectorFromString(@"_hidEvent");
     if ([object respondsToSelector:selector]) {
         const void *event = ((const void *(*)(id, SEL))objc_msgSend)(object, selector);
-        recordNode(event, [NSString stringWithUTF8String:source], @"root", 0);
+        capturePacket(event, [NSString stringWithUTF8String:source]);
     } else {
         appendRecord(@{@"kind": @"unavailable", @"source": [NSString stringWithUTF8String:source],
             @"class": NSStringFromClass([object class]), @"dispatch_id": @(dispatchID)});
@@ -113,7 +149,7 @@ static void probeHIDHandler(id application, SEL selector, const void *event)
 {
     uint64_t previous = activeIngress;
     activeIngress = ++ingressID;
-    recordNode(event, @"application_hid_ingress", @"root", 0);
+    capturePacket(event, @"application_hid_ingress");
     recordState(@"hid_before", nil);
     originalHIDHandler(application, selector, event);
     recordState(@"hid_after", nil);
@@ -144,11 +180,16 @@ static void probeHIDHandler(id application, SEL selector, const void *event)
 
 void install_hid_trace(void)
 {
-    if (![NSProcessInfo.processInfo.environment[@"HID_TRACE"] boolValue] || hidTrace) return;
+    if (![NSProcessInfo.processInfo.environment[@"HID_TRACE"] isEqualToString:@"1"] || hidTrace) return;
     hidTrace = [NSMutableString new];
+    traceQueue = dispatch_queue_create("dev.slint.hid-capture", DISPATCH_QUEUE_SERIAL);
+    dispatch_queue_set_specific(traceQueue, &traceQueueKey, &traceQueueKey, NULL);
+    appendRecord(@{@"kind": @"nonfinite_control", @"x": finiteNumber(NAN),
+        @"y": finiteNumber(INFINITY), @"negative_infinity": finiteNumber(-INFINITY)});
     mach_timebase_info(&timebase);
     void *library = dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", RTLD_LAZY);
     void *symbols = library ?: RTLD_DEFAULT;
+    copyEvent = dlsym(symbols, "IOHIDEventCreateCopy");
     getType = dlsym(symbols, "IOHIDEventGetType");
     getTimestamp = dlsym(symbols, "IOHIDEventGetTimeStamp");
     getChildren = dlsym(symbols, "IOHIDEventGetChildren");
@@ -179,7 +220,7 @@ void install_hid_trace(void)
     }
     free(methods);
     appendRecord(@{@"kind": @"capabilities", @"hid_ingress_hook": @(hooked),
-        @"get_type": @(getType != NULL), @"get_timestamp": @(getTimestamp != NULL),
+        @"copy_event": @(copyEvent != NULL), @"get_type": @(getType != NULL), @"get_timestamp": @(getTimestamp != NULL),
         @"get_children": @(getChildren != NULL), @"get_float": @(getFloat != NULL),
         @"get_integer": @(getInteger != NULL), @"raw_data": @(createData != NULL),
         @"timebase_numer": @(timebase.numer), @"timebase_denom": @(timebase.denom),
@@ -192,11 +233,13 @@ void save_hid_trace(const char *directory, const char *scenario)
 {
     if (!hidTrace) return;
     NSString *name = [NSString stringWithFormat:@"hid-%s.jsonl", scenario];
-    [hidTrace writeToFile:[[NSString stringWithUTF8String:directory] stringByAppendingPathComponent:name]
+    __block NSString *snapshot;
+    dispatch_sync(traceQueue, ^{ snapshot = [hidTrace copy]; });
+    [snapshot writeToFile:[[NSString stringWithUTF8String:directory] stringByAppendingPathComponent:name]
         atomically:YES encoding:NSUTF8StringEncoding error:nil];
 }
 
-NSUInteger hid_digitizer_node_count(void) { return digitizerNodes; }
+NSUInteger hid_digitizer_node_count(void) { return atomic_load(&digitizerNodes); }
 
 void record_hid_marker(NSString *name, NSDictionary *values)
 {
@@ -209,10 +252,4 @@ void record_hid_marker(NSString *name, NSDictionary *values)
     appendRecord(record);
 }
 
-void record_slint_touch(int32_t identity, uint8_t phase, double x, double y,
-    uint64_t context_ns, uint64_t tick_ns, bool before)
-{
-    record_hid_marker(before ? @"slint_touch_before" : @"slint_touch_after",
-        @{@"finger_id": @(identity), @"winit_phase": @(phase), @"x": @(x), @"y": @(y),
-            @"context_ns": @(context_ns), @"animation_tick_ns": @(tick_ns)});
-}
+NSUInteger hid_serialization_error_count(void) { return atomic_load(&serializationErrors); }

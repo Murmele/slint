@@ -12,6 +12,7 @@ extern void install_hid_trace(void);
 extern void record_hid_object(id object, const char *source);
 extern void save_hid_trace(const char *directory, const char *scenario);
 extern NSUInteger hid_digitizer_node_count(void);
+extern NSUInteger hid_serialization_error_count(void);
 extern void record_hid_marker(NSString *name, NSDictionary *values);
 
 typedef struct {
@@ -24,6 +25,7 @@ extern SlintScrollGeometry slint_scroll_geometry(void);
 @interface PassiveTouchForwarder : UIGestureRecognizer <UIGestureRecognizerDelegate>
 - (instancetype)initWithHost:(UIView *)host scrollView:(ForwardingScrollView *)scrollView;
 @property (nonatomic, weak) UIView *host;
+@property (nonatomic) BOOL nativeOnlyInput;
 @property (nonatomic, weak) ForwardingScrollView *scrollView;
 @end
 
@@ -90,6 +92,7 @@ void record_slint_drag(void)
     if (!self)
         return nil;
     self.host = host;
+    self.nativeOnlyInput = [NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue];
     self.scrollView = scrollView;
     self.delegate = self;
     self.cancelsTouchesInView = NO;
@@ -98,13 +101,13 @@ void record_slint_drag(void)
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self.scrollView recordTouches:touches event:event phase:0];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
+    if (!self.nativeOnlyInput)
         [self.host touchesBegan:touches withEvent:event];
 }
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self.scrollView recordTouches:touches event:event phase:1];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
+    if (!self.nativeOnlyInput)
         [self.host touchesMoved:touches withEvent:event];
 }
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
@@ -112,13 +115,13 @@ void record_slint_drag(void)
     self.scrollView.nativeReleaseVelocity =
             [self.scrollView.panGestureRecognizer velocityInView:self.scrollView].y;
     [self.scrollView recordTouches:touches event:event phase:2];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
+    if (!self.nativeOnlyInput)
         [self.host touchesEnded:touches withEvent:event];
 }
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     [self.scrollView recordTouches:touches event:event phase:3];
-    if (![NSProcessInfo.processInfo.environment[@"NATIVE_ONLY_INPUT"] boolValue])
+    if (!self.nativeOnlyInput)
         [self.host touchesCancelled:touches withEvent:event];
 }
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
@@ -400,6 +403,7 @@ void record_slint_drag(void)
         combined[@"segments"] = segments;
         combined[@"max_simultaneous_touches"] = @(self.regressionMaxTouches);
         combined[@"hid_digitizer_nodes"] = @(hid_digitizer_node_count());
+        combined[@"hid_serialization_errors"] = @(hid_serialization_error_count());
         NSData *data = [NSJSONSerialization dataWithJSONObject:combined options:0 error:nil];
         NSString *json = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         self.metricsLabel.accessibilityValue = [self.metricsLabel.accessibilityValue stringByAppendingFormat:@", Regression=%@", json];

@@ -70,3 +70,7 @@ python3 report/scripts/analyze.py \
 The script checks delivered gestures, geometry, sample gaps, and final rest.
 It exports relative-time position data and compares the measured outcomes.
 Raw input and `.xcresult` bundles are not part of the published evidence.
+
+Set `HID_TRACE=1` to capture HID packets in the manual diagnostic app.
+Other values leave HID capture disabled.
+Packet decoding and JSON serialization run on a serial worker queue after the capture snapshot.

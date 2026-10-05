@@ -13,10 +13,11 @@ Post-release travel mismatches also remain.
 - Release build, Cupertino style, Winit with Skia.
 - Four vertical replay profiles, twice each per engine; fresh app at offset 7,200 points.
 - All 16 paired cases passed delivery, geometry, sampling, and final-rest checks.
-- Both XCTest runs failed the physics assertions. These are intentional regression failures, not build failures.
+- Both XCTest runs failed the physics assertions.
+  These are intentional regression failures, not build failures.
 
 The app's recording code and test profiles are the same for both runs.
-No engine changes are included in this PR.
+These captures preceded the prototype engine changes.
 The baseline was tested before pulling the new engine changes.
 
 ## Original Manual Observation
