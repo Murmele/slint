@@ -63,6 +63,12 @@ final class HIDEvidenceTests: XCTestCase {
                 XCTAssertLessThanOrEqual(gap, 30, "Recording disrupted frame cadence")
                 let touches = try XCTUnwrap(result["max_simultaneous_touches"] as? NSNumber).intValue
                 XCTAssertEqual(touches, 1)
+                if name == "hid-gate-accelerating" {
+                    let native = try XCTUnwrap(result["uikit_post_range_pt"] as? NSNumber).doubleValue
+                    let slint = try XCTUnwrap(result["slint_post_range_pt"] as? NSNumber).doubleValue
+                    XCTAssertGreaterThan(native, 5, "UIKit did not fling; delivery is inconclusive")
+                    XCTAssertGreaterThan(slint, 5, "Slint rejected a native-accepted short hard flick")
+                }
                 let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
                 attachment.name = scenario; attachment.lifetime = .keepAlways; add(attachment)
                 XCTContext.runActivity(named: "\(scenario): \(value)") { _ in }

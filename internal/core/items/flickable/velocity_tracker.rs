@@ -57,8 +57,15 @@ pub(crate) type Velocity = euclid::Vector2D<f32, LogicalPx>;
 
 pub(crate) struct VelocityEstimate {
     pub(crate) velocity: Velocity,
+    pub(crate) threshold_velocity: Velocity,
     #[cfg_attr(not(test), expect(unused, reason = "Confidence is not yet considered"))]
     pub(crate) confidence: f32,
+}
+
+impl VelocityEstimate {
+    pub(crate) fn threshold_velocity(&self) -> Velocity {
+        if cfg!(target_os = "ios") { self.threshold_velocity } else { self.velocity }
+    }
 }
 
 trait VelocityEstimator {

@@ -19,6 +19,7 @@ use crate::lengths::LogicalVector;
 
 ///                        [oldest, middle, newest]`.
 const WEIGHTS: BlendWeights = [0.6, 0.35, 0.05];
+const PAN_WEIGHTS: BlendWeights = [0., 0.8, 0.2];
 /// `weighted_recent_velocity` reads one more sample than there are weights
 /// (each weight blends a segment between two consecutive samples).
 const REQUIRED_SAMPLES: usize = WEIGHTS.len() + 1;
@@ -26,6 +27,17 @@ const REQUIRED_SAMPLES: usize = WEIGHTS.len() + 1;
 #[derive(Default, Debug)]
 pub(crate) struct IOsVelocityTracker {
     buffer: VelocityRingBuffer<REQUIRED_SAMPLES>,
+}
+
+impl IOsVelocityTracker {
+    fn blended_velocity(&self, mut weights: BlendWeights) -> super::Velocity {
+        let missing = weights.len().saturating_sub(self.buffer.len().saturating_sub(1));
+        if missing < weights.len() {
+            weights[missing] += weights[..missing].iter().sum::<f32>();
+            weights[..missing].fill(0.);
+        }
+        weighted_recent_velocity(&self.buffer, weights)
+    }
 }
 
 impl VelocityTracker for IOsVelocityTracker {
@@ -41,7 +53,8 @@ impl VelocityTracker for IOsVelocityTracker {
 impl VelocityEstimator for IOsVelocityTracker {
     fn estimate_velocity_internal(&self) -> Option<VelocityEstimate> {
         Some(VelocityEstimate {
-            velocity: weighted_recent_velocity(&self.buffer, WEIGHTS),
+            velocity: self.blended_velocity(WEIGHTS),
+            threshold_velocity: self.blended_velocity(PAN_WEIGHTS),
             confidence: 1.0,
         })
     }
@@ -90,5 +103,34 @@ mod tests_ios_velocity_tracker {
         assert!((estimate.velocity.x - expected).abs() < 1e-3);
         assert_eq!(estimate.velocity.y, 0.0);
         assert_eq!(estimate.confidence, 1.0);
+    }
+
+    #[test]
+    fn accelerating_flick_uses_pan_speed_to_start_slower_scroll() {
+        let start = crate::animations::current_tick();
+        let mut tracker = IOsVelocityTracker::default();
+        tracker.push(start, LogicalVector::default());
+        for (millis, delta) in [(10, -0.8), (20, -0.8), (30, -18.)] {
+            tracker.push(start + Duration::from_millis(millis), LogicalVector::new(0., delta));
+        }
+        crate::animations::update_animations(start + Duration::from_millis(30));
+        let estimate = tracker.estimate_velocity().unwrap();
+        assert!((estimate.threshold_velocity.y + 424.).abs() < 0.01);
+        assert!((estimate.velocity.y + 166.).abs() < 0.01);
+        assert!(estimate.threshold_velocity.y.abs() >= 250.);
+        assert!(estimate.velocity.y.abs() < 250.);
+    }
+
+    #[test]
+    fn two_primary_segments_match_recorded_sparse_flick() {
+        let start = crate::animations::current_tick();
+        let mut tracker = IOsVelocityTracker::default();
+        tracker.push(start, LogicalVector::default());
+        tracker.push(start + Duration::from_micros(58425), LogicalVector::new(0., -20.));
+        tracker.push(start + Duration::from_micros(75122), LogicalVector::new(0., -10.667));
+        crate::animations::update_animations(start + Duration::from_micros(75122));
+        let estimate = tracker.estimate_velocity().unwrap();
+        assert!((estimate.threshold_velocity.y + 401.623).abs() < 0.1);
+        assert!((estimate.velocity.y + 357.146).abs() < 0.1);
     }
 }

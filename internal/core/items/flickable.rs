@@ -987,7 +987,7 @@ impl FlickableDataInner {
             let x_simulation = if inside_bounds_x {
                 match velocity_estimation.as_ref() {
                     Some(velocity_estimation)
-                        if velocity_estimation.velocity.x.abs()
+                        if velocity_estimation.threshold_velocity().x.abs()
                             >= FlickAnimation::minimum_flick_velocity_animation() =>
                     {
                         let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
@@ -1033,7 +1033,7 @@ impl FlickableDataInner {
             let y_simulation = if inside_bounds_y {
                 match velocity_estimation.as_ref() {
                     Some(velocity_estimation)
-                        if velocity_estimation.velocity.y.abs()
+                        if velocity_estimation.threshold_velocity().y.abs()
                             >= FlickAnimation::minimum_flick_velocity_animation() =>
                     {
                         let content_y = (Flickable::FIELD_OFFSETS.content_y()).apply_pin(flick);

@@ -89,11 +89,11 @@ impl<const N: usize> VelocityEstimator for GeneralVelocityTracker<N> {
 
             if let (Some(res_x), Some(res_y)) = (res_x, res_y) {
                 // Convert values
+                let velocity =
+                    Vector2D::new(res_x.coefficients()[1] * 1000., res_y.coefficients()[1] * 1000.);
                 return Some(VelocityEstimate {
-                    velocity: Vector2D::new(
-                        res_x.coefficients()[1] * 1000.,
-                        res_y.coefficients()[1] * 1000.,
-                    ),
+                    velocity,
+                    threshold_velocity: velocity,
                     confidence: res_x.confidence * res_y.confidence,
                 });
             }
