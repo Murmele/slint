@@ -87,6 +87,11 @@ The first full-sequence attempt did not provide valid delivery and crashed; it i
 This pending result is separate from the completed eight-case-per-version comparison above.
 XCTest can still resample the requested path; a successful synthesis call is not evidence of faithful historical touch delivery.
 
+## Source and Measurement Diagnosis
+
+[The detailed diagnosis](DIAGNOSIS.md) checks the stopping rule against 22 recorded curves and traces the missing velocity information through Winit and Slint.
+It separates confirmed source behavior from inferred UIKit behavior and unverified fixes.
+
 ## Evidence and Reproduction
 
 - [Measured case outcomes and delivery checks](evidence/results.json)

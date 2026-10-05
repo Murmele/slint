@@ -1,0 +1,889 @@
+{
+  "decay_rate": 2.0024805005437076,
+  "training_window_s": [
+    0.08,
+    1.0
+  ],
+  "cases": [
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture9-trial1",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 726.4110197029175,
+      "observed_position_stop_s": 2.151636541,
+      "inferred_speed_at_stop_pt_s": 9.771849770947085,
+      "1.0": {
+        "predicted_stop_s": 3.2899776031172823,
+        "timing_error_s": 1.1383410621172825,
+        "late_rms_pt": 2.823174872337309,
+        "late_max_pt": 3.9442268260518176
+      },
+      "10.0": {
+        "predicted_stop_s": 2.140111178765657,
+        "timing_error_s": -0.01152536223434275,
+        "late_rms_pt": 0.48507430482594716,
+        "late_max_pt": 0.6737462201081144
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture9-trial1",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 685.8457020649922,
+      "observed_position_stop_s": 3.269740291,
+      "inferred_speed_at_stop_pt_s": 0.9832041535213035,
+      "1.0": {
+        "predicted_stop_s": 3.2612815338526255,
+        "timing_error_s": -0.008458757147374651,
+        "late_rms_pt": 0.0449023624608009,
+        "late_max_pt": 0.20781778997297806
+      },
+      "10.0": {
+        "predicted_stop_s": 2.111415109501,
+        "timing_error_s": -1.1583251814990003,
+        "late_rms_pt": 3.2421780622383505,
+        "late_max_pt": 4.458767154569614
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture9-trial2",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 284.3392988398688,
+      "observed_position_stop_s": 1.667814125,
+      "inferred_speed_at_stop_pt_s": 10.078485218811451,
+      "1.0": {
+        "predicted_stop_s": 2.8215846485141065,
+        "timing_error_s": 1.1537705235141065,
+        "late_rms_pt": 3.3191691763794524,
+        "late_max_pt": 4.120717326351951
+      },
+      "10.0": {
+        "predicted_stop_s": 1.6717182241624815,
+        "timing_error_s": 0.003904099162481467,
+        "late_rms_pt": 0.36930323191084363,
+        "late_max_pt": 0.5669285975154708
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture9-trial2",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 639.6315414502627,
+      "observed_position_stop_s": 3.234993333,
+      "inferred_speed_at_stop_pt_s": 0.9830269190322193,
+      "1.0": {
+        "predicted_stop_s": 3.226444548312526,
+        "timing_error_s": -0.008548784687473887,
+        "late_rms_pt": 0.0401815201448678,
+        "late_max_pt": 0.12496498536438594
+      },
+      "10.0": {
+        "predicted_stop_s": 2.0765781239609007,
+        "timing_error_s": -1.1584152090390991,
+        "late_rms_pt": 3.3342617535764214,
+        "late_max_pt": 4.537730371113867
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture10-trial1",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 518.2516057405,
+      "observed_position_stop_s": 1.973796542,
+      "inferred_speed_at_stop_pt_s": 9.953972943759805,
+      "1.0": {
+        "predicted_stop_s": 3.121359158305789,
+        "timing_error_s": 1.1475626163057888,
+        "late_rms_pt": 2.948220272183901,
+        "late_max_pt": 3.9393125275501006
+      },
+      "10.0": {
+        "predicted_stop_s": 1.971492733954164,
+        "timing_error_s": -0.0023038080458361865,
+        "late_rms_pt": 0.4942869368173979,
+        "late_max_pt": 0.5551132596456227
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture10-trial1",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 412.38706193334264,
+      "observed_position_stop_s": 3.008002167,
+      "inferred_speed_at_stop_pt_s": 0.9984978234228091,
+      "1.0": {
+        "predicted_stop_s": 3.0072514450952443,
+        "timing_error_s": -0.000750721904755558,
+        "late_rms_pt": 0.10094466595867684,
+        "late_max_pt": 0.14432458907504042
+      },
+      "10.0": {
+        "predicted_stop_s": 1.8573850207436193,
+        "timing_error_s": -1.1506171462563806,
+        "late_rms_pt": 3.403539930534748,
+        "late_max_pt": 4.38949551900987
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture10-trial2",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 528.1684871677039,
+      "observed_position_stop_s": 1.993390083,
+      "inferred_speed_at_stop_pt_s": 9.75412786421937,
+      "1.0": {
+        "predicted_stop_s": 3.1308246625049727,
+        "timing_error_s": 1.1374345795049727,
+        "late_rms_pt": 2.854224589201265,
+        "late_max_pt": 3.829758292265069
+      },
+      "10.0": {
+        "predicted_stop_s": 1.9809582381533475,
+        "timing_error_s": -0.012431844846652496,
+        "late_rms_pt": 0.5963122073230148,
+        "late_max_pt": 0.6646674949306544
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture10-trial2",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 410.2314011565487,
+      "observed_position_stop_s": 3.010729542,
+      "inferred_speed_at_stop_pt_s": 0.9878683819949949,
+      "1.0": {
+        "predicted_stop_s": 3.0046341983952405,
+        "timing_error_s": -0.0060953436047594955,
+        "late_rms_pt": 0.01299811501175947,
+        "late_max_pt": 0.10243788930802111
+      },
+      "10.0": {
+        "predicted_stop_s": 1.854767774043615,
+        "timing_error_s": -1.155961767956385,
+        "late_rms_pt": 3.485357433647447,
+        "late_max_pt": 4.490302940973379
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture8-trial1",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 703.0119774368629,
+      "observed_position_stop_s": 2.118026458,
+      "inferred_speed_at_stop_pt_s": 10.115483274594146,
+      "1.0": {
+        "predicted_stop_s": 3.273626848047414,
+        "timing_error_s": 1.155600390047414,
+        "late_rms_pt": 3.0196729840653957,
+        "late_max_pt": 4.180959174200325
+      },
+      "10.0": {
+        "predicted_stop_s": 2.123760423695789,
+        "timing_error_s": 0.0057339656957888785,
+        "late_rms_pt": 0.2940456492203485,
+        "late_max_pt": 0.6665781024348689
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture8-trial1",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 310.33434996397244,
+      "observed_position_stop_s": 2.868629333,
+      "inferred_speed_at_stop_pt_s": 0.9932985176750648,
+      "1.0": {
+        "predicted_stop_s": 2.8652714785371893,
+        "timing_error_s": -0.003357854462810561,
+        "late_rms_pt": 0.02201880047269236,
+        "late_max_pt": 0.06268965232720802
+      },
+      "10.0": {
+        "predicted_stop_s": 1.7154050541855639,
+        "timing_error_s": -1.153224278814436,
+        "late_rms_pt": 3.5854154038647557,
+        "late_max_pt": 4.4747294664166475
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture8-trial2",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 702.633227864949,
+      "observed_position_stop_s": 2.11739575,
+      "inferred_speed_at_stop_pt_s": 10.122810372755053,
+      "1.0": {
+        "predicted_stop_s": 3.273357732898541,
+        "timing_error_s": 1.1559619828985408,
+        "late_rms_pt": 3.013620705366138,
+        "late_max_pt": 4.176043677531197
+      },
+      "10.0": {
+        "predicted_stop_s": 2.123491308546916,
+        "timing_error_s": 0.006095558546916013,
+        "late_rms_pt": 0.2983670861156964,
+        "late_max_pt": 0.6677156890818878
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture8-trial2",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 305.4164862962662,
+      "observed_position_stop_s": 2.860245208,
+      "inferred_speed_at_stop_pt_s": 0.9941085412757612,
+      "1.0": {
+        "predicted_stop_s": 2.8572944267909093,
+        "timing_error_s": -0.002950781209090536,
+        "late_rms_pt": 0.019592741555247217,
+        "late_max_pt": 0.07511216686907574
+      },
+      "10.0": {
+        "predicted_stop_s": 1.7074280024392845,
+        "timing_error_s": -1.1528172055607153,
+        "late_rms_pt": 3.593890474051608,
+        "late_max_pt": 4.476856611659059
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture13-trial1",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 738.500077455259,
+      "observed_position_stop_s": 2.14290725,
+      "inferred_speed_at_stop_pt_s": 10.109658199034172,
+      "1.0": {
+        "predicted_stop_s": 3.2982199851933784,
+        "timing_error_s": 1.1553127351933785,
+        "late_rms_pt": 2.9255558123995478,
+        "late_max_pt": 4.086406463363346
+      },
+      "10.0": {
+        "predicted_stop_s": 2.148353560841753,
+        "timing_error_s": 0.005446310841753288,
+        "late_rms_pt": 0.37052231038296807,
+        "late_max_pt": 0.581658587565471
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture13-trial1",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 716.8777434979903,
+      "observed_position_stop_s": 3.28611875,
+      "inferred_speed_at_stop_pt_s": 0.9945316019753422,
+      "1.0": {
+        "predicted_stop_s": 3.2833804439620446,
+        "timing_error_s": -0.0027383060379553292,
+        "late_rms_pt": 0.020607406979398155,
+        "late_max_pt": 0.1896534882589549
+      },
+      "10.0": {
+        "predicted_stop_s": 2.1335140196104194,
+        "timing_error_s": -1.1526047303895806,
+        "late_rms_pt": 3.2442217081246736,
+        "late_max_pt": 4.484255488855524
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture13-trial2",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 738.4548760868695,
+      "observed_position_stop_s": 2.151378791,
+      "inferred_speed_at_stop_pt_s": 9.938995107442283,
+      "1.0": {
+        "predicted_stop_s": 3.298189418670866,
+        "timing_error_s": 1.1468106276708658,
+        "late_rms_pt": 2.8985186812928907,
+        "late_max_pt": 4.050229683844918
+      },
+      "10.0": {
+        "predicted_stop_s": 2.1483229943192406,
+        "timing_error_s": -0.003055796680759393,
+        "late_rms_pt": 0.40478382205573527,
+        "late_max_pt": 0.6232042275214553
+      }
+    },
+    {
+      "run": "baseline",
+      "scenario": "recorded-gesture13-trial2",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 726.6074539072691,
+      "observed_position_stop_s": 3.294229,
+      "inferred_speed_at_stop_pt_s": 0.991790921548378,
+      "1.0": {
+        "predicted_stop_s": 3.2901126260941536,
+        "timing_error_s": -0.004116373905846515,
+        "late_rms_pt": 0.05888096723907394,
+        "late_max_pt": 0.1603176035996512
+      },
+      "10.0": {
+        "predicted_stop_s": 2.1402462017425283,
+        "timing_error_s": -1.1539827982574717,
+        "late_rms_pt": 3.2021638126848324,
+        "late_max_pt": 4.438527849714774
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture9-trial1",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 704.7528988874959,
+      "observed_position_stop_s": 2.118465917,
+      "inferred_speed_at_stop_pt_s": 10.131613181233288,
+      "1.0": {
+        "predicted_stop_s": 3.2748619732182105,
+        "timing_error_s": 1.1563960562182105,
+        "late_rms_pt": 2.942463657079743,
+        "late_max_pt": 4.083907630784779
+      },
+      "10.0": {
+        "predicted_stop_s": 2.1249955488665853,
+        "timing_error_s": 0.006529631866585284,
+        "late_rms_pt": 0.3723453620250191,
+        "late_max_pt": 0.6767756212875611
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture9-trial1",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 689.2514001791259,
+      "observed_position_stop_s": 3.271375792,
+      "inferred_speed_at_stop_pt_s": 0.9848556940200589,
+      "1.0": {
+        "predicted_stop_s": 3.2637551674438403,
+        "timing_error_s": -0.007620624556159861,
+        "late_rms_pt": 0.04827161977937514,
+        "late_max_pt": 0.18421446354568616
+      },
+      "10.0": {
+        "predicted_stop_s": 2.113888743092215,
+        "timing_error_s": -1.157487048907785,
+        "late_rms_pt": 3.233226219092787,
+        "late_max_pt": 4.449307712628979
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture9-trial2",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 709.4260656170384,
+      "observed_position_stop_s": 2.117725833,
+      "inferred_speed_at_stop_pt_s": 10.213921051663279,
+      "1.0": {
+        "predicted_stop_s": 3.278162400617334,
+        "timing_error_s": 1.1604365676173338,
+        "late_rms_pt": 3.037782030319236,
+        "late_max_pt": 4.210526489106087
+      },
+      "10.0": {
+        "predicted_stop_s": 2.1282959762657088,
+        "timing_error_s": 0.010570143265708598,
+        "late_rms_pt": 0.27383017859468406,
+        "late_max_pt": 0.6482210099948134
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture9-trial2",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 689.4794088013384,
+      "observed_position_stop_s": 3.27033125,
+      "inferred_speed_at_stop_pt_s": 0.9872443264896014,
+      "1.0": {
+        "predicted_stop_s": 3.2639203383280644,
+        "timing_error_s": -0.006410911671935526,
+        "late_rms_pt": 0.0695484315050029,
+        "late_max_pt": 0.17054165087211004
+      },
+      "10.0": {
+        "predicted_stop_s": 2.114053913976439,
+        "timing_error_s": -1.1562773360235608,
+        "late_rms_pt": 3.215971332697961,
+        "late_max_pt": 4.427858094422845
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture10-trial1",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 517.1065891084188,
+      "observed_position_stop_s": 1.973351292,
+      "inferred_speed_at_stop_pt_s": 9.940840145672228,
+      "1.0": {
+        "predicted_stop_s": 3.120254614239868,
+        "timing_error_s": 1.146903322239868,
+        "late_rms_pt": 2.9041354691830628,
+        "late_max_pt": 3.882817132017408
+      },
+      "10.0": {
+        "predicted_stop_s": 1.970388189888243,
+        "timing_error_s": -0.002963102111757099,
+        "late_rms_pt": 0.5459514359247091,
+        "late_max_pt": 0.6116086551783155
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture10-trial1",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 401.0867399751957,
+      "observed_position_stop_s": 2.999451459,
+      "inferred_speed_at_stop_pt_s": 0.9879083527663897,
+      "1.0": {
+        "predicted_stop_s": 2.993376320744532,
+        "timing_error_s": -0.0060751382554680156,
+        "late_rms_pt": 0.05796623240655166,
+        "late_max_pt": 0.15469960259633808
+      },
+      "10.0": {
+        "predicted_stop_s": 1.8435098963929064,
+        "timing_error_s": -1.1559415626070935,
+        "late_rms_pt": 3.453270650030305,
+        "late_max_pt": 4.438533778149576
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture10-trial2",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 403.51427934922134,
+      "observed_position_stop_s": 1.841154708,
+      "inferred_speed_at_stop_pt_s": 10.108083745383496,
+      "1.0": {
+        "predicted_stop_s": 2.996389664806432,
+        "timing_error_s": 1.155234956806432,
+        "late_rms_pt": 3.0923040434235194,
+        "late_max_pt": 3.999660545585357
+      },
+      "10.0": {
+        "predicted_stop_s": 1.8465232404548064,
+        "timing_error_s": 0.005368532454806507,
+        "late_rms_pt": 0.46316510891120516,
+        "late_max_pt": 0.6030365434808118
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture10-trial2",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 409.2317681983385,
+      "observed_position_stop_s": 3.008963583,
+      "inferred_speed_at_stop_pt_s": 0.9889522438395374,
+      "1.0": {
+        "predicted_stop_s": 3.0034158456596005,
+        "timing_error_s": -0.005547737340399372,
+        "late_rms_pt": 0.02745762361028212,
+        "late_max_pt": 0.07678354000199761
+      },
+      "10.0": {
+        "predicted_stop_s": 1.853549421307975,
+        "timing_error_s": -1.1554141616920248,
+        "late_rms_pt": 3.4727064223907314,
+        "late_max_pt": 4.4703949246522825
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture8-trial1",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 701.2902644839035,
+      "observed_position_stop_s": 2.110778292,
+      "inferred_speed_at_stop_pt_s": 10.238237673946848,
+      "1.0": {
+        "predicted_stop_s": 3.2724023387834142,
+        "timing_error_s": 1.1616240467834142,
+        "late_rms_pt": 3.039258268339202,
+        "late_max_pt": 4.2049873901451065
+      },
+      "10.0": {
+        "predicted_stop_s": 2.122535914431789,
+        "timing_error_s": 0.011757622431789017,
+        "late_rms_pt": 0.2991695070933732,
+        "late_max_pt": 0.5656766002457516
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture8-trial1",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 306.04338569238206,
+      "observed_position_stop_s": 2.860192792,
+      "inferred_speed_at_stop_pt_s": 0.9962536167054564,
+      "1.0": {
+        "predicted_stop_s": 2.8583184074234063,
+        "timing_error_s": -0.001874384576593613,
+        "late_rms_pt": 0.006867352770807243,
+        "late_max_pt": 0.08490253044965357
+      },
+      "10.0": {
+        "predicted_stop_s": 1.708451983071781,
+        "timing_error_s": -1.1517408089282188,
+        "late_rms_pt": 3.6080509737247386,
+        "late_max_pt": 4.493979487047
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture8-trial2",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 324.30756022422685,
+      "observed_position_stop_s": 1.724900292,
+      "inferred_speed_at_stop_pt_s": 10.25343862945389,
+      "1.0": {
+        "predicted_stop_s": 2.8872652312526954,
+        "timing_error_s": 1.1623649392526954,
+        "late_rms_pt": 3.259221024326863,
+        "late_max_pt": 4.103525359117157
+      },
+      "10.0": {
+        "predicted_stop_s": 1.73739880690107,
+        "timing_error_s": 0.012498514901069901,
+        "late_rms_pt": 0.3769496870003838,
+        "late_max_pt": 0.546722558363399
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture8-trial2",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 302.43966711864715,
+      "observed_position_stop_s": 2.859360792,
+      "inferred_speed_at_stop_pt_s": 0.9861641870239292,
+      "1.0": {
+        "predicted_stop_s": 2.852403211160386,
+        "timing_error_s": -0.006957580839614064,
+        "late_rms_pt": 0.025867248706433376,
+        "late_max_pt": 0.0806392386157313
+      },
+      "10.0": {
+        "predicted_stop_s": 1.7025367868087604,
+        "timing_error_s": -1.1568240051912395,
+        "late_rms_pt": 3.596386143108105,
+        "late_max_pt": 4.472296174069015
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture13-trial1",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 738.7011507630552,
+      "observed_position_stop_s": 2.146172584,
+      "inferred_speed_at_stop_pt_s": 10.04650378704325,
+      "1.0": {
+        "predicted_stop_s": 3.2983559343334736,
+        "timing_error_s": 1.1521833503334737,
+        "late_rms_pt": 2.977491228525545,
+        "late_max_pt": 4.154513956965275
+      },
+      "10.0": {
+        "predicted_stop_s": 2.1484895099818484,
+        "timing_error_s": 0.0023169259818485166,
+        "late_rms_pt": 0.3146418434517463,
+        "late_max_pt": 0.6313546541177857
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture13-trial1",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 766.5855899216257,
+      "observed_position_stop_s": 3.31881575,
+      "inferred_speed_at_stop_pt_s": 0.9960901943796009,
+      "1.0": {
+        "predicted_stop_s": 3.3168594418659376,
+        "timing_error_s": -0.0019563081340625565,
+        "late_rms_pt": 0.06981855309839503,
+        "late_max_pt": 0.1671597296035543
+      },
+      "10.0": {
+        "predicted_stop_s": 2.166993017514312,
+        "timing_error_s": -1.1518227324856882,
+        "late_rms_pt": 3.1693179011456976,
+        "late_max_pt": 4.426132728450284
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture13-trial2",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 738.6265562931145,
+      "observed_position_stop_s": 2.144828583,
+      "inferred_speed_at_stop_pt_s": 10.072561484015177,
+      "1.0": {
+        "predicted_stop_s": 3.2983055040406977,
+        "timing_error_s": 1.1534769210406979,
+        "late_rms_pt": 2.890904806215654,
+        "late_max_pt": 4.0403777893552615
+      },
+      "10.0": {
+        "predicted_stop_s": 2.1484390796890724,
+        "timing_error_s": 0.003610496689072651,
+        "late_rms_pt": 0.41077589847287604,
+        "late_max_pt": 0.5787475127863217
+      }
+    },
+    {
+      "run": "latest",
+      "scenario": "recorded-gesture13-trial2",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 728.2827693663417,
+      "observed_position_stop_s": 3.294520208,
+      "inferred_speed_at_stop_pt_s": 0.9934981461940176,
+      "1.0": {
+        "predicted_stop_s": 3.291262706653648,
+        "timing_error_s": -0.00325750134635161,
+        "late_rms_pt": 0.03610664930672182,
+        "late_max_pt": 0.14881358398361044
+      },
+      "10.0": {
+        "predicted_stop_s": 2.1413962823020234,
+        "timing_error_s": -1.1531239256979764,
+        "late_rms_pt": 3.274286318416751,
+        "late_max_pt": 4.5316170819360195
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-5",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 821.0772084172178,
+      "observed_position_stop_s": 2.203063167,
+      "inferred_speed_at_stop_pt_s": 9.964473462349986,
+      "1.0": {
+        "predicted_stop_s": 3.3511523059174912,
+        "timing_error_s": 1.1480891389174914,
+        "late_rms_pt": 2.4282619235242495,
+        "late_max_pt": 4.167273295416976
+      },
+      "10.0": {
+        "predicted_stop_s": 2.201285881565866,
+        "timing_error_s": -0.0017772854341338018,
+        "late_rms_pt": 0.30813105242172806,
+        "late_max_pt": 0.8287899913627825
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-5",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 950.3897054481382,
+      "observed_position_stop_s": 3.428211375,
+      "inferred_speed_at_stop_pt_s": 0.9919780356348332,
+      "1.0": {
+        "predicted_stop_s": 3.4241892067754662,
+        "timing_error_s": -0.004022168224533829,
+        "late_rms_pt": 0.013890369717809919,
+        "late_max_pt": 0.04770350074898033
+      },
+      "10.0": {
+        "predicted_stop_s": 2.2743227824238414,
+        "timing_error_s": -1.1538885925761586,
+        "late_rms_pt": 2.548938863210906,
+        "late_max_pt": 4.513677262146757
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-6",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 560.2816045520144,
+      "observed_position_stop_s": 2.010220167,
+      "inferred_speed_at_stop_pt_s": 10.004278348902702,
+      "1.0": {
+        "predicted_stop_s": 3.1603001981232777,
+        "timing_error_s": 1.1500800311232777,
+        "late_rms_pt": 2.7276426756614183,
+        "late_max_pt": 3.963404835718393
+      },
+      "10.0": {
+        "predicted_stop_s": 2.010433773771653,
+        "timing_error_s": 0.00021360677165294106,
+        "late_rms_pt": 0.47316656511428645,
+        "late_max_pt": 0.5873897135721791
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-6",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 564.5049800762246,
+      "observed_position_stop_s": 3.170492125,
+      "inferred_speed_at_stop_pt_s": 0.9871833895552942,
+      "1.0": {
+        "predicted_stop_s": 3.1640503884716265,
+        "timing_error_s": -0.006441736528373543,
+        "late_rms_pt": 0.009055192715831018,
+        "late_max_pt": 0.02657575143041413
+      },
+      "10.0": {
+        "predicted_stop_s": 2.014183964120001,
+        "timing_error_s": -1.1563081608799992,
+        "late_rms_pt": 3.130857059756181,
+        "late_max_pt": 4.506441109173352
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-7",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 642.2544136718093,
+      "observed_position_stop_s": 2.082880666,
+      "inferred_speed_at_stop_pt_s": 9.915077610682568,
+      "1.0": {
+        "predicted_stop_s": 3.2284881208147307,
+        "timing_error_s": 1.1456074548147308,
+        "late_rms_pt": 2.6334226318175977,
+        "late_max_pt": 3.7267087838899897
+      },
+      "10.0": {
+        "predicted_stop_s": 2.0786216964631055,
+        "timing_error_s": -0.004258969536894419,
+        "late_rms_pt": 0.7179477368213923,
+        "late_max_pt": 1.047869999797399
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-7",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 562.3998937972328,
+      "observed_position_stop_s": 3.158574666,
+      "inferred_speed_at_stop_pt_s": 1.007255165586363,
+      "1.0": {
+        "predicted_stop_s": 3.162184675425625,
+        "timing_error_s": 0.0036100094256252824,
+        "late_rms_pt": 0.09946180310426182,
+        "late_max_pt": 0.4903015931704431
+      },
+      "10.0": {
+        "predicted_stop_s": 2.0123182510739994,
+        "timing_error_s": -1.1462564149260004,
+        "late_rms_pt": 3.282986713087668,
+        "late_max_pt": 4.5059346041888375
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-8",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 319.79122435260473,
+      "observed_position_stop_s": 1.726811083,
+      "inferred_speed_at_stop_pt_s": 10.072035658994764,
+      "1.0": {
+        "predicted_stop_s": 2.8802619338408317,
+        "timing_error_s": 1.1534508508408317,
+        "late_rms_pt": 2.9583783040821716,
+        "late_max_pt": 4.017655500887599
+      },
+      "10.0": {
+        "predicted_stop_s": 1.7303955094892063,
+        "timing_error_s": 0.003584426489206205,
+        "late_rms_pt": 0.4430596711869944,
+        "late_max_pt": 0.5766194115981307
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-8",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 314.80407065364903,
+      "observed_position_stop_s": 2.878335875,
+      "inferred_speed_at_stop_pt_s": 0.988209048245032,
+      "1.0": {
+        "predicted_stop_s": 2.872412713041648,
+        "timing_error_s": -0.005923161958351741,
+        "late_rms_pt": 0.01369103568251782,
+        "late_max_pt": 0.024634477640461228
+      },
+      "10.0": {
+        "predicted_stop_s": 1.7225462886900234,
+        "timing_error_s": -1.1557895863099765,
+        "late_rms_pt": 3.3398587376858764,
+        "late_max_pt": 4.48438701699547
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-11",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 404.10591182561996,
+      "observed_position_stop_s": 1.835924375,
+      "inferred_speed_at_stop_pt_s": 10.229485036951193,
+      "1.0": {
+        "predicted_stop_s": 2.9971213202617455,
+        "timing_error_s": 1.1611969452617454,
+        "late_rms_pt": 2.7510672419555666,
+        "late_max_pt": 3.9583054015106427
+      },
+      "10.0": {
+        "predicted_stop_s": 1.8472548959101203,
+        "timing_error_s": 0.011330520910120212,
+        "late_rms_pt": 0.507255112390396,
+        "late_max_pt": 0.6784526171960579
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-11",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 412.83662102970567,
+      "observed_position_stop_s": 3.011853417,
+      "inferred_speed_at_stop_pt_s": 0.9919071111143294,
+      "1.0": {
+        "predicted_stop_s": 3.0077955427440686,
+        "timing_error_s": -0.004057874255931626,
+        "late_rms_pt": 0.03772887259242377,
+        "late_max_pt": 0.0445681477413018
+      },
+      "10.0": {
+        "predicted_stop_s": 1.8579291183924431,
+        "timing_error_s": -1.153924298607557,
+        "late_rms_pt": 3.179044909679121,
+        "late_max_pt": 4.538993934936798
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-13",
+      "toolkit": "uikit",
+      "effective_start_speed_pt_s": 707.6907288698346,
+      "observed_position_stop_s": 2.144643459,
+      "inferred_speed_at_stop_pt_s": 9.654271572035768,
+      "1.0": {
+        "predicted_stop_s": 3.2769393623791148,
+        "timing_error_s": 1.1322959033791147,
+        "late_rms_pt": 2.724516434642108,
+        "late_max_pt": 3.8082415647478456
+      },
+      "10.0": {
+        "predicted_stop_s": 2.1270729380274895,
+        "timing_error_s": -0.01757052097251055,
+        "late_rms_pt": 0.5871325183763114,
+        "late_max_pt": 0.6861842224477641
+      }
+    },
+    {
+      "run": "manual",
+      "scenario": "manual-13",
+      "toolkit": "slint",
+      "effective_start_speed_pt_s": 661.9909289595759,
+      "observed_position_stop_s": 3.2453835,
+      "inferred_speed_at_stop_pt_s": 0.9964410260432315,
+      "1.0": {
+        "predicted_stop_s": 3.243603047121595,
+        "timing_error_s": -0.0017804528784051143,
+        "late_rms_pt": 0.006039722644960274,
+        "late_max_pt": 0.02961633670952324
+      },
+      "10.0": {
+        "predicted_stop_s": 2.093736622769969,
+        "timing_error_s": -1.1516468772300308,
+        "late_rms_pt": 3.289866684117613,
+        "late_max_pt": 4.50073346121917
+      }
+    }
+  ]
+}
