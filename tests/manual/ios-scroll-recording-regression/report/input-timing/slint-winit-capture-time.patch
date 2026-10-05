@@ -1,0 +1,55 @@
+--- a/internal/backends/winit/winitwindowadapter.rs
++++ b/internal/backends/winit/winitwindowadapter.rs
+@@ -413,6 +413,8 @@
+     window: corelib::api::Window,
+     pub(crate) self_weak: Weak<Self>,
+     pending_redraw: Cell<bool>,
++    #[cfg(target_os = "ios")]
++    touch_clock_origin: std::cell::OnceCell<(std::time::Instant, corelib::animations::Instant)>,
+     constraints: Cell<corelib::window::LayoutConstraints>,
+     /// Indicates if the window is shown, from the perspective of the API user.
+     shown: Cell<WindowVisibility>,
+@@ -510,6 +512,8 @@
+             window: corelib::api::Window::new(self_weak.clone() as _),
+             self_weak: self_weak.clone(),
+             pending_redraw: Default::default(),
++            #[cfg(target_os = "ios")]
++            touch_clock_origin: Default::default(),
+             constraints: Default::default(),
+             shown: Default::default(),
+             window_level: Default::default(),
+@@ -1601,12 +1605,22 @@
+                         self.touch_finger_ids.borrow_mut().take((touch.device_id, touch.id))
+                     }
+                 };
++                #[cfg(target_os = "ios")]
++                let event_time = touch.timestamp.map(|timestamp| {
++                    let context = WindowInner::from_pub(self.window()).context();
++                    let origin = self.touch_clock_origin.get_or_init(|| {
++                        (std::time::Instant::now(), corelib::animations::Instant::now(context))
++                    });
++                    map_touch_timestamp(timestamp, *origin)
++                });
++                #[cfg(not(target_os = "ios"))]
++                let event_time = None;
+                 if let Some(finger_id) = finger_id {
+                     self.dispatch_internal_event(corelib::platform::InternalEvent::Touch {
+                         id: finger_id,
+                         position,
+                         phase: winit_touch_phase(touch.phase),
+-                        event_time: None,
++                        event_time,
+                         history: Default::default(),
+                     });
+                 }
+@@ -2487,3 +2501,10 @@
+     computed_style.get_property_value("width").ok().as_deref() != Some("auto")
+         || computed_style.get_property_value("height").ok().as_deref() != Some("auto")
+ }
++
++#[cfg(any(target_os = "ios", test))]
++fn map_touch_timestamp(timestamp: std::time::Instant,
++    origin: (std::time::Instant, corelib::animations::Instant)) -> corelib::animations::Instant {
++    if timestamp >= origin.0 { origin.1 + timestamp.duration_since(origin.0) }
++    else { origin.1 - origin.0.duration_since(timestamp) }
++}

@@ -1,0 +1,175 @@
+--- a/src/event.rs
++++ b/src/event.rs
+@@ -839,6 +839,9 @@
+ /// [`transform`]: https://developer.mozilla.org/en-US/docs/Web/CSS/transform
+ #[derive(Debug, Clone, Copy, PartialEq)]
+ pub struct Touch {
++    /// The system capture time mapped to the process monotonic clock.
++    /// Available on iOS; other platforms currently return `None`.
++    pub timestamp: Option<std::time::Instant>,
+     pub device_id: DeviceId,
+     pub phase: TouchPhase,
+     pub location: PhysicalPosition<f64>,
+@@ -1080,6 +1083,7 @@
+                 with_window_event(TouchpadPressure { device_id: did, pressure: 0.0, stage: 0 });
+                 with_window_event(AxisMotion { device_id: did, axis: 0, value: 0.0 });
+                 with_window_event(Touch(event::Touch {
++                    timestamp: None,
+                     device_id: did,
+                     phase: event::TouchPhase::Started,
+                     location: (0.0, 0.0).into(),
+@@ -1169,6 +1173,7 @@
+         HashSet::new().insert(event::Ime::Enabled);
+ 
+         let _ = event::Touch {
++                    timestamp: None,
+             device_id: did,
+             phase: event::TouchPhase::Started,
+             location: (0.0, 0.0).into(),
+--- a/src/platform_impl/ios/view.rs
++++ b/src/platform_impl/ios/view.rs
+@@ -1,5 +1,7 @@
+ #![allow(clippy::unnecessary_cast)]
+ use std::cell::{Cell, RefCell};
++use std::sync::OnceLock;
++use std::time::{Duration, Instant};
+ 
+ use objc2::rc::Retained;
+ use objc2::runtime::{NSObjectProtocol, ProtocolObject};
+@@ -20,6 +22,22 @@
+ use crate::platform_impl::platform::DEVICE_ID;
+ use crate::platform_impl::KeyEventExtra;
+ use crate::window::{WindowAttributes, WindowId as RootWindowId};
++
++fn touch_timestamp(timestamp: f64) -> Option<Instant> {
++    extern "C" {
++        fn CACurrentMediaTime() -> f64;
++    }
++    static ORIGIN: OnceLock<(f64, Instant)> = OnceLock::new();
++    let (uptime, instant) =
++        ORIGIN.get_or_init(|| (unsafe { CACurrentMediaTime() }, Instant::now()));
++    let delta = timestamp - uptime;
++    let duration = Duration::try_from_secs_f64(delta.abs()).ok()?;
++    if delta >= 0. {
++        instant.checked_add(duration)
++    } else {
++        instant.checked_sub(duration)
++    }
++}
+ 
+ pub struct WinitViewState {
+     pinch_gesture_recognizer: RefCell<Option<Retained<UIPinchGestureRecognizer>>>,
+@@ -528,6 +546,7 @@
+             touch_events.push(EventWrapper::StaticEvent(Event::WindowEvent {
+                 window_id: RootWindowId(window.id()),
+                 event: WindowEvent::Touch(Touch {
++                    timestamp: touch_timestamp(touch.timestamp()),
+                     device_id: DEVICE_ID,
+                     id: touch_id,
+                     location: physical_location,
+--- a/src/platform_impl/android/mod.rs
++++ b/src/platform_impl/android/mod.rs
+@@ -411,6 +411,7 @@
+                         let event = event::Event::WindowEvent {
+                             window_id,
+                             event: event::WindowEvent::Touch(event::Touch {
++                    timestamp: None,
+                                 device_id,
+                                 phase,
+                                 location,
+--- a/src/platform_impl/windows/event_loop.rs
++++ b/src/platform_impl/windows/event_loop.rs
+@@ -1961,6 +1961,7 @@
+                     userdata.send_event(Event::WindowEvent {
+                         window_id: RootWindowId(WindowId(window)),
+                         event: WindowEvent::Touch(Touch {
++                    timestamp: None,
+                             phase: if util::has_flag(input.dwFlags, TOUCHEVENTF_DOWN) {
+                                 TouchPhase::Started
+                             } else if util::has_flag(input.dwFlags, TOUCHEVENTF_UP) {
+@@ -2106,6 +2107,7 @@
+                     userdata.send_event(Event::WindowEvent {
+                         window_id: RootWindowId(WindowId(window)),
+                         event: WindowEvent::Touch(Touch {
++                    timestamp: None,
+                             phase: if util::has_flag(pointer_info.pointerFlags, POINTER_FLAG_DOWN) {
+                                 TouchPhase::Started
+                             } else if util::has_flag(pointer_info.pointerFlags, POINTER_FLAG_UP) {
+--- a/src/platform_impl/linux/x11/event_processor.rs
++++ b/src/platform_impl/linux/x11/event_processor.rs
+@@ -1393,6 +1393,7 @@
+             let event = Event::WindowEvent {
+                 window_id,
+                 event: WindowEvent::Touch(Touch {
++                    timestamp: None,
+                     device_id: mkdid(xev.deviceid as xinput::DeviceId),
+                     phase,
+                     location,
+--- a/src/platform_impl/linux/wayland/seat/touch/mod.rs
++++ b/src/platform_impl/linux/wayland/seat/touch/mod.rs
+@@ -47,6 +47,7 @@
+ 
+         self.events_sink.push_window_event(
+             WindowEvent::Touch(Touch {
++                    timestamp: None,
+                 device_id: crate::event::DeviceId(crate::platform_impl::DeviceId::Wayland(
+                     DeviceId,
+                 )),
+@@ -90,6 +91,7 @@
+ 
+         self.events_sink.push_window_event(
+             WindowEvent::Touch(Touch {
++                    timestamp: None,
+                 device_id: crate::event::DeviceId(crate::platform_impl::DeviceId::Wayland(
+                     DeviceId,
+                 )),
+@@ -135,6 +137,7 @@
+ 
+         self.events_sink.push_window_event(
+             WindowEvent::Touch(Touch {
++                    timestamp: None,
+                 device_id: crate::event::DeviceId(crate::platform_impl::DeviceId::Wayland(
+                     DeviceId,
+                 )),
+@@ -167,6 +170,7 @@
+ 
+             self.events_sink.push_window_event(
+                 WindowEvent::Touch(Touch {
++                    timestamp: None,
+                     device_id: crate::event::DeviceId(crate::platform_impl::DeviceId::Wayland(
+                         DeviceId,
+                     )),
+--- a/src/platform_impl/web/event_loop/window_target.rs
++++ b/src/platform_impl/web/event_loop/window_target.rs
+@@ -302,6 +302,7 @@
+                         |(location, force)| Event::WindowEvent {
+                             window_id: RootWindowId(id),
+                             event: WindowEvent::Touch(Touch {
++                    timestamp: None,
+                                 id: device_id as u64,
+                                 device_id: RootDeviceId(DeviceId(device_id)),
+                                 phase: TouchPhase::Moved,
+@@ -408,6 +409,7 @@
+                         Event::WindowEvent {
+                             window_id: RootWindowId(id),
+                             event: WindowEvent::Touch(Touch {
++                    timestamp: None,
+                                 id: device_id as u64,
+                                 device_id: RootDeviceId(DeviceId(device_id)),
+                                 phase: TouchPhase::Started,
+@@ -476,6 +478,7 @@
+                         Event::WindowEvent {
+                             window_id: RootWindowId(id),
+                             event: WindowEvent::Touch(Touch {
++                    timestamp: None,
+                                 id: device_id as u64,
+                                 device_id: RootDeviceId(DeviceId(device_id)),
+                                 phase: TouchPhase::Ended,
+@@ -517,6 +520,7 @@
+             runner.send_event(Event::WindowEvent {
+                 window_id: RootWindowId(id),
+                 event: WindowEvent::Touch(Touch {
++                    timestamp: None,
+                     id: device_id as u64,
+                     device_id: RootDeviceId(DeviceId(device_id)),
+                     phase: TouchPhase::Cancelled,

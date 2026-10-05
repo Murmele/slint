@@ -1,0 +1,5 @@
+NativeSlintScroll.xcodeproj/
+target/
+*.xcresult/
+__pycache__/
+.prototype/

@@ -1,6 +1,6 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: MIT
-// cspell:ignore Autoresizing fabs instancetype nonatomic NSEC NSJSON NSURL NSUTF Subview Subviews subviews uikit
+// cspell:ignore NSUInteger autoreleasing evaluatedObject Autoresizing fabs instancetype nonatomic NSEC NSUTF Subview Subviews subviews uikit
 
 #import <UIKit/UIKit.h>
 #import "../ios-scroll-touch-forwarding.h"
@@ -8,6 +8,12 @@
 extern float slint_scroll_offset(void);
 extern float slint_animation_clock_lag_ms(void);
 extern void set_slint_scroll_offset(float offset);
+extern void install_hid_trace(void);
+extern void record_hid_object(id object, const char *source);
+extern void save_hid_trace(const char *directory, const char *scenario);
+extern NSUInteger hid_digitizer_node_count(void);
+extern NSUInteger hid_serialization_error_count(void);
+extern void record_hid_marker(NSString *name, NSDictionary *values);
 
 typedef struct {
     float x, y, width, height, content_width, content_height;
@@ -45,12 +51,28 @@ extern SlintScrollGeometry slint_scroll_geometry(void);
 @property (nonatomic) UIGestureRecognizerState lastLoggedPanState;
 @property (nonatomic) BOOL hasLoggedPanState;
 @property (nonatomic, copy) NSString *scenario;
+@property (nonatomic, strong) NSMutableArray<NSArray<NSNumber *> *> *regressionSamples;
+@property (nonatomic, strong) NSMutableArray<NSMutableDictionary *> *regressionSegments;
+@property (nonatomic, strong) NSMutableSet<NSNumber *> *regressionTouches;
+@property (nonatomic) NSUInteger regressionMaxTouches;
+@property (nonatomic) CFTimeInterval regressionReleaseTime;
+@property (nonatomic) CGFloat regressionReleaseNative;
+@property (nonatomic) CGFloat regressionReleaseSlint;
 - (void)recordTouches:(NSSet<UITouch *> *)touches event:(UIEvent *)event phase:(NSInteger)phase;
 - (void)recordContentOffset;
 - (void)recordSlintDrag;
 @end
 
 static __weak ForwardingScrollView *recordingScrollView;
+
+NSDictionary *hid_trace_view_state(void)
+{
+    ForwardingScrollView *view = recordingScrollView;
+    return @{@"pan_state": @(view.panGestureRecognizer.state),
+        @"pan_velocity_y": @([view.panGestureRecognizer velocityInView:view].y),
+        @"pan_translation_y": @([view.panGestureRecognizer translationInView:view].y),
+        @"uikit_offset": @(view.contentOffset.y), @"slint_offset": @(slint_scroll_offset())};
+}
 
 void record_slint_drag(void)
 {
@@ -114,6 +136,7 @@ void record_slint_drag(void)
 }
 - (void)recordPan:(UIPanGestureRecognizer *)recognizer
 {
+    record_hid_marker(@"pan_action", hid_trace_view_state());
     if (!self.inputTracingEnabled || !self.inputTrace)
         return;
     CGPoint location = [recognizer locationInView:self.window];
@@ -185,6 +208,11 @@ void record_slint_drag(void)
         self.deliveredMoveSamples = 0;
         self.hasLoggedPanState = NO;
     }
+    self.regressionSamples = [NSMutableArray new];
+    self.regressionSegments = [NSMutableArray new];
+    self.regressionTouches = [NSMutableSet new];
+    self.regressionMaxTouches = 0;
+    self.regressionReleaseTime = 0;
     self.startTime = CACurrentMediaTime();
     self.hasPreviousSample = NO;
     self.maxOffsetDifference = 0;
@@ -198,9 +226,16 @@ void record_slint_drag(void)
 }
 - (void)sample:(CADisplayLink *)link
 {
+    CALayer *presentation = self.layer.presentationLayer;
+    record_hid_marker(@"display_sample", @{@"display_timestamp": @(link.timestamp),
+        @"display_target_timestamp": @(link.targetTimestamp),
+        @"native_model_offset": @(self.contentOffset.y),
+        @"native_presentation_offset": presentation ? @(presentation.bounds.origin.y) : NSNull.null,
+        @"slint_property_offset": @(slint_scroll_offset())});
     CFTimeInterval now = CACurrentMediaTime();
     CGFloat nativeOffset = self.contentOffset.y;
     CGFloat slintOffset = slint_scroll_offset();
+    [self.regressionSamples addObject:@[@(now), @(nativeOffset), @(slintOffset)]];
     CGFloat nativeVelocity = 0;
     CGFloat slintVelocity = 0;
     if (self.hasPreviousSample) {
@@ -240,15 +275,102 @@ void record_slint_drag(void)
     self.previousSlintOffset = slintOffset;
     self.hasPreviousSample = YES;
 }
+
+- (NSDictionary *)outcomeForSegment:(NSDictionary *)segment until:(double)end
+{
+    double origin = [segment[@"release_time"] doubleValue];
+    NSArray *post = [self.regressionSamples filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) {
+        double t = [object[0] doubleValue]; return t >= origin && t < end;
+    }]];
+    if (post.count < 2) return @{};
+    NSArray *last = post.lastObject;
+    double finalNative = [last[1] doubleValue], finalSlint = [last[2] doubleValue];
+    double nativeMin = finalNative, nativeMax = finalNative, slintMin = finalSlint, slintMax = finalSlint;
+    double native01 = 0, slint01 = 0, native1 = 0, slint1 = 0;
+    for (NSUInteger i = 0; i < post.count; ++i) {
+        NSArray *sample = post[i]; double n = [sample[1] doubleValue], s = [sample[2] doubleValue];
+        double next = i + 1 < post.count ? [post[i + 1][0] doubleValue] : [sample[0] doubleValue];
+        nativeMin = MIN(nativeMin, n); nativeMax = MAX(nativeMax, n);
+        slintMin = MIN(slintMin, s); slintMax = MAX(slintMax, s);
+        if (fabs(n - finalNative) > 0.1) native01 = next - origin;
+        if (fabs(s - finalSlint) > 0.1) slint01 = next - origin;
+        if (fabs(n - finalNative) > 1) native1 = next - origin;
+        if (fabs(s - finalSlint) > 1) slint1 = next - origin;
+    }
+    return @{@"uikit_post_range_pt": @(nativeMax - nativeMin), @"slint_post_range_pt": @(slintMax - slintMin),
+        @"uikit_post_travel_pt": @(finalNative - [segment[@"release_native"] doubleValue]),
+        @"slint_post_travel_pt": @(finalSlint - [segment[@"release_slint"] doubleValue]),
+        @"uikit_settle_01_s": @(native01), @"slint_settle_01_s": @(slint01),
+        @"uikit_settle_1_s": @(native1), @"slint_settle_1_s": @(slint1)};
+}
+
 - (void)saveTraceForGeneration:(NSInteger)generation
 {
     if (self.saveGeneration != generation)
         return;
     [self.displayLink invalidate];
     self.displayLink = nil;
+    NSArray<NSArray<NSNumber *> *> *post = [self.regressionSamples filteredArrayUsingPredicate:
+        [NSPredicate predicateWithBlock:^BOOL(id evaluatedObject, NSDictionary *bindings) {
+            NSArray *sample = evaluatedObject;
+            return [sample[0] doubleValue] >= self.regressionReleaseTime;
+        }]];
+    if (post.count > 1) {
+        NSArray *last = post.lastObject;
+        double finalTime = [last[0] doubleValue];
+        double finalNative = [last[1] doubleValue], finalSlint = [last[2] doubleValue];
+        double nativeMin = finalNative, nativeMax = finalNative, slintMin = finalSlint, slintMax = finalSlint;
+        double nativeFinalMin = finalNative, nativeFinalMax = finalNative;
+        double slintFinalMin = finalSlint, slintFinalMax = finalSlint, maxGap = 0;
+        double native01 = 0, slint01 = 0, native1 = 0, slint1 = 0;
+        for (NSUInteger i = 0; i < post.count; ++i) {
+            NSArray *sample = post[i];
+            double time = [sample[0] doubleValue], native = [sample[1] doubleValue], slint = [sample[2] doubleValue];
+            nativeMin = MIN(nativeMin, native); nativeMax = MAX(nativeMax, native);
+            slintMin = MIN(slintMin, slint); slintMax = MAX(slintMax, slint);
+            double next = i + 1 < post.count ? [post[i + 1][0] doubleValue] : time;
+            if (fabs(native - finalNative) > 0.1) native01 = next - self.regressionReleaseTime;
+            if (fabs(slint - finalSlint) > 0.1) slint01 = next - self.regressionReleaseTime;
+            if (fabs(native - finalNative) > 1) native1 = next - self.regressionReleaseTime;
+            if (fabs(slint - finalSlint) > 1) slint1 = next - self.regressionReleaseTime;
+            if (i) maxGap = MAX(maxGap, time - [post[i - 1][0] doubleValue]);
+            if (time >= finalTime - 0.2) {
+                nativeFinalMin = MIN(nativeFinalMin, native); nativeFinalMax = MAX(nativeFinalMax, native);
+                slintFinalMin = MIN(slintFinalMin, slint); slintFinalMax = MAX(slintFinalMax, slint);
+            }
+        }
+        NSDictionary *result = @{
+            @"uikit_post_travel_pt": @(finalNative - self.regressionReleaseNative),
+            @"slint_post_travel_pt": @(finalSlint - self.regressionReleaseSlint),
+            @"uikit_post_range_pt": @(nativeMax - nativeMin), @"slint_post_range_pt": @(slintMax - slintMin),
+            @"uikit_settle_01_s": @(native01), @"slint_settle_01_s": @(slint01),
+            @"uikit_settle_1_s": @(native1), @"slint_settle_1_s": @(slint1),
+            @"uikit_final_range_pt": @(nativeFinalMax - nativeFinalMin),
+            @"slint_final_range_pt": @(slintFinalMax - slintFinalMin), @"max_frame_gap_ms": @(maxGap * 1000)
+        };
+        NSMutableDictionary *combined = [result mutableCopy];
+        NSMutableArray *segments = [NSMutableArray new];
+        for (NSUInteger i = 0; i < self.regressionSegments.count; ++i) {
+            double end = i + 1 < self.regressionSegments.count ? [self.regressionSegments[i + 1][@"press_time"] doubleValue] : finalTime + 0.001;
+            [segments addObject:[self outcomeForSegment:self.regressionSegments[i] until:end]];
+        }
+        combined[@"segments"] = segments;
+        combined[@"release_gap_pt"] = @(self.regressionReleaseSlint - self.regressionReleaseNative);
+        combined[@"max_simultaneous_touches"] = @(self.regressionMaxTouches);
+        combined[@"hid_digitizer_nodes"] = @(hid_digitizer_node_count());
+        combined[@"hid_serialization_errors"] = @(hid_serialization_error_count());
+        NSData *data = [NSJSONSerialization dataWithJSONObject:combined options:0 error:nil];
+        NSString *json = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        self.metricsLabel.accessibilityValue = [self.metricsLabel.accessibilityValue stringByAppendingFormat:@", Regression=%@", json];
+        NSURL *directory = [[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
+        [data writeToURL:[directory URLByAppendingPathComponent:[NSString stringWithFormat:@"regression-%@.json", self.scenario]] atomically:YES];
+    }
+
     NSString *traceName = self.uniqueTraceFiles
             ? [NSString stringWithFormat:@"%@-%ld", self.scenario, (long)generation]
             : self.scenario;
+    NSString *directory = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+    save_hid_trace(directory.UTF8String, traceName.UTF8String);
     NSString *path =
             [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)
                             .firstObject
@@ -272,11 +394,18 @@ void record_slint_drag(void)
     if (phase == 0) {
         ++self.saveGeneration;
         [self startTrace];
+        [self.regressionSegments addObject:[@{@"press_time": @(CACurrentMediaTime())} mutableCopy]];
     }
     self.eventBatch++;
+    record_hid_object(event, "touch_callback_ui_event");
     if (phase == 1)
         self.deliveredMoveBatches++;
     for (UITouch *touch in touches) {
+        record_hid_object(touch, "primary_touch");
+        NSNumber *identity = @((uintptr_t)(__bridge void *)touch);
+        if (touch.phase == UITouchPhaseBegan) [self.regressionTouches addObject:identity];
+        if (touch.phase == UITouchPhaseEnded || touch.phase == UITouchPhaseCancelled) [self.regressionTouches removeObject:identity];
+        self.regressionMaxTouches = MAX(self.regressionMaxTouches, self.regressionTouches.count);
         CGPoint location = [touch locationInView:self.window];
         CGPoint previousLocation = [touch previousLocationInView:self.window];
         if (phase == 0)
@@ -300,6 +429,7 @@ void record_slint_drag(void)
                 previousLocation:previousLocation];
         [coalescedTouches enumerateObjectsUsingBlock:^(UITouch *sample, NSUInteger index,
                                                        BOOL *__unused stop) {
+            record_hid_object(sample, "coalesced_touch");
             [self appendInputEvent:@"coalesced_sample"
                         callbackTime:CACurrentMediaTime()
                       eventTimestamp:event.timestamp
@@ -316,6 +446,12 @@ void record_slint_drag(void)
     self.fingerY = [touches.anyObject locationInView:self.window].y;
     self.phase = phase;
     if (phase == 2 || phase == 3) {
+        self.regressionReleaseTime = CACurrentMediaTime();
+        self.regressionReleaseNative = self.contentOffset.y;
+        self.regressionReleaseSlint = slint_scroll_offset();
+        self.regressionSegments.lastObject[@"release_time"] = @(self.regressionReleaseTime);
+        self.regressionSegments.lastObject[@"release_native"] = @(self.regressionReleaseNative);
+        self.regressionSegments.lastObject[@"release_slint"] = @(self.regressionReleaseSlint);
         NSInteger generation = ++self.saveGeneration;
         int64_t delay = (int64_t)(self.traceSaveDelay * NSEC_PER_SEC);
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, delay), dispatch_get_main_queue(),
@@ -429,15 +565,31 @@ void record_slint_drag(void)
     self.scroll.metricsLabel = self.metrics;
     return self;
 }
+- (void)scrollViewWillBeginDragging:(UIScrollView *)scrollView
+{
+    record_hid_marker(@"will_begin_dragging", hid_trace_view_state());
+}
+
 - (void)scrollViewWillEndDragging:(UIScrollView *)scrollView
                      withVelocity:(CGPoint)velocity
               targetContentOffset:(inout CGPoint *)targetContentOffset
 {
     self.scroll.nativeReleaseVelocity = velocity.y;
+    record_hid_marker(@"will_end_dragging", @{@"velocity_pt_per_ms": @(velocity.y),
+        @"target_offset_pt": @(targetContentOffset->y), @"offset_pt": @(scrollView.contentOffset.y)});
 }
 - (void)scrollViewDidScroll:(UIScrollView *__unused)scrollView
 {
     [self.scroll recordContentOffset];
+}
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
+{
+    record_hid_marker(@"did_end_dragging", @{@"will_decelerate": @(decelerate),
+        @"offset_pt": @(scrollView.contentOffset.y)});
+}
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    record_hid_marker(@"did_end_decelerating", @{@"offset_pt": @(scrollView.contentOffset.y)});
 }
 - (void)layoutSubviews
 {
@@ -470,6 +622,7 @@ void record_slint_drag(void)
         self.scroll.contentOffset = CGPointMake(0, offset);
         set_slint_scroll_offset((float)offset);
         NSDictionary *record = @{
+            @"forwarding_mode": @"events",
             @"slint_viewport": @[@(geometry.x), @(geometry.y), @(geometry.width), @(geometry.height)],
             @"uikit_viewport": @[@(self.scroll.frame.origin.x), @(self.scroll.frame.origin.y),
                                   @(self.scroll.bounds.size.width), @(self.scroll.bounds.size.height)],
@@ -496,4 +649,5 @@ void install_native_scroll(void *hostPointer)
     NativeScrollPane *pane = [[NativeScrollPane alloc] initWithFrame:host.bounds host:host];
     pane.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [host addSubview:pane];
+    install_hid_trace();
 }

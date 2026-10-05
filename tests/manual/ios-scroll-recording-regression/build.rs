@@ -4,11 +4,12 @@
 
 fn main() {
     cc::Build::new()
-        .files(["native_scroll.m", "../ios-scroll-touch-forwarding.m"])
+        .files(["native_scroll.m", "hid_trace.m", "../ios-scroll-touch-forwarding.m"])
         .flag("-fobjc-arc")
         .compile("native_scroll");
     println!("cargo:rustc-link-lib=framework=UIKit");
     println!("cargo:rerun-if-changed=native_scroll.m");
     println!("cargo:rerun-if-changed=../ios-scroll-touch-forwarding.m");
     println!("cargo:rerun-if-changed=../ios-scroll-touch-forwarding.h");
+    println!("cargo:rerun-if-changed=hid_trace.m");
 }
