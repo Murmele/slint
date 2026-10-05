@@ -43,12 +43,7 @@ impl VelocityTracker for MacOsVelocityTracker {
 impl VelocityEstimator for MacOsVelocityTracker {
     fn estimate_velocity_internal(&self) -> Option<VelocityEstimate> {
         let velocity = weighted_recent_velocity(&self.buffer, WEIGHTS);
-        Some(VelocityEstimate {
-            velocity,
-            threshold_velocity: velocity,
-            minimum_launch_speed: 0.,
-            confidence: 1.0,
-        })
+        Some(VelocityEstimate { velocity, confidence: 1.0 })
     }
 }
 

@@ -893,9 +893,7 @@ impl WinitWindowAdapter {
         }
 
         let renderer = self.renderer();
-        log::trace!(target: "slint.frame", "before");
         let outcome = renderer.render(self.window());
-        log::trace!(target: "slint.frame", "after");
         // A timeout or an error ends the wait as well, so that the window can't stay invisible.
         #[cfg(target_os = "macos")]
         if !matches!(outcome, Ok(DrawOutcome::Occluded | DrawOutcome::Skipped)) {
@@ -1603,20 +1601,12 @@ impl WinitWindowAdapter {
                         self.touch_finger_ids.borrow_mut().take((touch.device_id, touch.id))
                     }
                 };
-                #[cfg(target_os = "ios")]
-                let event_time = {
-                    let context = WindowInner::from_pub(self.window()).context();
-                    let captured = corelib::animations::Instant::now(context);
-                    Some(captured)
-                };
-                #[cfg(not(target_os = "ios"))]
-                let event_time = None;
                 if let Some(finger_id) = finger_id {
                     self.dispatch_internal_event(corelib::platform::InternalEvent::Touch {
                         id: finger_id,
                         position,
                         phase: winit_touch_phase(touch.phase),
-                        event_time,
+                        event_time: None,
                         history: Default::default(),
                     });
                 }

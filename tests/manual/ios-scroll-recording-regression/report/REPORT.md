@@ -1,6 +1,10 @@
 <!-- cspell:ignore XCTest xcresult UIKit -->
 # Short Flicks and Settling Tails
 
+Bulk generated data is archived outside the working source tree.
+The [original public evidence snapshot](https://github.com/Murmele/slint/tree/3028c50cc90ea724a102d1a4a2b5b540e85b2a62/tests/manual/ios-scroll-recording-regression/report/evidence) remains available.
+
+
 This is historical evidence captured with the earlier forwarding harness and input timing.
 It doesn't isolate all position and settling differences as engine-curve errors.
 See [the current input-timing report](input-timing/README.md) for the bounded follow-up and remaining failures.

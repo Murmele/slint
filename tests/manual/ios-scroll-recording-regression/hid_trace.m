@@ -262,9 +262,3 @@ void record_hid_marker(NSString *name, NSDictionary *values)
 }
 
 NSUInteger hid_serialization_error_count(void) { return atomic_load(&serializationErrors); }
-
-void record_slint_render(bool after, uint64_t context_ns, uint64_t tick_ns, float offset)
-{
-    record_hid_marker(after ? @"slint_render_after" : @"slint_render_before",
-        @{@"context_ns": @(context_ns), @"animation_tick_ns": @(tick_ns), @"offset": finiteNumber(offset)});
-}

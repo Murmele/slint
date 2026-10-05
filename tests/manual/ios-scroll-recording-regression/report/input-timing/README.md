@@ -7,7 +7,8 @@ The forwarding change doesn't eliminate all start-position differences.
 
 ## Changes in the PR
 
-- The iOS Winit backend supplies a fresh per-event delivery timestamp instead of falling back to the animation tick.
+- The reviewed normal build keeps the existing animation-tick fallback until Winit supplies capture timestamps.
+  The earlier per-dispatch timestamp experiment was removed because burst delivery could create extreme velocity spikes.
 - The native iOS tracker retains its estimate when no new movement samples arrive.
   Linux, embedded, macOS, and the general tracker retain their existing expiration policy.
 - Stationary or jitter samples still update the tracker and close the release gate.
@@ -18,7 +19,8 @@ The forwarding change doesn't eliminate all start-position differences.
 ## Capture Timestamps Need a Winit Change
 
 Stock Winit 0.30.13 doesn't expose the UIKit capture timestamp in its touch event.
-The mergeable change samples delivery time; it doesn't claim that delivery time equals capture time.
+The per-dispatch time experiment was removed during review.
+The capture-time integration remains a companion dependency patch.
 
 Apple documents [`UITouch.timestamp`](https://developer.apple.com/documentation/uikit/uitouch/timestamp) as the touch's system-uptime timestamp.
 [`CACurrentMediaTime`](https://developer.apple.com/documentation/quartzcore/cacurrentmediatime()) provides the corresponding Mach-based uptime clock in seconds.
@@ -50,14 +52,16 @@ The final request didn't deliver a near-zero launch.
 UIKit coasted in both captures, so this is a measured low-speed comparison, not proof of rejection below the stop speed.
 The deterministic minimum-launch-speed regression covers rejection separately.
 
-Two additional gestures checked the ordinary build with stock Winit:
+Two additional gestures checked the now-withdrawn delivery-time experiment with stock Winit:
 
 | Case | UIKit Travel (pt) | Slint Travel (pt) | Error (pt) |
 | --- | ---: | ---: | ---: |
 | Fast flick | 362.333 | 362.848 | +0.514 |
 | Short flick | 341.000 | 330.042 | -10.958 |
 
-Fresh delivery time reduces animation-tick quantization but doesn't solve short-flick timing by itself.
+Fresh delivery time reduced quantization in one capture but didn't solve short-flick timing.
+It can also create a spike when queued samples arrive close together.
+The normal build therefore no longer uses that fallback.
 The native capture-time experiment produces much closer travel and identifies the remaining dependency work.
 
 ## Actual Position Curves
@@ -79,7 +83,9 @@ The 14 phone captures completed with one touch, no HID serialization errors, and
 The analyzer asserts a 0.5-point post-release travel bound for the six native capture-time cases.
 All six satisfy it; the ordinary fallback's short-flick error remains open.
 
-Ten targeted velocity-tracker tests pass, including idle retention, stationary rejection, sparse samples, and non-iOS policy preservation.
+The review follow-up passes 53 focused Flickable tests, including same-tick bursts and the input-time momentum boundary.
+Native iOS policy now has its own tracker; common velocity estimates contain no iOS gate or minimum-speed fields.
+The normal Winit renderer contains no experimental frame logging.
 The clock-mapping regression passed against the capture-time integration.
 Murmele's new manual app also compiles for `aarch64-apple-ios` in Release with shared forwarding.
 We didn't run its large matrix.
@@ -98,7 +104,8 @@ It isn't reported as a completed full-suite run.
 Run `analyze.py EVIDENCE_DIRECTORY OUTPUT_DIRECTORY` with Python, Matplotlib, and NumPy installed.
 The evidence directory contains `before/raw`, `after/raw`, and `delivery/raw`.
 Raw device clocks, touch identities, and HID packets remain local.
-The committed position CSVs contain only release-relative time and both offsets.
+The bulk position CSVs are retained in the prepared archive and the original public PR snapshot.
+They are no longer included in the PR tip.
 
 For the dependency experiment, copy Winit 0.30.13 to a separate checkout and apply `winit-capture-time.patch` there.
 Apply `slint-winit-capture-time.patch` to a separate Slint worktree and override Winit locally for that build.

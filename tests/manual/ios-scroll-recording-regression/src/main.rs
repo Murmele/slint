@@ -104,46 +104,9 @@ extern "C" fn set_slint_scroll_offset(offset: f32) {
 unsafe extern "C" {
     fn install_native_scroll(host: *mut std::ffi::c_void);
     fn record_slint_drag();
-    fn record_slint_render(after: bool, context_ns: u64, tick_ns: u64, offset: f32);
 }
-
-struct FrameLogger;
-impl log::Log for FrameLogger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.target() == "slint.frame"
-    }
-    fn log(&self, record: &log::Record) {
-        if !self.enabled(record.metadata()) {
-            return;
-        }
-        let after = match record.args().as_str() {
-            Some("before") => false,
-            Some("after") => true,
-            _ => return,
-        };
-        APP.with(|slot| {
-            if let Some(app) = slot.borrow().as_ref().and_then(slint::Weak::upgrade) {
-                let context = i_slint_core::window::WindowInner::from_pub(app.window()).context();
-                unsafe {
-                    record_slint_render(
-                        after,
-                        i_slint_core::animations::Instant::now(context).as_nanos(),
-                        i_slint_core::animations::current_tick().as_nanos(),
-                        app.get_scroll_offset(),
-                    );
-                }
-            }
-        });
-    }
-    fn flush(&self) {}
-}
-static FRAME_LOGGER: FrameLogger = FrameLogger;
 
 fn main() {
-    if std::env::var("HID_TRACE").as_deref() == Ok("1") {
-        log::set_logger(&FRAME_LOGGER).expect("frame logger");
-        log::set_max_level(log::LevelFilter::Trace);
-    }
     let app = Comparison::new().unwrap();
     if let Some(height) = std::env::var("VIEWPORT_HEIGHT").ok().and_then(|h| h.parse().ok()) {
         app.set_list_height(height);

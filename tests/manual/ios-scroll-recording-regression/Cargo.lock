@@ -1531,7 +1531,6 @@ dependencies = [
  "i-slint-renderer-skia",
  "i-slint-renderer-software",
  "imgref",
- "log",
  "lyon_path",
  "muda",
  "objc2 0.6.4",
@@ -2352,7 +2351,6 @@ version = "0.1.0"
 dependencies = [
  "cc",
  "i-slint-core",
- "log",
  "raw-window-handle",
  "slint",
 ]

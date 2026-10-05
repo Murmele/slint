@@ -47,6 +47,13 @@ final class HIDEvidenceTests: XCTestCase {
         ])
     }
 
+    func testLongHoldReview() throws {
+        try capture([
+            ("review-hold-300ms", [0.08, 0.12, 0.16, 0.20], [0, -20, -40, -60], 0.3),
+            ("review-hold-2000ms", [0.08, 0.12, 0.16, 0.20], [0, -20, -40, -60], 2.0)
+        ], repeats: 1)
+    }
+
     func testDeliveryTimeFallback() throws {
         try capture([
             ("timing-delivery-fast", [0.08, 0.188, 0.196, 0.204], [0, -86.4, -87.2, -88], 0),
@@ -107,7 +114,8 @@ final class HIDEvidenceTests: XCTestCase {
                 XCTAssertLessThanOrEqual(gap, 30, "Recording disrupted frame cadence")
                 let touches = try XCTUnwrap(result["max_simultaneous_touches"] as? NSNumber).intValue
                 XCTAssertEqual(touches, 1)
-                if name.hasPrefix("timing-after-") || name.hasPrefix("timing-delivery-") {
+                if name.hasPrefix("timing-after-") || name.hasPrefix("timing-delivery-")
+                    || name.hasPrefix("review-hold-") {
                     let native = try XCTUnwrap(result["uikit_post_range_pt"] as? NSNumber).doubleValue
                     let slint = try XCTUnwrap(result["slint_post_range_pt"] as? NSNumber).doubleValue
                     if native > 5 {

@@ -25,6 +25,8 @@ mod ios;
     not(any(target_os = "ios", target_os = "linux", target_os = "none", target_os = "macos"))
 ))]
 mod least_square;
+#[cfg(any(test, target_os = "linux", target_os = "none"))]
+mod legacy;
 #[cfg(any(test, target_os = "macos"))]
 mod macos;
 mod ring_buffer;
@@ -37,9 +39,9 @@ mod ring_buffer;
 )))]
 pub(crate) use general::GeneralVelocityTracker;
 #[cfg(target_os = "ios")]
-pub(crate) type IOsVelocityTracker = ios::IOsVelocityTracker<true>;
+pub(crate) use ios::IOsVelocityTracker;
 #[cfg(any(target_os = "linux", target_os = "none"))]
-pub(crate) type IOsVelocityTracker = ios::IOsVelocityTracker<false>;
+pub(crate) use legacy::LegacyVelocityTracker;
 #[cfg(target_os = "macos")]
 pub(crate) use macos::MacOsVelocityTracker;
 
@@ -60,23 +62,29 @@ pub(crate) type Velocity = euclid::Vector2D<f32, LogicalPx>;
 
 pub(crate) struct VelocityEstimate {
     pub(crate) velocity: Velocity,
-    pub(crate) threshold_velocity: Velocity,
-    pub(crate) minimum_launch_speed: f32,
     #[cfg_attr(not(test), expect(unused, reason = "Confidence is not yet considered"))]
     pub(crate) confidence: f32,
 }
 
-impl VelocityEstimate {
-    pub(crate) fn can_flick(&self, launch: f32, gate: f32, threshold: f32) -> bool {
+pub(crate) struct FlickPolicy {
+    pub(crate) threshold_velocity: Velocity,
+    pub(crate) minimum_launch_speed: f32,
+}
+
+impl FlickPolicy {
+    pub(crate) fn can_flick(&self, axis: super::Dimension, launch: f32, threshold: f32) -> bool {
+        let gate = match axis {
+            super::Dimension::X => self.threshold_velocity.x,
+            super::Dimension::Y => self.threshold_velocity.y,
+        };
         gate.is_finite()
             && launch.is_finite()
             && gate.abs() >= threshold
-            && (self.minimum_launch_speed == 0. || launch.abs() > self.minimum_launch_speed)
+            && launch.abs() > self.minimum_launch_speed
     }
 }
 
 trait VelocityEstimator {
-    const EXPIRES_WHEN_IDLE: bool = true;
     fn estimate_velocity_internal(&self) -> Option<VelocityEstimate>;
 }
 
@@ -86,11 +94,11 @@ trait VelocityEstimator {
 pub(crate) trait VelocityTracker: VelocityEstimator {
     fn push(&mut self, time: Instant, position_delta: LogicalVector);
     fn last_time(&self) -> Option<Instant>;
+    fn flick_policy(&self, estimate: &VelocityEstimate) -> FlickPolicy {
+        FlickPolicy { threshold_velocity: estimate.velocity, minimum_launch_speed: 0. }
+    }
     fn estimate_velocity(&self) -> Option<VelocityEstimate> {
-        let last_time = self.last_time()?;
-        if Self::EXPIRES_WHEN_IDLE
-            && crate::animations::current_tick() - last_time > ASSUME_POINTER_MOVE_STOPPED
-        {
+        if crate::animations::current_tick() - self.last_time()? > ASSUME_POINTER_MOVE_STOPPED {
             return None;
         }
         self.estimate_velocity_internal()

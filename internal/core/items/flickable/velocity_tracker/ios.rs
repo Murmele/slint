@@ -13,7 +13,7 @@
 
 use super::fling::{BlendWeights, weighted_recent_velocity};
 use super::ring_buffer::VelocityRingBuffer;
-use super::{VelocityEstimate, VelocityEstimator, VelocityTracker};
+use super::{FlickPolicy, VelocityEstimate, VelocityEstimator, VelocityTracker};
 use crate::animations::Instant;
 use crate::lengths::LogicalVector;
 
@@ -25,14 +25,14 @@ const PAN_WEIGHTS: BlendWeights = [0., 0.8, 0.2];
 const REQUIRED_SAMPLES: usize = WEIGHTS.len() + 1;
 
 #[derive(Default, Debug)]
-pub(crate) struct IOsVelocityTracker<const NATIVE_IOS: bool = false> {
+pub(crate) struct IOsVelocityTracker {
     buffer: VelocityRingBuffer<REQUIRED_SAMPLES>,
 }
 
-impl<const NATIVE_IOS: bool> IOsVelocityTracker<NATIVE_IOS> {
+impl IOsVelocityTracker {
     fn blended_velocity(&self, mut weights: BlendWeights) -> super::Velocity {
         let missing = weights.len().saturating_sub(self.buffer.len().saturating_sub(1));
-        if NATIVE_IOS && missing < weights.len() {
+        if missing < weights.len() {
             weights[missing] += weights[..missing].iter().sum::<f32>();
             weights[..missing].fill(0.);
         }
@@ -40,7 +40,7 @@ impl<const NATIVE_IOS: bool> IOsVelocityTracker<NATIVE_IOS> {
     }
 }
 
-impl<const NATIVE_IOS: bool> VelocityTracker for IOsVelocityTracker<NATIVE_IOS> {
+impl VelocityTracker for IOsVelocityTracker {
     fn push(&mut self, time: Instant, position_delta: LogicalVector) {
         self.buffer.push(time, position_delta);
     }
@@ -48,26 +48,24 @@ impl<const NATIVE_IOS: bool> VelocityTracker for IOsVelocityTracker<NATIVE_IOS> 
     fn last_time(&self) -> Option<Instant> {
         self.buffer.last_time()
     }
+
+    fn estimate_velocity(&self) -> Option<VelocityEstimate> {
+        self.last_time()?;
+        self.estimate_velocity_internal()
+    }
+
+    fn flick_policy(&self, _: &VelocityEstimate) -> FlickPolicy {
+        FlickPolicy {
+            threshold_velocity: self.blended_velocity(PAN_WEIGHTS),
+            minimum_launch_speed: crate::animations::simulations::ios::DECELERATION_STOP_VELOCITY,
+        }
+    }
 }
 
-impl<const NATIVE_IOS: bool> VelocityEstimator for IOsVelocityTracker<NATIVE_IOS> {
-    const EXPIRES_WHEN_IDLE: bool = !NATIVE_IOS;
+impl VelocityEstimator for IOsVelocityTracker {
     fn estimate_velocity_internal(&self) -> Option<VelocityEstimate> {
         let velocity = self.blended_velocity(WEIGHTS);
-        Some(VelocityEstimate {
-            velocity,
-            threshold_velocity: if NATIVE_IOS {
-                self.blended_velocity(PAN_WEIGHTS)
-            } else {
-                velocity
-            },
-            minimum_launch_speed: if NATIVE_IOS {
-                crate::animations::simulations::ios::DECELERATION_STOP_VELOCITY
-            } else {
-                0.
-            },
-            confidence: 1.0,
-        })
+        Some(VelocityEstimate { velocity, confidence: 1.0 })
     }
 }
 
@@ -78,9 +76,24 @@ mod tests_ios_velocity_tracker {
     use core::time::Duration;
 
     #[test]
+    fn same_tick_burst_does_not_create_a_velocity_spike() {
+        let mut tracker = IOsVelocityTracker::default();
+        for delta in [0., 20., 20., 20.] {
+            tracker.push(Instant::from_millis(10), LogicalVector::new(0., delta));
+        }
+        let estimate = tracker.estimate_velocity().unwrap();
+        assert_eq!(estimate.velocity.y, 0.);
+        assert!(!tracker.flick_policy(&estimate).can_flick(
+            super::super::super::Dimension::Y,
+            estimate.velocity.y,
+            250.
+        ));
+    }
+
+    #[test]
     fn native_ios_retains_velocity_without_new_samples_but_other_targets_expire() {
-        let mut native = IOsVelocityTracker::<true>::default();
-        let mut legacy = IOsVelocityTracker::<false>::default();
+        let mut native = IOsVelocityTracker::default();
+        let mut legacy = super::super::legacy::LegacyVelocityTracker::default();
         for (millis, delta) in [(0, 0.), (10, 5.), (20, 5.), (30, 5.)] {
             native.push(Instant::from_millis(millis), LogicalVector::new(0., delta));
             legacy.push(Instant::from_millis(millis), LogicalVector::new(0., delta));
@@ -88,32 +101,36 @@ mod tests_ios_velocity_tracker {
         crate::animations::update_animations(Instant::from_millis(330));
         let estimate = native.estimate_velocity().unwrap();
         assert_eq!(estimate.velocity.y, 500.);
-        assert_eq!(estimate.threshold_velocity.y, 500.);
+        assert_eq!(native.flick_policy(&estimate).threshold_velocity.y, 500.);
         assert!(legacy.estimate_velocity().is_none());
     }
 
     #[test]
     fn native_ios_stationary_samples_close_the_release_gate() {
-        let mut tracker = IOsVelocityTracker::<true>::default();
+        let mut tracker = IOsVelocityTracker::default();
         for (millis, delta) in [(0, 0.), (10, 5.), (20, 5.), (30, 5.), (80, 0.), (130, 0.)] {
             tracker.push(Instant::from_millis(millis), LogicalVector::new(0., delta));
         }
         crate::animations::update_animations(Instant::from_millis(430));
         let estimate = tracker.estimate_velocity().unwrap();
-        assert_eq!(estimate.threshold_velocity.y, 0.);
-        assert!(!estimate.can_flick(estimate.velocity.y, estimate.threshold_velocity.y, 250.));
+        assert_eq!(tracker.flick_policy(&estimate).threshold_velocity.y, 0.);
+        assert!(!tracker.flick_policy(&estimate).can_flick(
+            super::super::super::Dimension::Y,
+            estimate.velocity.y,
+            250.
+        ));
     }
 
     #[test]
     fn estimate_velocity_is_none_when_empty() {
-        let tracker = IOsVelocityTracker::<false>::default();
+        let tracker = super::super::legacy::LegacyVelocityTracker::default();
         assert!(tracker.estimate_velocity().is_none());
         assert_eq!(tracker.last_time(), None);
     }
 
     #[test]
     fn estimate_velocity_is_zero_with_a_single_sample() {
-        let mut tracker = IOsVelocityTracker::<false>::default();
+        let mut tracker = super::super::legacy::LegacyVelocityTracker::default();
         tracker.push(Instant::default(), LogicalVector::new(5.0, 5.0));
 
         let estimate = tracker.estimate_velocity().unwrap();
@@ -123,7 +140,7 @@ mod tests_ios_velocity_tracker {
 
     #[test]
     fn estimate_velocity_blends_the_last_three_segments() {
-        let mut tracker = IOsVelocityTracker::<false>::default();
+        let mut tracker = super::super::legacy::LegacyVelocityTracker::default();
         let base_time = crate::animations::current_tick();
 
         // 4 samples, 10ms apart; the first sample's delta is never used
@@ -146,29 +163,33 @@ mod tests_ios_velocity_tracker {
     #[test]
     fn accelerating_flick_uses_pan_speed_to_start_slower_scroll() {
         let start = crate::animations::current_tick();
-        let mut tracker = IOsVelocityTracker::<true>::default();
+        let mut tracker = IOsVelocityTracker::default();
         tracker.push(start, LogicalVector::default());
         for (millis, delta) in [(10, -0.8), (20, -0.8), (30, -18.)] {
             tracker.push(start + Duration::from_millis(millis), LogicalVector::new(0., delta));
         }
         crate::animations::update_animations(start + Duration::from_millis(30));
         let estimate = tracker.estimate_velocity().unwrap();
-        assert!((estimate.threshold_velocity.y + 424.).abs() < 0.01);
+        assert!((tracker.flick_policy(&estimate).threshold_velocity.y + 424.).abs() < 0.01);
         assert!((estimate.velocity.y + 166.).abs() < 0.01);
-        assert!(estimate.can_flick(estimate.velocity.y, estimate.threshold_velocity.y, 250.));
+        assert!(tracker.flick_policy(&estimate).can_flick(
+            super::super::super::Dimension::Y,
+            estimate.velocity.y,
+            250.
+        ));
         assert!(estimate.velocity.y.abs() < 250.);
     }
 
     #[test]
     fn two_primary_segments_match_recorded_sparse_flick() {
         let start = crate::animations::current_tick();
-        let mut tracker = IOsVelocityTracker::<true>::default();
+        let mut tracker = IOsVelocityTracker::default();
         tracker.push(start, LogicalVector::default());
         tracker.push(start + Duration::from_micros(58425), LogicalVector::new(0., -20.));
         tracker.push(start + Duration::from_micros(75122), LogicalVector::new(0., -10.667));
         crate::animations::update_animations(start + Duration::from_micros(75122));
         let estimate = tracker.estimate_velocity().unwrap();
-        assert!((estimate.threshold_velocity.y + 401.623).abs() < 0.1);
+        assert!((tracker.flick_policy(&estimate).threshold_velocity.y + 401.623).abs() < 0.1);
         assert!((estimate.velocity.y + 357.146).abs() < 0.1);
     }
 
@@ -178,7 +199,7 @@ mod tests_ios_velocity_tracker {
             [([400., -300., -300.], true), ([190., -300., -300.], false)]
         {
             let start = crate::animations::current_tick();
-            let mut tracker = IOsVelocityTracker::<true>::default();
+            let mut tracker = IOsVelocityTracker::default();
             tracker.push(start, LogicalVector::default());
             for (index, speed) in segments.into_iter().enumerate() {
                 tracker.push(
@@ -188,9 +209,13 @@ mod tests_ios_velocity_tracker {
             }
             crate::animations::update_animations(start + Duration::from_millis(30));
             let estimate = tracker.estimate_velocity().unwrap();
-            assert!((estimate.threshold_velocity.y + 300.).abs() < 0.01);
+            assert!((tracker.flick_policy(&estimate).threshold_velocity.y + 300.).abs() < 0.01);
             assert_eq!(
-                estimate.can_flick(estimate.velocity.y, estimate.threshold_velocity.y, 250.),
+                tracker.flick_policy(&estimate).can_flick(
+                    super::super::super::Dimension::Y,
+                    estimate.velocity.y,
+                    250.
+                ),
                 should_flick
             );
         }
@@ -200,7 +225,7 @@ mod tests_ios_velocity_tracker {
     fn non_ios_sparse_samples_keep_the_existing_launch_and_gate() {
         for (moves, expected) in [(1, 20.), (2, 160.)] {
             let start = crate::animations::current_tick();
-            let mut tracker = IOsVelocityTracker::<false>::default();
+            let mut tracker = super::super::legacy::LegacyVelocityTracker::default();
             tracker.push(start, LogicalVector::default());
             for index in 1..=moves {
                 tracker.push(start + Duration::from_millis(index * 10), LogicalVector::new(4., 0.));
@@ -208,9 +233,13 @@ mod tests_ios_velocity_tracker {
             crate::animations::update_animations(start + Duration::from_millis(moves * 10));
             let estimate = tracker.estimate_velocity().unwrap();
             assert!((estimate.velocity.x - expected).abs() < 0.01);
-            assert_eq!(estimate.threshold_velocity, estimate.velocity);
+            assert_eq!(tracker.flick_policy(&estimate).threshold_velocity, estimate.velocity);
             assert_eq!(
-                estimate.can_flick(estimate.velocity.x, estimate.threshold_velocity.x, 50.),
+                tracker.flick_policy(&estimate).can_flick(
+                    super::super::super::Dimension::X,
+                    estimate.velocity.x,
+                    50.
+                ),
                 moves == 2
             );
         }
@@ -218,13 +247,9 @@ mod tests_ios_velocity_tracker {
 
     #[test]
     fn carried_motion_can_make_a_small_native_launch_move() {
-        let estimate = VelocityEstimate {
-            velocity: Velocity::new(0., 6.),
-            threshold_velocity: Velocity::new(0., 300.),
-            minimum_launch_speed: 10.,
-            confidence: 1.,
-        };
-        assert!(!estimate.can_flick(6., 300., 250.));
-        assert!(estimate.can_flick(306., 300., 250.));
+        let policy =
+            FlickPolicy { threshold_velocity: Velocity::new(0., 300.), minimum_launch_speed: 10. };
+        assert!(!policy.can_flick(super::super::super::Dimension::Y, 6., 250.));
+        assert!(policy.can_flick(super::super::super::Dimension::Y, 306., 250.));
     }
 }

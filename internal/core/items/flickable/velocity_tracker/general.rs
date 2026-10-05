@@ -93,8 +93,6 @@ impl<const N: usize> VelocityEstimator for GeneralVelocityTracker<N> {
                     Vector2D::new(res_x.coefficients()[1] * 1000., res_y.coefficients()[1] * 1000.);
                 return Some(VelocityEstimate {
                     velocity,
-                    threshold_velocity: velocity,
-                    minimum_launch_speed: 0.,
                     confidence: res_x.confidence * res_y.confidence,
                 });
             }
