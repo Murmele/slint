@@ -1,0 +1,195 @@
+{
+  "tolerance_reference": "Each list uses its own final observed offset; time is measured from the same delivered release callback.",
+  "velocity_method": "Position difference over a centered 100 ms window, evaluated every 50 ms. No capture-time filtering.",
+  "measured_curves": [
+    {
+      "gesture": 5,
+      "post_release_travel_uikit_pt": 403.66700000000003,
+      "post_release_travel_slint_pt": 471.702,
+      "within_1_pt": {
+        "uikit_s": 2.103113041999677,
+        "slint_s": 2.8782665839999027,
+        "slint_later_s": 0.7751535420002256
+      },
+      "within_0.5_pt": {
+        "uikit_s": 2.1695292499998686,
+        "slint_s": 3.0870296669995696,
+        "slint_later_s": 0.917500416999701
+      },
+      "within_0.1_pt": {
+        "uikit_s": 2.203063166999982,
+        "slint_s": 3.344970333999754,
+        "slint_later_s": 1.141907166999772
+      },
+      "within_0.005_pt": {
+        "uikit_s": 2.203063166999982,
+        "slint_s": 3.4282113749995915,
+        "slint_later_s": 1.2251482079996094
+      },
+      "stable_last_0_3_s": {
+        "uikit_range_pt": 0.0,
+        "slint_range_pt": 0.08000000000004093
+      },
+      "slint_remaining_when_uikit_settles_pt": 5.272000000000048
+    },
+    {
+      "gesture": 6,
+      "post_release_travel_uikit_pt": -274.66599999999994,
+      "post_release_travel_slint_pt": -280.28100000000006,
+      "within_1_pt": {
+        "uikit_s": 1.9269630840003629,
+        "slint_s": 2.6199196669999765,
+        "slint_later_s": 0.6929565829996136
+      },
+      "within_0.5_pt": {
+        "uikit_s": 1.9769798340003035,
+        "slint_s": 2.828635542000029,
+        "slint_later_s": 0.8516557079997256
+      },
+      "within_0.1_pt": {
+        "uikit_s": 2.0102201670001705,
+        "slint_s": 3.0870862920000945,
+        "slint_later_s": 1.076866124999924
+      },
+      "within_0.005_pt": {
+        "uikit_s": 2.0102201670001705,
+        "slint_s": 3.170492125000237,
+        "slint_later_s": 1.1602719580000667
+      },
+      "stable_last_0_3_s": {
+        "uikit_range_pt": 0.0,
+        "slint_range_pt": 0.0
+      },
+      "slint_remaining_when_uikit_settles_pt": 4.538999999999987
+    },
+    {
+      "gesture": 7,
+      "post_release_travel_uikit_pt": 307.33299999999997,
+      "post_release_travel_slint_pt": 276.144,
+      "within_1_pt": {
+        "uikit_s": 1.9992952499997045,
+        "slint_s": 2.616681083000003,
+        "slint_later_s": 0.6173858330002986
+      },
+      "within_0.5_pt": {
+        "uikit_s": 2.049522207999871,
+        "slint_s": 2.816765000000032,
+        "slint_later_s": 0.767242792000161
+      },
+      "within_0.1_pt": {
+        "uikit_s": 2.08288066599971,
+        "slint_s": 3.0746045830001094,
+        "slint_later_s": 0.9917239170003995
+      },
+      "within_0.005_pt": {
+        "uikit_s": 2.08288066599971,
+        "slint_s": 3.158574665999822,
+        "slint_later_s": 1.0756940000001123
+      },
+      "stable_last_0_3_s": {
+        "uikit_range_pt": 0.0,
+        "slint_range_pt": 0.0
+      },
+      "slint_remaining_when_uikit_settles_pt": 3.798000000000002
+    },
+    {
+      "gesture": 8,
+      "post_release_travel_uikit_pt": -154.66700000000003,
+      "post_release_travel_slint_pt": -156.04399999999998,
+      "within_1_pt": {
+        "uikit_s": 1.6434673750000002,
+        "slint_s": 2.3283757079998395,
+        "slint_later_s": 0.6849083329998393
+      },
+      "within_0.5_pt": {
+        "uikit_s": 1.693613416000062,
+        "slint_s": 2.536629707999964,
+        "slint_later_s": 0.843016291999902
+      },
+      "within_0.1_pt": {
+        "uikit_s": 1.7268110830000296,
+        "slint_s": 2.7866114160001416,
+        "slint_later_s": 1.059800333000112
+      },
+      "within_0.005_pt": {
+        "uikit_s": 1.7268110830000296,
+        "slint_s": 2.8783358749997205,
+        "slint_later_s": 1.151524791999691
+      },
+      "stable_last_0_3_s": {
+        "uikit_range_pt": 0.0,
+        "slint_range_pt": 0.0
+      },
+      "slint_remaining_when_uikit_settles_pt": 4.455000000000041
+    },
+    {
+      "gesture": 11,
+      "post_release_travel_uikit_pt": 196.66599999999994,
+      "post_release_travel_slint_pt": 204.70000000000005,
+      "within_1_pt": {
+        "uikit_s": 1.7527122920000693,
+        "slint_s": 2.4613858749999054,
+        "slint_later_s": 0.7086735829998361
+      },
+      "within_0.5_pt": {
+        "uikit_s": 1.8029771669998809,
+        "slint_s": 2.670144917000016,
+        "slint_later_s": 0.8671677500001351
+      },
+      "within_0.1_pt": {
+        "uikit_s": 1.8359243750001042,
+        "slint_s": 2.920455082999979,
+        "slint_later_s": 1.0845307079998747
+      },
+      "within_0.005_pt": {
+        "uikit_s": 1.8359243750001042,
+        "slint_s": 3.011853417000111,
+        "slint_later_s": 1.175929042000007
+      },
+      "stable_last_0_3_s": {
+        "uikit_range_pt": 0.0,
+        "slint_range_pt": 0.0
+      },
+      "slint_remaining_when_uikit_settles_pt": 4.726999999999975
+    },
+    {
+      "gesture": 13,
+      "post_release_travel_uikit_pt": -347.66700000000003,
+      "post_release_travel_slint_pt": -328.38300000000004,
+      "within_1_pt": {
+        "uikit_s": 2.0612149169996883,
+        "slint_s": 2.7035809169997265,
+        "slint_later_s": 0.6423660000000382
+      },
+      "within_0.5_pt": {
+        "uikit_s": 2.1279736669998783,
+        "slint_s": 2.9036095419996855,
+        "slint_later_s": 0.7756358749998071
+      },
+      "within_0.1_pt": {
+        "uikit_s": 2.1446434589997807,
+        "slint_s": 3.162182458999723,
+        "slint_later_s": 1.0175389999999425
+      },
+      "within_0.005_pt": {
+        "uikit_s": 2.1446434589997807,
+        "slint_s": 3.2453834999996616,
+        "slint_later_s": 1.1007400409998809
+      },
+      "stable_last_0_3_s": {
+        "uikit_range_pt": 0.0,
+        "slint_range_pt": 0.0
+      },
+      "slint_remaining_when_uikit_settles_pt": 4.016000000000076
+    }
+  ],
+  "complete_joint_flings": 6,
+  "interrupted_joint_flings_excluded": [
+    2,
+    3
+  ],
+  "only_uikit_fling_gestures": [
+    9,
+    10
+  ]
+}

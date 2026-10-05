@@ -75,4 +75,56 @@ final class ScrollComparisonTests: XCTestCase {
             }
         }
     }
+
+    func testFullRecordedSequenceParity() throws {
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "full-sequence", withExtension: "json"))
+        let manifest = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        let gestures = try XCTUnwrap(manifest["gestures"] as? [[String: Any]])
+        var times: [Double] = [], xs: [Double] = [], ys: [Double] = []
+        var starts: [Int32] = [], counts: [Int32] = []
+        for gesture in gestures {
+            let points = try XCTUnwrap(gesture["points"] as? [[Double]])
+            starts.append(Int32(times.count)); counts.append(Int32(points.count))
+            for p in points { times.append(p[0]); xs.append(p[1]); ys.append(p[2]) }
+        }
+        let app = XCUIApplication()
+        app.launchEnvironment = ["SLINT_BACKEND": "winit-skia", "SLINT_STYLE": "cupertino",
+            "SCROLL_SCENARIO": "recorded-full-sequence", "START_OFFSET": "0", "INPUT_TRACE": "1",
+            "TRACE_SAVE_DELAY_MS": "5000", "NATIVE_ONLY_INPUT": "0"]
+        app.launch()
+        let metrics = app.staticTexts["Scroll comparison metrics"]
+        XCTAssertTrue(metrics.waitForExistence(timeout: 10))
+        let pid = (app.value(forKey: "processID") as! NSNumber).int32Value
+        var delivered = false
+        times.withUnsafeBufferPointer { ts in xs.withUnsafeBufferPointer { xx in ys.withUnsafeBufferPointer { yy in
+            starts.withUnsafeBufferPointer { ss in counts.withUnsafeBufferPointer { cc in
+                delivered = synthesizeRecordedSequence(pid, app.frame.width, app.frame.height,
+                    ts.baseAddress, xx.baseAddress, yy.baseAddress, ss.baseAddress, cc.baseAddress, Int32(gestures.count))
+            }}
+        }}}
+        XCTAssertTrue(delivered)
+        let saved = expectation(description: "Save the full sequence")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.6) { saved.fulfill() }
+        wait(for: [saved], timeout: 8)
+        let value = try XCTUnwrap(metrics.value as? String)
+        let marker = try XCTUnwrap(value.range(of: "Regression="))
+        let data = try XCTUnwrap(String(value[marker.upperBound...]).data(using: .utf8))
+        let result = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let segments = try XCTUnwrap(result["segments"] as? [[String: NSNumber]])
+        XCTAssertEqual(segments.count, 13)
+        XCTAssertEqual((result["max_simultaneous_touches"] as? NSNumber)?.intValue, 1, "Replay delivery overlapped contacts")
+        let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
+        attachment.name = "recorded-full-sequence"; attachment.lifetime = .keepAlways; add(attachment)
+        for index in [8, 9] where index < segments.count {
+            XCTAssertGreaterThan(try XCTUnwrap(segments[index]["uikit_post_range_pt"]).doubleValue, 5, "UIKit did not coast")
+            XCTAssertGreaterThan(try XCTUnwrap(segments[index]["slint_post_range_pt"]).doubleValue, 5, "Slint did not coast after gesture \(index + 1)")
+        }
+        for index in [7, 12] where index < segments.count {
+            let slintTime = try XCTUnwrap(segments[index]["slint_settle_01_s"]).doubleValue
+            let nativeTime = try XCTUnwrap(segments[index]["uikit_settle_01_s"]).doubleValue
+            XCTAssertLessThanOrEqual(abs(slintTime - nativeTime), 0.15, "Sequence settling mismatch")
+        }
+        XCTContext.runActivity(named: "recorded-full-sequence: \(value)") { _ in }
+        app.terminate()
+    }
 }
