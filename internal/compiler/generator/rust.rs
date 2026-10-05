@@ -4953,6 +4953,17 @@ fn compile_builtin_function_call(
                 panic!("internal error: invalid args to ScrollTo {arguments:?}")
             }
         }
+        BuiltinFunction::EnsureVisible => {
+            if let [Expression::PropertyReference(pr), mode] = arguments {
+                item_owner(pr).then(|owner| {
+                    let mode = compile_expression(mode, ctx);
+                    let (_, item_rc) = native_item_from_owner(pr, ctx, &owner);
+                    quote!(#item_rc.try_scroll_into_visible(#mode))
+                })
+            } else {
+                panic!("internal error: invalid args to EnsureVisible {arguments:?}")
+            }
+        }
         BuiltinFunction::ImplicitLayoutInfo(orient) => {
             if let [Expression::PropertyReference(pr), constraint_expr] = arguments {
                 let window_adapter_tokens = access_window_adapter_field(ctx);

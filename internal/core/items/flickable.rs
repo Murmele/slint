@@ -322,7 +322,12 @@ impl Flickable {
 
     /// Scroll the Flickable so that all of the points are visible at the same time (if possible).
     /// The points have to be in the parent's coordinate space.
-    pub(crate) fn reveal_points(self: Pin<&Self>, self_rc: &ItemRc, pts: &[LogicalPoint]) {
+    pub(crate) fn reveal_points(
+        self: Pin<&Self>,
+        self_rc: &ItemRc,
+        pts: &[LogicalPoint],
+        scroll_mode: ScrollMode,
+    ) {
         if pts.is_empty() {
             return;
         }

@@ -508,7 +508,12 @@ fn build(l: &mut Loader) {
         }};
     }
 
-    item! { Empty { } }
+    item! { Empty {
+        //! ## Functions
+        //!
+        //! ### ensure-visible(ScrollMode)
+        //! Call this function to scroll a flickable until this item is visible. The parent of this item must be a flickable
+    } }
 
     element! {
         @is_internal

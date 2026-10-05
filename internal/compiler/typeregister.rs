@@ -15,7 +15,7 @@ use crate::langtype::{
     Struct, Type,
 };
 use crate::object_tree::{Component, PropertyVisibility};
-use crate::typeloader;
+use crate::{typeloader, typeregister};
 
 pub const RESERVED_GEOMETRY_PROPERTIES: &[(&str, Type)] = &[
     ("x", Type::LogicalLength),
@@ -373,6 +373,11 @@ pub fn reserved_properties() -> impl Iterator<Item = (&'static str, Type, Proper
             ),
         ]))
         .chain(std::iter::once(("init", noarg_callback_type(), PropertyVisibility::Private)))
+        .chain(std::iter::once((
+            "ensure-visible",
+            Type::Function(BuiltinFunction::EnsureVisible.ty()),
+            PropertyVisibility::Public,
+        )))
 }
 
 /// lookup reserved property injected in every item

@@ -2750,6 +2750,19 @@ fn call_builtin_function(
             }
             panic!("internal error: argument to ScrollTo must be an element")
         }
+        BuiltinFunction::EnsureVisible => {
+            if let Some(Expression::PropertyReference(mr)) = arguments.first()
+                && let Some((inst, flat_idx)) = resolve_item_rc_from_ref(ctx, mr)
+            {
+                let mode: ScrollMode =
+                    eval_expression(ctx, &arguments[1]).try_into().unwrap_or_default();
+                let dyn_rc = vtable::VRc::into_dyn(inst);
+                let item_rc = i_slint_core::items::ItemRc::new(dyn_rc, flat_idx as u32);
+                item_rc.try_scroll_into_visible(mode);
+                return Value::Void;
+            }
+            panic!("internal error: argument to ScrollTo must be an element")
+        }
     }
 }
 
