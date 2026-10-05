@@ -36,14 +36,18 @@ mod ring_buffer;
     target_os = "macos"
 )))]
 pub(crate) use general::GeneralVelocityTracker;
-#[cfg(any(target_os = "ios", target_os = "linux", target_os = "none"))]
-pub(crate) use ios::IOsVelocityTracker;
+#[cfg(target_os = "ios")]
+pub(crate) type IOsVelocityTracker = ios::IOsVelocityTracker<true>;
+#[cfg(any(target_os = "linux", target_os = "none"))]
+pub(crate) type IOsVelocityTracker = ios::IOsVelocityTracker<false>;
 #[cfg(target_os = "macos")]
 pub(crate) use macos::MacOsVelocityTracker;
 
 use crate::animations::Instant;
 use crate::lengths::{LogicalPx, LogicalVector};
 use core::time::Duration;
+#[cfg(not(feature = "std"))]
+use num_traits::Float;
 
 // https://github.com/flutter/flutter/blob/d6bed8ff6135cdd414f14edc3063f761d47ca846/packages/flutter/lib/src/gestures/velocity_tracker.dart#L142-L145
 //
@@ -58,13 +62,17 @@ pub(crate) type Velocity = euclid::Vector2D<f32, LogicalPx>;
 pub(crate) struct VelocityEstimate {
     pub(crate) velocity: Velocity,
     pub(crate) threshold_velocity: Velocity,
+    pub(crate) minimum_launch_speed: f32,
     #[cfg_attr(not(test), expect(unused, reason = "Confidence is not yet considered"))]
     pub(crate) confidence: f32,
 }
 
 impl VelocityEstimate {
-    pub(crate) fn threshold_velocity(&self) -> Velocity {
-        if cfg!(target_os = "ios") { self.threshold_velocity } else { self.velocity }
+    pub(crate) fn can_flick(&self, launch: f32, gate: f32, threshold: f32) -> bool {
+        gate.is_finite()
+            && launch.is_finite()
+            && gate.abs() >= threshold
+            && (self.minimum_launch_speed == 0. || launch.abs() > self.minimum_launch_speed)
     }
 }
 

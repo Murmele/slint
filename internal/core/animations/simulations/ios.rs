@@ -47,7 +47,7 @@ const MAX_SPRING_TRANSFER_VELOCITY: f32 = 5000.0;
 const VELOCITY_TOLERANCE: f32 = 1.0;
 /// UIKit ends a deceleration where the content is once its speed falls below this, in logical
 /// px/s, measured on an iPhone 13 Pro Max with iOS 27.
-const DECELERATION_STOP_VELOCITY: f32 = 10.0;
+pub(crate) const DECELERATION_STOP_VELOCITY: f32 = 10.0;
 /// A spring within this distance (logical px) of `limit_value` is considered settled.
 const DISTANCE_TOLERANCE: f32 = 0.5;
 

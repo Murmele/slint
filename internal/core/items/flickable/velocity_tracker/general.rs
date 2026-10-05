@@ -94,6 +94,7 @@ impl<const N: usize> VelocityEstimator for GeneralVelocityTracker<N> {
                 return Some(VelocityEstimate {
                     velocity,
                     threshold_velocity: velocity,
+                    minimum_launch_speed: 0.,
                     confidence: res_x.confidence * res_y.confidence,
                 });
             }

@@ -983,19 +983,36 @@ impl FlickableDataInner {
             );
             let velocity_estimation = self.velocity_rb.estimate_velocity();
             let release_time = Self::backend_now(flick_rc);
+            let mut launch_velocity = velocity_estimation
+                .as_ref()
+                .map_or(Default::default(), |estimate| estimate.velocity);
+            if let Some(estimate) = velocity_estimation.as_ref() {
+                if inside_bounds_x {
+                    launch_velocity.x += FlickAnimation::carried_momentum(
+                        estimate.velocity.x,
+                        self.retained_velocity.x,
+                        flick.carry_momentum(),
+                    );
+                }
+                if inside_bounds_y {
+                    launch_velocity.y += FlickAnimation::carried_momentum(
+                        estimate.velocity.y,
+                        self.retained_velocity.y,
+                        flick.carry_momentum(),
+                    );
+                }
+            }
 
             let x_simulation = if inside_bounds_x {
                 match velocity_estimation.as_ref() {
                     Some(velocity_estimation)
-                        if velocity_estimation.threshold_velocity().x.abs()
-                            >= FlickAnimation::minimum_flick_velocity_animation() =>
+                        if velocity_estimation.can_flick(
+                            launch_velocity.x,
+                            velocity_estimation.threshold_velocity.x,
+                            FlickAnimation::minimum_flick_velocity_animation(),
+                        ) =>
                     {
                         let content_x = (Flickable::FIELD_OFFSETS.content_x()).apply_pin(flick);
-                        let carried_velocity_x = FlickAnimation::carried_momentum(
-                            velocity_estimation.velocity.x,
-                            self.retained_velocity.x,
-                            flick.carry_momentum(),
-                        );
                         let limit_x = Self::flick_limits(
                             flick_rc,
                             velocity_estimation.velocity.x,
@@ -1007,8 +1024,7 @@ impl FlickableDataInner {
                                 content_x.set_physic_animation_value(weak.clone());
                                 RefCell::new(FlickAnimation::create_animation(
                                     FlickAnimationParameter::Velocity {
-                                        velocity: velocity_estimation.velocity.x
-                                            + carried_velocity_x,
+                                        velocity: launch_velocity.x,
                                     },
                                     effective_bounce(flick, &geo, Dimension::X),
                                     curr_val,
@@ -1033,15 +1049,13 @@ impl FlickableDataInner {
             let y_simulation = if inside_bounds_y {
                 match velocity_estimation.as_ref() {
                     Some(velocity_estimation)
-                        if velocity_estimation.threshold_velocity().y.abs()
-                            >= FlickAnimation::minimum_flick_velocity_animation() =>
+                        if velocity_estimation.can_flick(
+                            launch_velocity.y,
+                            velocity_estimation.threshold_velocity.y,
+                            FlickAnimation::minimum_flick_velocity_animation(),
+                        ) =>
                     {
                         let content_y = (Flickable::FIELD_OFFSETS.content_y()).apply_pin(flick);
-                        let carried_velocity_y = FlickAnimation::carried_momentum(
-                            velocity_estimation.velocity.y,
-                            self.retained_velocity.y,
-                            flick.carry_momentum(),
-                        );
                         let limit_y = Self::flick_limits(
                             flick_rc,
                             velocity_estimation.velocity.y,
@@ -1053,8 +1067,7 @@ impl FlickableDataInner {
                                 content_y.set_physic_animation_value(weak.clone());
                                 RefCell::new(FlickAnimation::create_animation(
                                     FlickAnimationParameter::Velocity {
-                                        velocity: velocity_estimation.velocity.y
-                                            + carried_velocity_y,
+                                        velocity: launch_velocity.y,
                                     },
                                     effective_bounce(flick, &geo, Dimension::Y),
                                     curr_val,
