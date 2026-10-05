@@ -47,7 +47,7 @@ for stage in ['before', 'after', 'delivery']:
                 last = t
         series[stage, case] = selected
         with (args.output / f'{stage}-{case}.positions.csv').open('w') as out:
-            writer = csv.writer(out); writer.writerow(['time_since_delivered_release_s','uikit_offset_pt','slint_offset_pt']);writer.writerows(selected)
+            writer = csv.writer(out, lineterminator="\n"); writer.writerow(['time_since_delivered_release_s','uikit_offset_pt','slint_offset_pt']);writer.writerows(selected)
 for group, cases in [('flicks', ['fast','short']), ('holds', ['hold','jitter']), ('reversals', ['reversal','near-zero'])]:
     fig, axes = plt.subplots(2, 2, figsize=(11, 7))
     for i, case in enumerate(cases):
@@ -64,6 +64,6 @@ for group, cases in [('flicks', ['fast','short']), ('holds', ['hold','jitter']),
         for ax in axes[i]:ax.set_ylim(min(limits)-pad,max(limits)+pad)
     fig.tight_layout();fig.savefig(args.output/f'{group}.png',dpi=170);plt.close(fig)
 with (args.output/'results.csv').open('w') as f:
-    writer=csv.DictWriter(f,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
+    writer=csv.DictWriter(f,fieldnames=list(rows[0]), lineterminator="\n");writer.writeheader();writer.writerows(rows)
 (args.output/'results.json').write_text(json.dumps(rows,indent=2)+'\n')
 print(json.dumps(rows,indent=2))
