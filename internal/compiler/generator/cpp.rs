@@ -5558,6 +5558,20 @@ fn compile_builtin_function_call(
                 panic!("internal error: invalid args to ItemFontMetrics {arguments:?}")
             }
         }
+        BuiltinFunction::ScrollTo => {
+            if let [llr::Expression::PropertyReference(pr), pos, mode] = arguments {
+                let window = access_window_field(ctx);
+                item_owner(pr).map_or_default(|owner| {
+                    let (_, item_rc) = native_item_from_owner(pr, ctx, owner);
+                    // format!(
+                    //     "[&]{{ slint::cbindgen_private::FontMetrics fm; slint_cpp_text_item_fontmetrics(&{window}.handle(), &{item_rc}, &fm); return fm; }}()"
+                    // )
+                    unimplemented!("Not yet implemented")
+                })
+            } else {
+                panic!("internal error: invalid args to ItemFontMetrics {arguments:?}")
+            }
+        }
         BuiltinFunction::ItemAbsolutePosition => {
             if let [llr::Expression::PropertyReference(pr)] = arguments {
                 item_owner(pr).map_or_default(|owner| {

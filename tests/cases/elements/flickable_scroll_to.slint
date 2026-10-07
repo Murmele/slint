@@ -1,0 +1,124 @@
+// Copyright © SixtyFPS GmbH <info@slint.dev>
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+
+export component TestCase inherits Window {
+    width: 500phx;
+    height: 500phx;
+    no-frame: false;
+
+    callback flickable-scroll-to(length, length, ScrollMode);
+    flickable-scroll-to(x, y, scroll_mode) => {
+        f.scroll-to({x: x, y: y}, scroll_mode);
+    }
+
+    f := Flickable {
+        width: parent.width;
+        height: parent.height;
+        content_width: 1000phx;
+        content_height: 1000phx;
+
+        Rectangle {
+            background: @radial-gradient(circle, yellow, blue, red, green);
+        }
+    }
+
+    in-out property<length> offset_x: -f.content_x;
+    in-out property<length> offset_y: -f.content_y;
+}
+
+/*
+
+```rust
+// Same as first test, but wait a bit before moving the mouse, and move only a tiny  ()
+use slint::LogicalPosition;
+use slint::language::ScrollMode;
+
+let instance = TestCase::new().unwrap();
+
+const SCROLL_TO_POS: LogicalPosition = LogicalPosition::new(35., 45.);
+const SCROLL_TO_SMOOTH_POS: LogicalPosition = LogicalPosition::new(105., 135.);
+
+assert_eq!(instance.get_offset_x(), 0.);
+assert_eq!(instance.get_offset_y(), 0.);
+
+instance.invoke_flickable_scroll_to(SCROLL_TO_POS.x, SCROLL_TO_POS.y, ScrollMode::Instant);
+assert_eq!(instance.get_offset_x(), SCROLL_TO_POS.x);
+assert_eq!(instance.get_offset_y(),SCROLL_TO_POS.y);
+slint_testing::mock_elapsed_time(1000000);
+assert_eq!(instance.get_offset_x(), SCROLL_TO_POS.x);
+assert_eq!(instance.get_offset_y(), SCROLL_TO_POS.y);
+
+instance.invoke_flickable_scroll_to(SCROLL_TO_SMOOTH_POS.x, SCROLL_TO_SMOOTH_POS.y, ScrollMode::Smooth);
+assert_eq!(instance.get_offset_x(), SCROLL_TO_POS.x, "Did not change yet because we just started the animation");
+assert_eq!(instance.get_offset_y(),SCROLL_TO_POS.y, "Did not change yet because we just started the animation");
+
+slint_testing::mock_elapsed_time(10);
+assert!(instance.get_offset_x() > SCROLL_TO_POS.x, "Animation has started but not finished");
+assert!(instance.get_offset_y() > SCROLL_TO_POS.y, "Animation has started but not finished");
+
+slint_testing::mock_elapsed_time(1000000);
+assert_eq!(instance.get_offset_x(), SCROLL_TO_SMOOTH_POS.x, "Animation finished");
+assert_eq!(instance.get_offset_y(), SCROLL_TO_SMOOTH_POS.y, "Animation finished");
+```
+
+```cpp
+auto handle = TestCase::create();
+const TestCase &instance = *handle;
+
+const float scroll_to_x = 35., scroll_to_y = 45.;
+const float scroll_to_smooth_x = 105., scroll_to_smooth_y = 135.;
+
+assert_eq(instance.get_offset_x(), 0.);
+assert_eq(instance.get_offset_y(), 0.);
+
+instance.invoke_flickable_scroll_to(scroll_to_x, scroll_to_y);
+assert_eq(instance.get_offset_x(), scroll_to_x);
+assert_eq(instance.get_offset_y(), scroll_to_y);
+slint_testing::mock_elapsed_time(1000000);
+assert_eq(instance.get_offset_x(), scroll_to_x);
+assert_eq(instance.get_offset_y(), scroll_to_y);
+
+instance.invoke_flickable_scroll_to_smooth(scroll_to_smooth_x, scroll_to_smooth_y);
+// The animation only just started.
+assert_eq(instance.get_offset_x(), scroll_to_x);
+assert_eq(instance.get_offset_y(), scroll_to_y);
+
+slint_testing::mock_elapsed_time(10);
+assert(instance.get_offset_x() > scroll_to_x);
+assert(instance.get_offset_y() > scroll_to_y);
+
+slint_testing::mock_elapsed_time(1000000);
+assert_eq(instance.get_offset_x(), scroll_to_smooth_x);
+assert_eq(instance.get_offset_y(), scroll_to_smooth_y);
+```
+
+```js
+var instance = new slint.TestCase();
+
+const scroll_to_pos = { x: 35, y: 45 };
+const scroll_to_smooth_pos = { x: 105, y: 135 };
+
+assert.equal(instance.offset_x, 0);
+assert.equal(instance.offset_y, 0);
+
+instance.flickable_scroll_to(scroll_to_pos.x, scroll_to_pos.y);
+assert.equal(instance.offset_x, scroll_to_pos.x);
+assert.equal(instance.offset_y, scroll_to_pos.y);
+slintlib.private_api.mock_elapsed_time(1000000);
+assert.equal(instance.offset_x, scroll_to_pos.x);
+assert.equal(instance.offset_y, scroll_to_pos.y);
+
+instance.flickable_scroll_to_smooth(scroll_to_smooth_pos.x, scroll_to_smooth_pos.y);
+assert.equal(instance.offset_x, scroll_to_pos.x, "Did not change yet because we just started the animation");
+assert.equal(instance.offset_y, scroll_to_pos.y, "Did not change yet because we just started the animation");
+
+slintlib.private_api.mock_elapsed_time(10);
+assert(instance.offset_x > scroll_to_pos.x, "Animation has started but not finished");
+assert(instance.offset_y > scroll_to_pos.y, "Animation has started but not finished");
+
+slintlib.private_api.mock_elapsed_time(1000000);
+assert.equal(instance.offset_x, scroll_to_smooth_pos.x, "Animation finished");
+assert.equal(instance.offset_y, scroll_to_smooth_pos.y, "Animation finished");
+```
+
+*/

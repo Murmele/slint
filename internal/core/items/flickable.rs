@@ -12,11 +12,13 @@ use super::{
 };
 use crate::animations::Instant;
 use crate::animations::simulations::constant_deceleration::ConstantDecelerationParameters;
+use crate::api::LogicalPosition;
 use crate::input::InternalKeyEvent;
 use crate::input::{
     FocusEvent, FocusEventResult, InputEventFilterResult, InputEventResult, MouseEvent, TouchPhase,
 };
 use crate::item_rendering::CachedRenderingData;
+use crate::items::ScrollMode;
 use crate::layout::{LayoutInfo, Orientation};
 use crate::lengths::{
     LogicalBorderRadius, LogicalLength, LogicalPoint, LogicalRect, LogicalSize, LogicalVector,
@@ -244,6 +246,16 @@ impl ItemConsts for Flickable {
 }
 
 impl Flickable {
+    pub fn scroll_to(
+        self: Pin<&Self>,
+        _self_rc: &ItemRc,
+        position: LogicalPosition,
+        scroll_mode: ScrollMode,
+    ) {
+        self.as_ref().content_x.set(-LogicalLength::new(position.x));
+        self.as_ref().content_y.set(-LogicalLength::new(position.y));
+    }
+
     /// Whether the event may pan this Flickable, given that `interactive` and
     /// `mouse-drag-pan-enabled` can disable it.
     fn accepts_pan_event(self: Pin<&Self>, event: &MouseEvent) -> bool {

@@ -4939,6 +4939,20 @@ fn compile_builtin_function_call(
                 panic!("internal error: invalid args to ItemMemberFunction {arguments:?}")
             }
         }
+        BuiltinFunction::ScrollTo => {
+            if let [Expression::PropertyReference(pr), pos, mode] = arguments {
+                let pos = compile_expression(pos, ctx);
+                let mode = compile_expression(mode, ctx);
+                item_owner(pr).map_or_default(|owner| {
+                    let (item, item_rc) = native_item_from_owner(pr, ctx, &owner);
+                    quote!(
+                        #item.as_ref().scroll_to(&#item_rc, #pos, #mode)
+                    )
+                })
+            } else {
+                panic!("internal error: invalid args to ScrollTo {arguments:?}")
+            }
+        }
         BuiltinFunction::ImplicitLayoutInfo(orient) => {
             if let [Expression::PropertyReference(pr), constraint_expr] = arguments {
                 let window_adapter_tokens = access_window_adapter_field(ctx);
