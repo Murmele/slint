@@ -19,7 +19,7 @@ use crate::layout::{LayoutConstraints, Orientation};
 use crate::namedreference::NamedReference;
 use crate::parser::{SyntaxKind, SyntaxNode, syntax_nodes};
 use crate::typeloader::{ImportKind, ImportedTypes, LibraryInfo};
-use crate::typeregister::TypeRegister;
+use crate::typeregister::{self, TypeRegister};
 use crate::{parser, reject_experimental_feature};
 use interfaces::ImplementedInterface;
 use itertools::Either;
@@ -2828,6 +2828,61 @@ impl Element {
         );
     }
 
+    fn has_required_listview_properties(element: &ElementRc) -> bool {
+        let element = element.borrow();
+        let required_properties =
+            ["content-y", "content-height", "content-width", "visible-height", "visible-width"]
+                .iter()
+                .all(|p| {
+                    element.lookup_property(p, PropertyLookupMode::InternalName).property_type
+                        == Type::LogicalLength
+                });
+        if !required_properties {
+            return false;
+        }
+
+        let required_functions = [(
+            "ensure-row-visible",
+            &[Type::Int32, Type::Enumeration(typeregister::BUILTIN.enums.ScrollMode.clone())],
+            Type::Void,
+        )]
+        .iter()
+        .all(|(name, args, return_type)| {
+            println!("has_required_listview_properties: {name:?}");
+            if name.contains("ensure-row-visible") {
+                println!("Ensure-row-visible function: {element:?}");
+                // println!(
+                //     "ComponentLocal: {:?}",
+                //     element.lookup_property(name, PropertyLookupMode::ComponentLocal)
+                // );
+                // println!(
+                //     "FromOutside: {:?}",
+                //     element.lookup_property(name, PropertyLookupMode::FromOutside)
+                // );
+                println!(
+                    "InternalName: {:?}",
+                    element.lookup_property(name, PropertyLookupMode::InternalName)
+                );
+            }
+            let p = element.lookup_property(name, PropertyLookupMode::InternalName);
+            let Type::Function(f) = p.property_type else {
+                return false;
+            };
+            if f.args.len() != args.len() || f.return_type != *return_type {
+                return false;
+            }
+
+            for (a, expected) in f.args.iter().zip(*args) {
+                if a != expected {
+                    return false;
+                }
+            }
+            true
+        });
+
+        required_functions
+    }
+
     fn from_repeated_node(
         node: syntax_nodes::RepeatedElement,
         parent: &ElementRc,
@@ -2849,18 +2904,9 @@ impl Element {
             tr,
         );
         let parent_is_listview = {
-            let parent = parent.borrow();
-            parent.base_type.to_string() == "ListView"
+            parent.borrow().base_type.to_string() == "ListView"
                 // Custom "ListView" is OK, but it must have these properties
-                && [
-                    "content-y",
-                    "content-height",
-                    "content-width",
-                    "visible-height",
-                    "visible-width",
-                ]
-                .iter()
-                .all(|p| parent.lookup_property(p, PropertyLookupMode::InternalName).property_type == Type::LogicalLength)
+                && Self::has_required_listview_properties(parent)
         };
         let is_listview = if parent_is_listview
             && let Some(geometry_props) = e.borrow().geometry_props.as_ref()
