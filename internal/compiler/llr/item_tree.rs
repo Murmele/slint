@@ -410,8 +410,6 @@ pub struct ListViewInfo {
     pub prop_y: MemberReference,
     // In the repeated component context
     pub prop_height: MemberReference,
-    /// The ListView's `ensure-row-visible` function
-    pub ensure_row_visible: MemberReference,
 }
 
 #[derive(Debug, Clone)]

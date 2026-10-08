@@ -1473,7 +1473,6 @@ fn generate_sub_component(
                 });
             });
             if let Some(listview) = &repeated.listview {
-                let ensure_row_visible = access_member(&listview.ensure_row_visible, &ctx).unwrap();
                 let content_y = access_member(&listview.content_y, &ctx).unwrap();
                 let lv_h = access_member(&listview.listview_height, &ctx).unwrap();
                 let lv_w = access_member(&listview.listview_width, &ctx).unwrap();

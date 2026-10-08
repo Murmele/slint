@@ -9,7 +9,7 @@
 
 use crate::Value;
 use crate::globals::{GlobalInstance, GlobalStorage};
-use crate::instance::SubComponentInstance;
+use crate::instance::{RepeaterOrConditional, SubComponentInstance};
 use i_slint_compiler::diagnostics::SourceLocation;
 use i_slint_compiler::expression_tree::{BuiltinFunction, MinMaxOp};
 use i_slint_compiler::langtype::{ConstantExpression, Type};
@@ -138,7 +138,7 @@ impl i_slint_compiler::llr::TypeResolutionContext for EvalContext {
                     // The stored `Type::Callback` — `Expression::ty()`'s
                     // CallBackCall arm extracts the return type from it.
                     LocalMemberIndex::Callback(idx) => &g.callbacks[*idx].ty,
-                    LocalMemberIndex::Native { .. } | LocalMemberIndex::Timer(_) => &Type::Invalid,
+                    LocalMemberIndex::Native { .. } | LocalMemberIndex::Timer(_) | LocalMemberIndex::Repeater(_) => &Type::Invalid,
                 }
             }
             MemberReference::Relative { parent_level, local_reference } => {
@@ -161,6 +161,8 @@ impl i_slint_compiler::llr::TypeResolutionContext for EvalContext {
                     LocalMemberIndex::Callback(idx) => &sc.callbacks[*idx].ty,
                     // A timer reference is only valid as the RestartTimer argument.
                     LocalMemberIndex::Timer(_) => &Type::Invalid,
+                    // A repeater reference is only valid as the ListViewEnsureRowVisible argument.
+                    LocalMemberIndex::Repeater(_) => &Type::Invalid,
                     LocalMemberIndex::Native { item_index, prop_name, .. } => {
                         if prop_name == "elements" {
                             // The `Path::elements` property is not in the NativeClass
@@ -227,8 +229,9 @@ fn load_local(instance: &SubComponentInstance, member: &LocalMemberIndex) -> Val
         }
         LocalMemberIndex::Callback(_)
         | LocalMemberIndex::Function(_)
-        | LocalMemberIndex::Timer(_) => {
-            panic!("load_local called on callback/function/timer reference")
+        | LocalMemberIndex::Timer(_)
+        | LocalMemberIndex::Repeater(_) => {
+            panic!("load_local called on callback/function/timer/repeater reference")
         }
     }
 }
@@ -295,8 +298,9 @@ fn store_local(
         }
         LocalMemberIndex::Callback(_)
         | LocalMemberIndex::Function(_)
+        | LocalMemberIndex::Repeater(_)
         | LocalMemberIndex::Timer(_) => {
-            panic!("store_local called on callback/function/timer reference")
+            panic!("store_local called on callback/function/repeater/timer reference")
         }
     }
 }
@@ -2762,6 +2766,27 @@ fn call_builtin_function(
                 return Value::Void;
             }
             panic!("internal error: argument to ScrollTo must be an element")
+        }
+        BuiltinFunction::ListViewEnsureRowVisible => {
+            if let
+                Some(Expression::PropertyReference(MemberReference::Relative {
+                    parent_level,
+                    local_reference,
+                }))
+             = arguments.first()
+                && let LocalMemberIndex::Repeater(repeater_idx) = &local_reference.reference
+                && let Some(instance) = try_walk_to(ctx, *parent_level, local_reference)
+                && let RepeaterOrConditional::Repeater(repeater) =
+                    &instance.repeaters[*repeater_idx]
+            {
+                let row: i32 = eval_expression(ctx, &arguments[1]).try_into().unwrap_or_default();
+                let mode: ScrollMode =
+                    eval_expression(ctx, &arguments[2]).try_into().unwrap_or_default();
+                repeater.as_ref().listview_ensure_row_visible(row, mode);
+                return Value::Void;
+            }
+
+            panic!("internal error: invalid arguments to ListViewEnsureRowVisible {arguments:?}")
         }
     }
 }

@@ -315,6 +315,7 @@ fn install_property_init(
             // `invoke_function` reads them directly.
         }
         LocalMemberIndex::Timer(_) => unreachable!("a timer is not a binding target"),
+        LocalMemberIndex::Repeater(_) => unreachable!("a repeater is not a binding target"),
     }
 }
 
@@ -362,7 +363,8 @@ fn install_global_property_init(
         }
         LocalMemberIndex::Function(_)
         | LocalMemberIndex::Native { .. }
-        | LocalMemberIndex::Timer(_) => {}
+        | LocalMemberIndex::Timer(_)
+        | LocalMemberIndex::Repeater(_) => {}
     }
 }
 
