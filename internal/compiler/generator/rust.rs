@@ -4984,6 +4984,7 @@ fn compile_builtin_function_call(
             }
         }
         BuiltinFunction::ListViewEnsureRowVisible => {
+            implement like ensure_updated_listview
             if let [Expression::PropertyReference(pr), row, mode] = arguments {
                 let mode = compile_expression(mode, ctx);
                 let row = compile_expression(row, ctx);

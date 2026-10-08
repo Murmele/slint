@@ -650,7 +650,26 @@ impl<C: RepeatedItemTree> Default for Repeater<C> {
 }
 
 impl<C: RepeatedItemTree + 'static> Repeater<C> {
-    pub fn listview_ensure_row_visible(self: Pin<&Self>, row: i32, mode: ScrollMode) {}
+    pub fn listview_ensure_row_visible(self: Pin<&Self>, new_row: i32, mode: ScrollMode) {
+        let inner = self.0.inner.borrow_mut();
+
+        let cached_item_height = inner.layout_state.cached_item_height;
+        let current_row = inner.layout_state.offset;
+
+        match mode {
+            ScrollMode::Instant => {
+                // if (current_row as i32 - new_row).abs() as Coord * cached_item_height
+                //     > 1.5 * listview_height
+                // {
+                //     // Random jump
+                // }
+            }
+            ScrollMode::Smooth => {
+                // We have to instantiate all items up to the required one, calculating the distance
+                // and starting the simulation
+            }
+        }
+    }
 
     fn data(self: Pin<&Self>) -> Pin<&RepeaterTracker<C>> {
         self.project_ref().0.get()
