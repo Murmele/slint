@@ -518,7 +518,12 @@ impl ElementType {
         name: &'a str,
         mode: PropertyLookupMode,
     ) -> PropertyLookupResult<'a> {
-        match self {
+        if name.contains("ensure_row_visible") || name.contains("ensure-row-visible") {
+            println!(
+                "ElementType::Lookup start property ensure_row_visible: {mode:?}"
+            );
+        }
+        let res = match self {
             Self::Component(c) => c.root_element.borrow().lookup_property(name, mode),
             Self::Builtin(b) => {
                 let resolved_name =
@@ -554,7 +559,11 @@ impl ElementType {
                 }
             }
             _ => PropertyLookupResult::invalid(Cow::Borrowed(name)),
+        };
+        if name.contains("ensure_row_visible") || name.contains("ensure-row-visible") {
+            println!("ElementType::Lookup property ensure_row_visible: {mode:?}. Res: {res:?}");
         }
+        res
     }
 
     /// Return the node declaring `name` in this type or one of its bases, if there is one.

@@ -7,7 +7,7 @@
 
 // cSpell: ignore qualname
 
-use crate::diagnostics::{BuildDiagnostics, SourceLocation, Spanned};
+use crate::diagnostics::{BuildDiagnostics, SourceLocation, Span, Spanned};
 use crate::expression_tree::{
     self, BindingExpression, Callable, ConditionLocation, Expression, Unit,
 };
@@ -564,9 +564,11 @@ impl Component {
         let mut child_insertion_points = BTreeMap::new();
         let mut declared_slots = Vec::new();
         let is_legacy_syntax = node.child_token(SyntaxKind::ColonEqual).is_some();
+        let id = parser::identifier_text(&node.DeclaredIdentifier()).unwrap_or_default();
+        println!("------------------------------------ Component from node: {id:?}");
         let c = Component {
             node: Some(node.clone()),
-            id: parser::identifier_text(&node.DeclaredIdentifier()).unwrap_or_default(),
+            id,
             root_element: Element::from_node(
                 node.Element(),
                 "root".into(),
@@ -1453,6 +1455,8 @@ pub struct ListViewInfo {
     pub listview_height: NamedReference,
     /// The ListView's inner visible width (not counting eventual scrollbar)
     pub listview_width: NamedReference,
+    /// The ListView's `ensure-row-visible` function
+    pub ensure_row_visible: NamedReference,
 }
 
 #[derive(Debug, Clone)]
@@ -1938,6 +1942,7 @@ impl Element {
         diag: &mut BuildDiagnostics,
         tr: &TypeRegister,
     ) -> Option<(ElementRc, Vec<ImplementedInterface>, Vec<ImplementedInterface>)> {
+        println!("######################### element_without_children: {id:?}");
         // A child element's parent_type is the type of its parent; the root
         // gets a sentinel from Component::from_node
         #[cfg(feature = "slint-sc")]
@@ -2351,10 +2356,24 @@ impl Element {
         }
 
         for func in node.Function() {
+            // println!("Handle functions: {func:?}. {:?}", func.to_source_location());
             #[cfg(feature = "slint-sc")]
             diag.slint_sc_error("Function declarations are", &func);
             let name =
                 unwrap_or_continue!(parser::identifier_text(&func.DeclaredIdentifier()); diag);
+
+            // if let Some(source_file) = func.to_source_location().source_file {
+            //     if source_file.path().ends_with("builtin:/common/listview.slint") {
+            //         if matches!(func.span(), Span { offset: 367, length: 63 }) {
+            //             println!("Function '{name:?}': {func:?}");
+            //         }
+            //         // source_file.line_column(offset, format)
+            //     }
+            // }
+
+            if name.contains("ensure-row-visible") {
+                println!("Function '{name:?}': {func:?}");
+            }
 
             let member_decl = r.member_declaration(&name);
             if let MemberDeclaration::Conflict { existing_type, declared_in } = &member_decl {
@@ -2446,6 +2465,7 @@ impl Element {
                     continue;
                 }
                 (_, None) => {
+                    println!("Functions must have a code block. {base_type:?}");
                     diag.push_error("Functions must have a code block".into(), &func);
                 }
                 (_, Some(_)) => {}
@@ -2850,7 +2870,7 @@ impl Element {
         .all(|(name, args, return_type)| {
             println!("has_required_listview_properties: {name:?}");
             if name.contains("ensure-row-visible") {
-                println!("Ensure-row-visible function: {element:?}");
+                println!("Ensure-row-visible function. Component: {element:?}");
                 // println!(
                 //     "ComponentLocal: {:?}",
                 //     element.lookup_property(name, PropertyLookupMode::ComponentLocal)
@@ -2931,7 +2951,12 @@ impl Element {
                     .then(|| NamedReference::new(parent, SmolStr::new_static("content-width"))),
                 listview_height: NamedReference::new(parent, SmolStr::new_static("visible-height")),
                 listview_width: NamedReference::new(parent, SmolStr::new_static("visible-width")),
+                ensure_row_visible: NamedReference::new(
+                    parent,
+                    SmolStr::new_static("ensure-row-visible"),
+                ),
             };
+
             // these properties are set by the ListView layouting code
             if let Some(content_height) = &lvi.content_height {
                 content_height.mark_as_set();
@@ -3074,6 +3099,9 @@ impl Element {
         name: &'a str,
         mode: PropertyLookupMode,
     ) -> PropertyLookupResult<'a> {
+        if name.contains("ensure_row_visible") || name.contains("ensure-row-visible") {
+            println!("Element: Lookup property ensure_row_visible: {mode:?}");
+        }
         let declaration = match mode {
             PropertyLookupMode::InternalName => self.property_declarations.get_key_value(name),
             PropertyLookupMode::ComponentLocal | PropertyLookupMode::FromOutside => {
@@ -4530,6 +4558,7 @@ fn visit_all_named_references_in_element_dyn(
         }
         vis(&mut lv.listview_height);
         vis(&mut lv.listview_width);
+        vis(&mut lv.ensure_row_visible);
     }
     elem.borrow_mut().repeated = repeated;
     let mut layout_info_prop = std::mem::take(&mut elem.borrow_mut().layout_info_prop);

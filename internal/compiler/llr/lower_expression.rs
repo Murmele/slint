@@ -20,6 +20,7 @@ use crate::expression_tree::{
 use crate::langtype::{BuiltinStruct, ConstantExpression, Struct, StructName, Type};
 use crate::llr::ArrayOutput as llr_ArrayOutput;
 use crate::llr::Expression as llr_Expression;
+use crate::llr::lower_to_item_tree::LoweredElement;
 use crate::namedreference::NamedReference;
 use crate::object_tree::{Component, Element, ElementRc, ElementWeak, PropertyAnimation};
 use crate::typeregister::BUILTIN;
@@ -295,6 +296,9 @@ fn lower_function_call(
     };
     match function {
         Callable::Builtin(BuiltinFunction::RestartTimer) => lower_restart_timer(arguments, ctx),
+        Callable::Builtin(BuiltinFunction::ListViewEnsureRowVisible) => {
+            lower_listview_ensure_row_visible(arguments, ctx)
+        }
         Callable::Builtin(BuiltinFunction::ShowPopupWindow) => {
             lower_show_popup_window(arguments, ctx)
         }
@@ -654,6 +658,35 @@ fn lower_restart_timer(args: &[tree_Expression], ctx: &ExpressionLoweringCtx) ->
         }
     } else {
         panic!("invalid arguments to RestartTimer");
+    }
+}
+
+fn lower_listview_ensure_row_visible(
+    args: &[tree_Expression],
+    ctx: &mut ExpressionLoweringCtx,
+) -> llr_Expression {
+    let [tree_Expression::ElementReference(e), row, mode] = args else {
+        panic!("invalid arguments to ListViewEnsureRowVisible");
+    };
+    let repeated = e.upgrade().unwrap();
+    let enclosing = repeated.borrow().enclosing_component.upgrade().unwrap();
+    let (parent_level, map) = ctx.find_component(&enclosing);
+    let LoweredElement::Repeated { repeated_index } =
+        map.mapping.element_mapping.get(&repeated.clone().into()).unwrap()
+    else {
+        panic!("ListViewEnsureRowVisible argument isn't a repeated element");
+    };
+    let repeater = llr_Expression::PropertyReference(MemberReference::Relative {
+        parent_level,
+        local_reference: LocalMemberReference {
+            sub_component_path: Vec::new(),
+            reference: (*repeated_index).into(),
+        },
+    });
+    llr_Expression::BuiltinFunctionCall {
+        function: BuiltinFunction::ListViewEnsureRowVisible,
+        arguments: vec![repeater, lower_expression(row, ctx), lower_expression(mode, ctx)],
+        source_location: None,
     }
 }
 

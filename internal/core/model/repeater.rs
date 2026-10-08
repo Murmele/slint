@@ -12,6 +12,7 @@
 use super::model_peer::{ModelChangeListener, ModelChangeListenerContainer};
 use super::{Model, ModelExt, ModelRc};
 use crate::item_tree::{ItemTreeVTable, TraversalOrder};
+use crate::items::ScrollMode;
 use crate::layout::Orientation;
 use crate::lengths::{LogicalLength, RectLengths};
 use crate::{Coord, Property};
@@ -649,6 +650,8 @@ impl<C: RepeatedItemTree> Default for Repeater<C> {
 }
 
 impl<C: RepeatedItemTree + 'static> Repeater<C> {
+    pub fn listview_ensure_row_visible(self: Pin<&Self>, row: i32, mode: ScrollMode) {}
+
     fn data(self: Pin<&Self>) -> Pin<&RepeaterTracker<C>> {
         self.project_ref().0.get()
     }

@@ -55,6 +55,7 @@ pub enum BuiltinFunction {
     ClearFocusItem,
     ScrollTo,
     EnsureVisible,
+    ListViewEnsureRowVisible,
     ShowPopupWindow,
     ClosePopupWindow,
     /// Show a context popup menu.
@@ -345,6 +346,7 @@ declare_builtin_function_types!(
     PathAngleAt: (Type::ElementReference, Type::Float32) -> Type::Angle,
     ScrollTo: (Type::ElementReference, typeregister::logical_point_type().into(), Type::Enumeration(typeregister::BUILTIN.enums.ScrollMode.clone())) -> Type::Void,
     EnsureVisible: (Type::ElementReference, Type::Enumeration(typeregister::BUILTIN.enums.ScrollMode.clone())) -> Type::Void,
+    ListViewEnsureRowVisible: (Type::ElementReference, Type::Int32, Type::Enumeration(typeregister::BUILTIN.enums.ScrollMode.clone())) -> Type::Void,
 );
 
 impl Default for BuiltinFunctionTypes {
@@ -469,6 +471,7 @@ impl BuiltinFunction {
             | BuiltinFunction::ArrayAll
             | BuiltinFunction::ArrayFindIndex => true,
             BuiltinFunction::ScrollTo | BuiltinFunction::EnsureVisible => false,
+            BuiltinFunction::ListViewEnsureRowVisible => false,
         }
     }
 
@@ -571,6 +574,7 @@ impl BuiltinFunction {
             | BuiltinFunction::ArrayAll
             | BuiltinFunction::ArrayFindIndex => true,
             BuiltinFunction::ScrollTo | BuiltinFunction::EnsureVisible => false,
+            BuiltinFunction::ListViewEnsureRowVisible => false,
         }
     }
 }

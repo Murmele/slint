@@ -3916,6 +3916,10 @@ fn access_member(reference: &llr::MemberReference, ctx: &EvaluationContext) -> M
                     }
                     llr::LocalMemberIndex::Timer(timer_index) => path
                         .with_member(format!("->{compo_path}timer{}", usize::from(*timer_index))),
+                    llr::LocalMemberIndex::Repeater(repeater_index) => path.with_member(format!(
+                        "->{compo_path}repeater{}",
+                        usize::from(*repeater_index)
+                    )),
                     llr::LocalMemberIndex::Native { item_index, prop_name, .. } => {
                         let item_name = field_name(&sub_component.items[*item_index].name);
                         if prop_name.is_empty()
@@ -5102,6 +5106,17 @@ fn compile_builtin_function_call(
                     let (_, focus_item) = native_item_from_owner(pr, ctx, owner);
                     format!("{focus_item}.ensure_visible()")
                 })
+            } else {
+                panic!("internal error: invalid args to EnsureVisible {arguments:?}")
+            }
+        }
+        BuiltinFunction::ListViewEnsureRowVisible => {
+            if let [llr::Expression::PropertyReference(pr), index, mode] = arguments {
+                // item_owner(pr).then(|owner| {
+                //     let (_, focus_item) = native_item_from_owner(pr, ctx, owner);
+                //     format!("{focus_item}.ensure_visible()")
+                // })
+                unimplemented!()
             } else {
                 panic!("internal error: invalid args to EnsureVisible {arguments:?}")
             }

@@ -26,7 +26,7 @@ pub struct PublicComponentIdx(usize);
 pub struct SubComponentInstanceIdx(usize);
 #[derive(Debug, Clone, Copy, Into, From, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ItemInstanceIdx(usize);
-#[derive(Debug, Clone, Copy, Into, From, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Into, From, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RepeatedElementIdx(usize);
 #[derive(Debug, Clone, Copy, Into, From, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TimerIdx(usize);
@@ -195,6 +195,8 @@ pub enum LocalMemberIndex {
     /// Only valid as the argument of a `RestartTimer` builtin function call.
     #[from]
     Timer(TimerIdx),
+    #[from]
+    Repeater(RepeatedElementIdx),
     Native {
         item_index: ItemInstanceIdx,
         prop_name: SmolStr,
@@ -408,6 +410,8 @@ pub struct ListViewInfo {
     pub prop_y: MemberReference,
     // In the repeated component context
     pub prop_height: MemberReference,
+    /// The ListView's `ensure-row-visible` function
+    pub ensure_row_visible: MemberReference,
 }
 
 #[derive(Debug, Clone)]

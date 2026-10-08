@@ -2810,6 +2810,7 @@ fn continue_lookup_within_element(
         return None;
     };
     let prop_name = crate::parser::normalize_identifier(second.text());
+    println!("Second: {}. Normalized: {}", second.text(), prop_name);
 
     let is_local_element = ctx.is_local_element(elem);
     let mode = if is_local_element {
@@ -2817,6 +2818,9 @@ fn continue_lookup_within_element(
     } else {
         PropertyLookupMode::FromOutside
     };
+    if prop_name.contains("ensure-row-visible") {
+        println!("Found");
+    }
     let lookup_result = elem.borrow().lookup_property(&prop_name, mode);
     let local_to_component = lookup_result.is_local_to_component && is_local_element;
     // A property or function whose type is outside the Slint SC subset

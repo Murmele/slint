@@ -30,6 +30,7 @@ mod inject_debug_hooks;
 pub use inject_debug_hooks::property_id;
 mod inlining;
 mod key_bindings;
+mod listview;
 mod lower_absolute_coordinates;
 mod lower_accessibility;
 mod lower_component_container;
@@ -146,6 +147,10 @@ pub async fn run_passes(
     });
 
     inlining::inline(doc, inlining::InlineSelection::InlineOnlyRequiredComponents, diag);
+    doc.visit_all_used_components(|component| {
+        listview::handle_listview(component, diag);
+    });
+
     collect_subcomponents::collect_subcomponents(doc);
 
     for root_component in doc.exported_roots() {
