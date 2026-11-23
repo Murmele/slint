@@ -74,11 +74,7 @@ fn init() -> Result<State, slint::PlatformError> {
             if let Some(main_window) = weak_window.upgrade()
                 && todo_model.iter().any(|t| !t.checked)
             {
-                if confirm_dialog
-                    .window()
-                    .show_modal(slint::WindowModality::Window(main_window.window()))
-                    .is_err()
-                {
+                if confirm_dialog.show_modal(slint::WindowModality::Window(main_window.window())).is_err() {
                     confirm_dialog.show().unwrap();
                 }
                 return slint::CloseRequestResponse::KeepWindowShown;

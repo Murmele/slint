@@ -797,6 +797,7 @@ pub struct ItemTree {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TopLevelComponentType {
     Window,
+    Dialog,
     SystemTrayIcon,
 }
 
@@ -880,8 +881,12 @@ const _: () = {
 
 impl CompilationUnit {
     pub fn needs_window_adapter(&self) -> bool {
-        self.public_components.iter().any(|p| p.top_level_type == TopLevelComponentType::Window)
-            || self.popup_menu.is_some()
+        self.public_components.iter().any(|p| {
+            matches!(
+                p.top_level_type,
+                TopLevelComponentType::Window | TopLevelComponentType::Dialog
+            )
+        }) || self.popup_menu.is_some()
     }
 
     pub fn for_each_sub_components<'a>(

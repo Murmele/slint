@@ -808,6 +808,10 @@ impl Component {
         self.root_element.borrow().builtin_type().is_some_and(|b| b.name == "SystemTrayIcon")
     }
 
+    pub fn inherits_dialog(&self) -> bool {
+        self.root_element.borrow().builtin_type().is_some_and(|b| b.name == "Dialog")
+    }
+
     /// Returns the names of aliases to global singletons, exactly as
     /// specified in the .slint markup (not normalized).
     pub fn global_aliases(&self) -> Vec<SmolStr> {

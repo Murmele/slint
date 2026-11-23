@@ -1555,7 +1555,7 @@ fn generate_public_component(
     // property on the tray native item, expose no `window()`, and skip
     // `run()` entirely (a tray icon doesn't drive the event loop).
     let (show_body, hide_body) = match component.top_level_type {
-        llr::TopLevelComponentType::Window => {
+        llr::TopLevelComponentType::Window | llr::TopLevelComponentType::Dialog => {
             ("globals->window().show();".to_string(), "globals->window().hide();".to_string())
         }
         llr::TopLevelComponentType::SystemTrayIcon => {
@@ -1595,7 +1595,7 @@ fn generate_public_component(
     ));
 
     match component.top_level_type {
-        llr::TopLevelComponentType::Window => {
+        llr::TopLevelComponentType::Window | llr::TopLevelComponentType::Dialog => {
             component_struct.members.push((
                 Access::Public,
                 Declaration::Function(Function {

@@ -345,7 +345,7 @@ pub trait WindowAdapterInternal: core::any::Any {
     /// The default implementation does nothing; backends without support ignore the request.
     fn start_window_move(&self) {}
 
-    /// Re-implement this to provide an implementation of [`Window::show_modal`].
+    /// Re-implement this to provide an implementation of [`crate::api::DialogHandle::show_modal`].
     ///
     /// Note that [`WindowAdapter::set_visible()`] is not called but this function should also make the window visible.
     fn show_modal(&self, _: crate::api::WindowModality<'_>) -> Result<(), PlatformError> {
@@ -2156,6 +2156,18 @@ impl WindowInner {
         Some(ImageOverlay::new(image, position - hotspot))
     }
 
+    /// Shows the window as a modal window, see [`crate::api::DialogHandle::show_modal`].
+    pub fn show_modal(&self, modality: crate::api::WindowModality) -> Result<(), PlatformError> {
+        // Platforms decide modality when the window is mapped.
+        if self.is_visible() {
+            return Err(PlatformError::Unsupported);
+        }
+        match self.window_adapter().internal(crate::InternalToken) {
+            Some(internal) => internal.show_modal(modality),
+            None => Err(PlatformError::Unsupported),
+        }
+    }
+
     /// Registers the window with the windowing system, in order to render the component's items and react
     /// to input events once the event loop spins.
     pub fn show(&self) -> Result<(), PlatformError> {
@@ -3522,7 +3534,7 @@ pub mod ffi {
         }
     }
 
-    /// Calls [`Window::show_modal()`].
+    /// Calls [`WindowInner::show_modal()`].
     #[unsafe(no_mangle)]
     pub unsafe extern "C" fn slint_windowrc_show_modal(
         handle: *const WindowAdapterRcOpaque,
@@ -3532,7 +3544,7 @@ pub mod ffi {
         let parent = unsafe { (other as *const Rc<dyn WindowAdapter>).as_ref() };
         let modality =
             parent.map_or(WindowModality::Application, |x| WindowModality::Window(x.window()));
-        window_adapter.window().show_modal(modality).is_ok()
+        WindowInner::from_pub(window_adapter.window()).show_modal(modality).is_ok()
     }
 }
 

@@ -1,26 +1,27 @@
 // Copyright © SixtyFPS GmbH <info@slint.dev>
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 
-//! `Window::show_modal` answers for itself on two counts that need no windowing system:
+//! `DialogHandle::show_modal` answers for itself on two counts that need no windowing system:
 //! a backend that doesn't implement modality has to say so rather than show the window
 //! anyway, and a window that is already up can't be given modality afterwards.
 
 use i_slint_core::window::{WindowAdapter, WindowAdapterInternal};
 use slint::PhysicalSize;
 use slint::platform::software_renderer::SoftwareRenderer;
-use slint::{PlatformError, WindowModality};
+use slint::{DialogHandle, PlatformError, WindowModality};
 use std::cell::Cell;
 use std::rc::Rc;
 
 slint::slint! {
-    export component Dialog inherits Window {
+    export component ConfirmDialog inherits Dialog {
         width: 100px;
         height: 100px;
+        Rectangle {}
     }
 }
 
 /// A backend that does implement modality, so that a refusal can only come from the
-/// check in `Window::show_modal` and not from the default that answers `Unsupported`.
+/// check in `DialogHandle::show_modal` and not from the default that answers `Unsupported`.
 struct ModalWindow {
     window: slint::Window,
     renderer: SoftwareRenderer,
@@ -76,9 +77,9 @@ impl slint::platform::Platform for ModalPlatform {
 fn a_backend_without_modality_says_so() {
     i_slint_backend_testing::init_no_event_loop();
 
-    let dialog = Dialog::new().unwrap();
+    let dialog = ConfirmDialog::new().unwrap();
     assert!(matches!(
-        dialog.window().show_modal(WindowModality::Application),
+        dialog.show_modal(WindowModality::Application),
         Err(PlatformError::Unsupported)
     ));
     // Saying no means the window stays down; a caller that falls back to `show()` decides.
@@ -89,15 +90,15 @@ fn a_backend_without_modality_says_so() {
 fn a_window_that_is_already_shown_cannot_become_modal() {
     slint::platform::set_platform(Box::new(ModalPlatform)).unwrap();
 
-    let dialog = Dialog::new().unwrap();
+    let dialog = ConfirmDialog::new().unwrap();
     // The backend takes modality, so this one succeeds.
-    assert!(dialog.window().show_modal(WindowModality::Application).is_ok());
+    assert!(dialog.show_modal(WindowModality::Application).is_ok());
 
-    let shown = Dialog::new().unwrap();
+    let shown = ConfirmDialog::new().unwrap();
     shown.show().unwrap();
     assert!(shown.window().is_visible());
     assert!(matches!(
-        shown.window().show_modal(WindowModality::Application),
+        shown.show_modal(WindowModality::Application),
         Err(PlatformError::Unsupported)
     ));
     shown.hide().unwrap();
@@ -107,17 +108,17 @@ fn a_window_that_is_already_shown_cannot_become_modal() {
 fn the_backend_is_told_which_window_to_be_modal_to() {
     slint::platform::set_platform(Box::new(ModalPlatform)).unwrap();
 
-    let parent = Dialog::new().unwrap();
-    let dialog = Dialog::new().unwrap();
-    dialog.window().show_modal(WindowModality::Window(parent.window())).unwrap();
+    let parent = ConfirmDialog::new().unwrap();
+    let dialog = ConfirmDialog::new().unwrap();
+    dialog.show_modal(WindowModality::Window(parent.window())).unwrap();
     assert_eq!(
         modal_to(dialog.window()),
         Some(Some(parent.window() as *const slint::Window)),
         "the parent window reached the backend"
     );
 
-    let app_modal = Dialog::new().unwrap();
-    app_modal.window().show_modal(WindowModality::Application).unwrap();
+    let app_modal = ConfirmDialog::new().unwrap();
+    app_modal.show_modal(WindowModality::Application).unwrap();
     assert_eq!(
         modal_to(app_modal.window()),
         Some(None),

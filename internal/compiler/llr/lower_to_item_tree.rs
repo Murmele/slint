@@ -145,6 +145,8 @@ pub fn lower_to_item_tree(
             let name = &names[0];
             let top_level_type = if component.inherits_system_tray_icon() {
                 TopLevelComponentType::SystemTrayIcon
+            } else if component.inherits_dialog() {
+                TopLevelComponentType::Dialog
             } else {
                 TopLevelComponentType::Window
             };

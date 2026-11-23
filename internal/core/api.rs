@@ -447,7 +447,7 @@ impl raw_window_handle_06::HasDisplayHandle for WindowHandle {
 
 #[derive(Clone)]
 #[non_exhaustive]
-/// Argument to [`Window::show_modal`].
+/// Argument to [`DialogHandle::show_modal`].
 pub enum WindowModality<'a> {
     /// The window is modal to the application.
     /// The user will be unable to interact with the application while the window is open.
@@ -519,30 +519,6 @@ impl Window {
     /// strong reference.
     pub fn show(&self) -> Result<(), PlatformError> {
         self.0.show()
-    }
-
-    /// Shows the window as a modal window.
-    ///
-    /// A modal window is typically a dialog that blocks the user from interacting with the application
-    /// until the user closes it.
-    ///
-    /// Modal windows do not need taskbar entries as they are shown on top of other windows of the application
-    ///
-    /// See also [`WindowModality`].
-    ///
-    /// If the platform doesn't support modal windows, this function will return an [`PlatformError::Unsupported`].
-    /// The same error will also be returned if the window is already shown.
-    pub fn show_modal(&self, modality: WindowModality) -> Result<(), PlatformError> {
-        // Modality is decided as the window is mapped, so a window that is already up
-        // can't take it, whatever the platform.
-        if self.is_visible() {
-            return Err(PlatformError::Unsupported);
-        }
-        if let Some(internal) = self.0.window_adapter().internal(crate::InternalToken) {
-            internal.show_modal(modality)
-        } else {
-            Err(PlatformError::Unsupported)
-        }
     }
 
     /// Hides the window, so that it is not visible anymore. The additional strong
@@ -1160,6 +1136,23 @@ pub trait ComponentHandle: StrongHandle {
     fn global<'a, T: Global<'a, Self>>(&'a self) -> T
     where
         Self: Sized;
+}
+
+/// This trait describes the API of a component that inherits `Dialog`.
+///
+/// This trait is implemented by the [generated component](index.html#generated-components)
+/// when the component inherits `Dialog`.
+pub trait DialogHandle: ComponentHandle {
+    /// Shows the dialog as a modal window.
+    ///
+    /// A modal window blocks the user from interacting with the application,
+    /// or with the parent window, until the user closes it.
+    /// It doesn't need a taskbar entry, since it's shown on top of the other windows of the application.
+    ///
+    /// Returns [`PlatformError::Unsupported`] if the platform doesn't support modal windows,
+    /// or if the dialog is already shown.
+    /// Call [`ComponentHandle::show()`] to show it as a normal window instead.
+    fn show_modal(&self, modality: WindowModality) -> Result<(), PlatformError>;
 }
 
 mod weak_handle {

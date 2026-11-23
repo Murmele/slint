@@ -378,7 +378,7 @@ pub fn generate(
         pub use #generated_mod::{#(#compo_ids,)* #(#type_reexports,)* #(#globals_ids,)* #(#global_exports,)*};
         #(#deprecated_type_exports)*
         #[allow(unused_imports)]
-        pub use slint::{ComponentHandle as _, Global as _, ModelExt as _};
+        pub use slint::{ComponentHandle as _, DialogHandle as _, Global as _, ModelExt as _};
     })
 }
 
@@ -491,7 +491,7 @@ fn generate_public_component(
     // eager creation calls in `new` / `new_with_context` so instantiating
     // a tray doesn't spin up a hidden window adapter as a side effect.
     let (eager_create_window, ensure_tree_instantiated) = match llr.top_level_type {
-        llr::TopLevelComponentType::Window => (
+        llr::TopLevelComponentType::Window | llr::TopLevelComponentType::Dialog => (
             Some(quote!(
                 // ensure that the window exist as this point so further call to window() don't panic
                 inner.globals.get().unwrap().window_adapter_ref()?;
@@ -532,6 +532,7 @@ fn generate_public_component(
                 ::core::result::Result::Ok(Self(inner))
             }
         )),
+        llr::TopLevelComponentType::Dialog => None,
         llr::TopLevelComponentType::SystemTrayIcon => None,
     };
 
@@ -555,7 +556,7 @@ fn generate_public_component(
             )
         };
         match llr.top_level_type {
-            llr::TopLevelComponentType::Window => {
+            llr::TopLevelComponentType::Window | llr::TopLevelComponentType::Dialog => {
                 let common = common(quote!());
                 quote!(
                     impl slint::ComponentHandle for #public_component_id {
@@ -615,6 +616,16 @@ fn generate_public_component(
         }
     };
 
+    let dialog_handle_impl = (llr.top_level_type == llr::TopLevelComponentType::Dialog).then(|| {
+        quote!(
+            impl slint::DialogHandle for #public_component_id {
+                fn show_modal(&self, modality: slint::WindowModality) -> ::core::result::Result<(), slint::PlatformError> {
+                    sp::WindowInner::from_pub(slint::ComponentHandle::window(self)).show_modal(modality)
+                }
+            }
+        )
+    });
+
     quote!(
         #component
         pub struct #public_component_id(sp::VRc<sp::ItemTreeVTable, #inner_component_id>);
@@ -653,6 +664,7 @@ fn generate_public_component(
         }
 
         #handle_impl
+        #dialog_handle_impl
     )
 }
 

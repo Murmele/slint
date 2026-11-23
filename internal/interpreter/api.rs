@@ -1707,7 +1707,11 @@ impl ComponentDefinition {
     #[doc(hidden)]
     #[cfg(feature = "internal")]
     pub fn is_window(&self) -> bool {
-        self.inner.top_level_type() == i_slint_compiler::llr::TopLevelComponentType::Window
+        matches!(
+            self.inner.top_level_type(),
+            i_slint_compiler::llr::TopLevelComponentType::Window
+                | i_slint_compiler::llr::TopLevelComponentType::Dialog
+        )
     }
 }
 
