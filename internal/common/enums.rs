@@ -740,6 +740,13 @@ macro_rules! for_each_enums {
                 /// Smooth scroll animation to the scroll position
                 Smooth,
             }
+
+            #[non_exhaustive]
+            pub enum DialogModality {
+                None,
+                WindowModal,
+                ApplicationModal,
+            }
         }
     };
 }
