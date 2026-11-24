@@ -2341,7 +2341,7 @@ pub struct QtWindow {
     // Last icon image set on the window
     window_icon_cache_key: RefCell<Option<ImageCacheKey>>,
 
-    parent: Weak<QtWindow>,
+    parent: RefCell<Weak<QtWindow>>,
 }
 
 impl Drop for QtWindow {
@@ -2377,7 +2377,7 @@ impl QtWindow {
                 text_layout_cache: Default::default(),
                 tree_structure_changed: RefCell::new(false),
                 window_icon_cache_key: Default::default(),
-                parent,
+                parent: RefCell::new(parent),
             }
         });
         let widget_ptr = rc.widget_ptr();
@@ -2477,6 +2477,7 @@ impl QtWindow {
     }
 
     fn mouse_event(&self, event: BackendMouseEvent) {
+        println!("Mouse move: {}", WindowInner::from_pub(&self.window).name.borrow());
         self.window.dispatch_event(WindowEvent::internal(event));
         timer_event();
     }
@@ -2634,11 +2635,16 @@ impl WindowAdapter for QtWindow {
         } else {
             self.rendering_metrics_collector.take();
             let widget_ptr = self.widget_ptr();
-            cpp! {unsafe [widget_ptr as "QWidget*"] {
+            let was_modal = cpp! {unsafe [widget_ptr as "QWidget*"] -> bool as "bool" {
 
                 bool wasVisible = widget_ptr->isVisible();
 
                 widget_ptr->hide();
+                bool wasModal = widget_ptr->windowModality() != Qt::NonModal;
+                if (wasModal) {
+                    widget_ptr->setParent(nullptr);
+                    widget_ptr->setWindowModality(Qt::NonModal);
+                }
                 if (wasVisible) {
                     // Since we don't call close(), try to compute whether this was the last window and that
                     // we must end the application
@@ -2648,7 +2654,11 @@ impl WindowAdapter for QtWindow {
                     });
                     g_lastWindowClosed = !visible_windows_left;
                 }
+                return wasModal;
             }};
+            if was_modal {
+                self.parent.replace(Weak::new());
+            }
 
             Ok(())
         }
@@ -2852,7 +2862,7 @@ fn into_qsize(logical_size: i_slint_core::api::LogicalSize) -> qttypes::QSize {
 
 impl WindowAdapterInternal for QtWindow {
     fn get_parent(&self) -> Option<Rc<dyn WindowAdapter>> {
-        self.parent.clone().upgrade().map(|rc| rc as _)
+        self.parent.borrow().clone().upgrade().map(|rc| rc as _)
     }
 
     fn start_drag(&self, request: &DragRequest) -> bool {
@@ -2985,7 +2995,10 @@ impl WindowAdapterInternal for QtWindow {
         let parent_ptr = self.widget_ptr();
 
         let window_kind = match window_kind {
-            WindowKind::Popup => Qt_WindowType_Popup,
+            WindowKind::Popup => {
+                WindowInner::from_pub(&child_window.window).name.replace("Popup");
+                Qt_WindowType_Popup
+            }
             WindowKind::ToolTip => Qt_WindowType_ToolTip,
             WindowKind::Menu => Qt_WindowType_Popup,
         };
@@ -3130,6 +3143,7 @@ impl WindowAdapterInternal for QtWindow {
 
     fn show_modal(&self, modality: WindowModality) -> Result<(), PlatformError> {
         let widget_ptr = self.widget_ptr();
+        WindowInner::from_pub(&self.window).name.replace("Dialog");
         match modality {
             WindowModality::Application => {
                 cpp!(unsafe [widget_ptr as "QWidget*"] {
@@ -3139,6 +3153,12 @@ impl WindowAdapterInternal for QtWindow {
                 });
             }
             WindowModality::Window(parent) => {
+                let parent_adapter = WindowInner::from_pub(parent).window_adapter();
+                let parent_window = parent_adapter
+                    .internal(i_slint_core::InternalToken)
+                    .and_then(|wa| (wa as &dyn core::any::Any).downcast_ref::<QtWindow>())
+                    .ok_or(PlatformError::Unsupported)?;
+                self.parent.replace(parent_window.self_weak.clone());
                 let parent_widget_ptr = crate::QtWidgetAccessor::qt_widget_ptr(parent)
                     .ok_or(PlatformError::Unsupported)?;
                 cpp!(unsafe [widget_ptr as "QWidget*", parent_widget_ptr as "QWidget*"] {

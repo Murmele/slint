@@ -4951,6 +4951,8 @@ fn compile_builtin_function_call(
                             let _self = popup_instance_vrc_for_position.as_pin_ref(); #position
                         });
 
+                        println!("Show popup. Parent: {}", window.name.borrow());
+
                         #is_open_self_weak_decl
                         let popup_id = window.show_popup(
                             &sp::VRc::into_dyn(popup_instance.into()),

@@ -34,6 +34,7 @@ use core::cell::{Cell, RefCell};
 use core::num::NonZeroU32;
 use core::pin::Pin;
 use euclid::num::Zero;
+use std::println;
 use vtable::{VRc, VRcMapped};
 
 pub mod popup;
@@ -740,6 +741,7 @@ pub struct WindowInner {
     /// fallback, and lets a drop back onto this same window restore the source's `DataTransfer`:
     /// the OS round-trip can't carry in-app `user_data`.
     native_drag: RefCell<Option<NativePendingDrag>>,
+    pub name: RefCell<&'static str>,
 }
 
 impl Drop for WindowInner {
@@ -817,6 +819,7 @@ impl WindowInner {
             ctx: Default::default(),
             menubar: Default::default(),
             native_drag: Default::default(),
+            name: RefCell::new("Default WindowInner"),
         }
     }
 
@@ -929,6 +932,7 @@ impl WindowInner {
     /// `Exit` (if not). The reported `accepted` reflects the rewritten event, so a
     /// `Released` that completes a drop on a non-accepting target reports `accepted = false`.
     pub(crate) fn process_mouse_input(&self, mut event: MouseEvent) -> Option<MouseDispatchResult> {
+        println!("Window process_mouse_input: {}", self.name.borrow());
         crate::animations::update_animations(crate::animations::Instant::now(self.context()));
 
         let item_tree = self.try_component()?;
@@ -1067,6 +1071,11 @@ impl WindowInner {
 
         let parent_adapter = self.parent_window_adapter().unwrap_or_else(|| window_adapter.clone());
         let active_popups = &WindowInner::from_pub(parent_adapter.window()).active_popups;
+        println!(
+            "Num active popups of parent ({}): {}",
+            parent_adapter.window().0.name.borrow(),
+            active_popups.borrow().len(),
+        );
         let native_popup_index =
             active_popups.borrow().iter().position(|p| p.is_native_window(&window_adapter));
 
@@ -2162,15 +2171,21 @@ impl WindowInner {
         if self.is_visible() {
             return Err(PlatformError::Unsupported);
         }
-        match self.window_adapter().internal(crate::InternalToken) {
-            Some(internal) => internal.show_modal(modality),
-            None => Err(PlatformError::Unsupported),
-        }
+        let adapter = self.window_adapter();
+        let internal = adapter.internal(crate::InternalToken).ok_or(PlatformError::Unsupported)?;
+        self.show_with(|| internal.show_modal(modality))
     }
 
     /// Registers the window with the windowing system, in order to render the component's items and react
     /// to input events once the event loop spins.
     pub fn show(&self) -> Result<(), PlatformError> {
+        self.show_with(|| self.window_adapter().set_visible(true))
+    }
+
+    fn show_with(
+        &self,
+        make_visible: impl FnOnce() -> Result<(), PlatformError>,
+    ) -> Result<(), PlatformError> {
         if let Some(component) = self.try_component() {
             let previous = self.strong_component_ref.take();
             let keepalive = match previous {
@@ -2182,7 +2197,7 @@ impl WindowInner {
 
         self.ensure_tree_instantiated();
         self.update_window_properties();
-        self.window_adapter().set_visible(true)?;
+        make_visible()?;
         // Make sure that the window's inner size is in sync with the root window item's
         // width/height.
         let size = self.window_adapter().size();
@@ -2440,6 +2455,7 @@ impl WindowInner {
         // `active_popups` while running user-provided code.
         is_open_setter(true);
 
+        println!("Adding popup to active popups. Parent: {}", self.name.borrow());
         self.active_popups.borrow_mut().push(PopupWindow {
             popup_id,
             location,
