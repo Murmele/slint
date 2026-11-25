@@ -1084,26 +1084,6 @@ impl WindowInner {
             };
         let active_popups = &WindowInner::from_pub(to_check_window_adapter.window()).active_popups;
         if pressed_event {
-            // 1) Non native popup: self is the parent
-            // 2) Native popup: self is the parent or the popup itself
-            // if native_popup_index.is_some() {
-            //     // 1) self is the native popup
-            //     self.had_popup_on_press.set(true);
-            // } else {
-            //     // 2) Whether the native popup was not pressed
-            //     // 3) or popup child window parent was pressed
-            //     let has_active_native_popups = active_popups
-            //         .borrow()
-            //         .iter()
-            //         .any(|p| matches!(p.location, PopupWindowLocation::TopLevel(_)));
-            //     if !has_active_native_popups {
-            //         // No active native popups. So wether some child window popups or no
-            //         self.had_popup_on_press.set(!active_popups.borrow().is_empty());
-            //     } else {
-            //         // The popups are not triggered so had_popup_on_press is false for those
-            //     }
-            // }
-            // Simplified version:
             self.had_popup_on_press.set(!active_popups.borrow().is_empty());
         }
 
