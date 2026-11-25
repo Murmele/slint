@@ -1078,7 +1078,7 @@ impl WindowInner {
                 // therefore we have to check the parents window adapter
                 (parent, native_popup_index)
             } else {
-                // 1) Clicked outside of the popup native popup (In this case we must not use the parent)
+                // 1) Clicked outside of the native popup (In this case we must not use the parent because this might be already the parent)
                 // 2) Popup is a child window and not a native one
                 (window_adapter.clone(), None)
             };
@@ -1317,7 +1317,8 @@ impl WindowInner {
         if let Some(popup_id) = popup_to_close {
             WindowInner::from_pub(to_check_window_adapter.window()).close_popup(popup_id);
         }
-        for (window_adapter, popup_id) in native_popup_to_close.into_iter().chain(child_popups_to_close)
+        for (window_adapter, popup_id) in
+            native_popup_to_close.into_iter().chain(child_popups_to_close)
         {
             WindowInner::from_pub(window_adapter.window()).close_popup(popup_id);
         }
