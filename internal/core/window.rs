@@ -1119,7 +1119,7 @@ impl WindowInner {
         });
 
         // A press lands outside the native popups opened from this window.
-        // Chosen before dispatch, so that a popup the press opens stays open.
+        // Find all popups to close recursively
         let pressed_outside_native_popups = pressed_event
             && (!Rc::ptr_eq(&to_check_window_adapter, &window_adapter)
                 || self
