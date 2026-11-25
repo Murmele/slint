@@ -1411,6 +1411,7 @@ impl GlyphRenderer for QtItemRenderer<'_> {
         synthesis: &fontique::Synthesis,
         brush: Self::PlatformBrush,
         y_offset: sharedparley::PhysicalLength,
+        _baseline: sharedparley::PhysicalLength,
         glyphs_it: &mut dyn Iterator<Item = sharedparley::parley::layout::Glyph>,
     ) {
         let stroke = matches!(brush, GlyphBrush::Stroke(_));
@@ -2342,10 +2343,14 @@ pub struct QtWindow {
     window_icon_cache_key: RefCell<Option<ImageCacheKey>>,
 
     parent: RefCell<Weak<QtWindow>>,
+    children: RefCell<alloc::vec::Vec<Weak<QtWindow>>>,
 }
 
 impl Drop for QtWindow {
     fn drop(&mut self) {
+        if let Some(parent) = self.parent.borrow().upgrade() {
+            parent.child_about_to_remove(&self.self_weak);
+        }
         let widget_ptr = self.widget_ptr();
         cpp! {unsafe [widget_ptr as "SlintWidget*"]  {
             // widget_ptr uses deleteLater to destroy the SlintWidget, we must prevent events to still call us
@@ -2377,9 +2382,13 @@ impl QtWindow {
                 text_layout_cache: Default::default(),
                 tree_structure_changed: RefCell::new(false),
                 window_icon_cache_key: Default::default(),
-                parent: RefCell::new(parent),
+                parent: RefCell::new(parent.clone()),
+                children: Default::default(),
             }
         });
+        if let Some(parent) = parent.upgrade() {
+            parent.children.borrow_mut().push(Rc::downgrade(&rc));
+        }
         let widget_ptr = rc.widget_ptr();
         let rust_window = Rc::as_ptr(&rc);
         cpp! {unsafe [widget_ptr as "SlintWidget*", rust_window as "void*"]  {
@@ -2593,6 +2602,19 @@ impl QtWindow {
             self.window().set_fullscreen(fullscreen);
         }
     }
+
+    fn set_parent(&self, parent: Weak<QtWindow>) {
+        if let Some(old) = self.parent.replace(parent.clone()).upgrade() {
+            old.child_about_to_remove(&self.self_weak);
+        }
+        if let Some(new) = parent.upgrade() {
+            new.children.borrow_mut().push(self.self_weak.clone());
+        }
+    }
+
+    fn child_about_to_remove(&self, child: &Weak<QtWindow>) {
+        self.children.borrow_mut().retain(|v| !Weak::ptr_eq(v, child));
+    }
 }
 
 impl WindowAdapter for QtWindow {
@@ -2657,7 +2679,7 @@ impl WindowAdapter for QtWindow {
                 return wasModal;
             }};
             if was_modal {
-                self.parent.replace(Weak::new());
+                self.set_parent(Weak::new());
             }
 
             Ok(())
@@ -2863,6 +2885,20 @@ fn into_qsize(logical_size: i_slint_core::api::LogicalSize) -> qttypes::QSize {
 impl WindowAdapterInternal for QtWindow {
     fn get_parent(&self) -> Option<Rc<dyn WindowAdapter>> {
         self.parent.borrow().clone().upgrade().map(|rc| rc as _)
+    }
+
+    fn get_children(&self) -> alloc::vec::Vec<Weak<dyn WindowAdapter>> {
+        self.children
+            .borrow()
+            .iter()
+            .filter_map(|v| {
+                let c = v.upgrade()?;
+                let mut vec = c.get_children();
+                vec.push(v.clone());
+                Some(vec)
+            })
+            .flatten()
+            .collect::<Vec<_>>()
     }
 
     fn start_drag(&self, request: &DragRequest) -> bool {
@@ -3158,7 +3194,7 @@ impl WindowAdapterInternal for QtWindow {
                     .internal(i_slint_core::InternalToken)
                     .and_then(|wa| (wa as &dyn core::any::Any).downcast_ref::<QtWindow>())
                     .ok_or(PlatformError::Unsupported)?;
-                self.parent.replace(parent_window.self_weak.clone());
+                self.set_parent(parent_window.self_weak.clone());
                 let parent_widget_ptr = crate::QtWidgetAccessor::qt_widget_ptr(parent)
                     .ok_or(PlatformError::Unsupported)?;
                 cpp!(unsafe [widget_ptr as "QWidget*", parent_widget_ptr as "QWidget*"] {

@@ -1383,6 +1383,11 @@ macro_rules! declare_features {
                     )*
                 }
             }
+
+            #[allow(unused)]
+            pub fn all() -> Self {
+                Self { $($f: true,)* }
+            }
         }
     };
 }

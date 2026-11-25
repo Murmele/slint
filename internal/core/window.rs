@@ -29,7 +29,7 @@ use crate::renderer::Renderer;
 use crate::{Callback, Coord, SharedString, SharedVector};
 use alloc::boxed::Box;
 use alloc::rc::{Rc, Weak};
-use alloc::vec::Vec;
+use alloc::vec::{self, Vec};
 use core::cell::{Cell, RefCell};
 use core::num::NonZeroU32;
 use core::pin::Pin;
@@ -48,7 +48,7 @@ fn previous_focus_item(item: ItemRc) -> ItemRc {
 }
 
 /// The window kind when creating a new child window
-#[repr(C)]
+#[repr(u8)]
 pub enum WindowKind {
     /// Tooltip
     ToolTip,
@@ -239,6 +239,11 @@ pub trait WindowAdapterInternal: core::any::Any {
     /// Get the parent window adapter of this window adapter
     fn get_parent(&self) -> Option<Rc<dyn WindowAdapter>> {
         None
+    }
+
+    /// Get all children recursively up
+    fn get_children(&self) -> alloc::vec::Vec<Weak<dyn WindowAdapter>> {
+        Default::default()
     }
 
     /// Create a window for a popup.
@@ -1069,17 +1074,47 @@ impl WindowInner {
             }
         }
 
-        let parent_adapter = self.parent_window_adapter().unwrap_or_else(|| window_adapter.clone());
-        let active_popups = &WindowInner::from_pub(parent_adapter.window()).active_popups;
-        println!(
-            "Num active popups of parent ({}): {}",
-            parent_adapter.window().0.name.borrow(),
-            active_popups.borrow().len(),
-        );
-        let native_popup_index =
-            active_popups.borrow().iter().position(|p| p.is_native_window(&window_adapter));
-
+        let (to_check_window_adapter, native_popup_index) =
+            if let Some((parent, native_popup_index)) =
+                self.parent_window_adapter().and_then(|parent| {
+                    let index = WindowInner::from_pub(parent.window())
+                        .active_popups
+                        .borrow()
+                        .iter()
+                        .position(|p| p.is_native_window(&window_adapter))?;
+                    Some((parent, Some(index)))
+                })
+            {
+                // self is in the parents active popups as native popup
+                // therefore we have to check the parents window adapter
+                (parent, native_popup_index)
+            } else {
+                // 1) Clicked outside of the popup native popup (In this case we must not use the parent)
+                // 2) Popup is a child window and not a native one
+                (window_adapter.clone(), None)
+            };
+        let active_popups = &WindowInner::from_pub(to_check_window_adapter.window()).active_popups;
         if pressed_event {
+            // 1) Non native popup: self is the parent
+            // 2) Native popup: self is the parent or the popup itself
+            // if native_popup_index.is_some() {
+            //     // 1) self is the native popup
+            //     self.had_popup_on_press.set(true);
+            // } else {
+            //     // 2) Whether the native popup was not pressed
+            //     // 3) or popup child window parent was pressed
+            //     let has_active_native_popups = active_popups
+            //         .borrow()
+            //         .iter()
+            //         .any(|p| matches!(p.location, PopupWindowLocation::TopLevel(_)));
+            //     if !has_active_native_popups {
+            //         // No active native popups. So wether some child window popups or no
+            //         self.had_popup_on_press.set(!active_popups.borrow().is_empty());
+            //     } else {
+            //         // The popups are not triggered so had_popup_on_press is false for those
+            //     }
+            // }
+            // Simplified version:
             self.had_popup_on_press.set(!active_popups.borrow().is_empty());
         }
 
@@ -1113,6 +1148,21 @@ impl WindowInner {
             }
             .then_some(popup.popup_id)
         });
+
+        // A press lands outside the native popups opened from this window.
+        // Chosen before dispatch, so that a popup the press opens stays open.
+        let pressed_outside_native_popups = pressed_event
+            && (!Rc::ptr_eq(&to_check_window_adapter, &window_adapter)
+                || self
+                    .active_popups
+                    .borrow()
+                    .last()
+                    .is_some_and(|p| matches!(p.location, PopupWindowLocation::TopLevel(_))));
+        if pressed_outside_native_popups && Rc::ptr_eq(&to_check_window_adapter, &window_adapter) {
+            popup_to_close = None;
+        }
+        let native_popup_to_close =
+            pressed_outside_native_popups.then(|| self.popup_to_close_on_press_outside()).flatten();
 
         let grab_result =
             crate::input::handle_mouse_grab(&event, &window_adapter, &mut mouse_input_state);
@@ -1281,7 +1331,10 @@ impl WindowInner {
         }
 
         if let Some(popup_id) = popup_to_close {
-            WindowInner::from_pub(parent_adapter.window()).close_popup(popup_id);
+            WindowInner::from_pub(to_check_window_adapter.window()).close_popup(popup_id);
+        }
+        if let Some((window_adapter, popup_id)) = native_popup_to_close {
+            WindowInner::from_pub(window_adapter.window()).close_popup(popup_id);
         }
 
         self.ensure_tree_instantiated();
@@ -2517,6 +2570,7 @@ impl WindowInner {
                 }
             }
             PopupWindowLocation::TopLevel(adapter) => {
+                WindowInner::from_pub(adapter.window()).close_all_popups();
                 let _ = adapter.set_visible(false);
             }
         }
@@ -2581,6 +2635,35 @@ impl WindowInner {
         for popup in popups {
             self.close_popup_impl(&popup);
         }
+    }
+
+    /// The popup that a press outside of the popups closes, and the window that lists it.
+    /// It follows the top-most popup of this window and the top-most popups opened from it.
+    /// A `NoAutoClose` popup stays open, and so do the popups it was opened from.
+    fn popup_to_close_on_press_outside(&self) -> Option<(WindowAdapterRc, NonZeroU32)> {
+        let mut chain = Vec::new();
+        let mut window_adapter = self.window_adapter();
+        loop {
+            let next = {
+                let window = WindowInner::from_pub(window_adapter.window());
+                let popups = window.active_popups.borrow();
+                let Some(popup) = popups.last() else { break };
+                chain.push((window_adapter.clone(), popup.popup_id, popup.close_policy));
+                match &popup.location {
+                    PopupWindowLocation::TopLevel(adapter) => adapter.clone(),
+                    PopupWindowLocation::ChildWindow(_) => break,
+                }
+            };
+            window_adapter = next;
+        }
+        let first_to_close = chain
+            .iter()
+            .rposition(|(_, _, policy)| *policy == PopupClosePolicy::NoAutoClose)
+            .map_or(0, |index| index + 1);
+        chain
+            .into_iter()
+            .nth(first_to_close)
+            .map(|(window_adapter, popup_id, _)| (window_adapter, popup_id))
     }
 
     /// Close the top-most popup.
