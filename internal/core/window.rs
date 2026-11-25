@@ -1138,6 +1138,21 @@ impl WindowInner {
             .then_some(popup.popup_id)
         });
 
+        // A press lands outside the native popups opened from this window.
+        // Chosen before dispatch, so that a popup the press opens stays open.
+        let pressed_outside_native_popups = pressed_event
+            && (!Rc::ptr_eq(&to_check_window_adapter, &window_adapter)
+                || self
+                    .active_popups
+                    .borrow()
+                    .last()
+                    .is_some_and(|p| matches!(p.location, PopupWindowLocation::TopLevel(_))));
+        if pressed_outside_native_popups && Rc::ptr_eq(&to_check_window_adapter, &window_adapter) {
+            popup_to_close = None;
+        }
+        let native_popup_to_close =
+            pressed_outside_native_popups.then(|| self.popup_to_close_on_press_outside()).flatten();
+
         let grab_result =
             crate::input::handle_mouse_grab(&event, &window_adapter, &mut mouse_input_state);
         let grab_accepted = grab_result.accepted;
@@ -1306,6 +1321,9 @@ impl WindowInner {
 
         if let Some(popup_id) = popup_to_close {
             WindowInner::from_pub(to_check_window_adapter.window()).close_popup(popup_id);
+        }
+        if let Some((window_adapter, popup_id)) = native_popup_to_close {
+            WindowInner::from_pub(window_adapter.window()).close_popup(popup_id);
         }
 
         self.ensure_tree_instantiated();
@@ -2522,6 +2540,7 @@ impl WindowInner {
                 }
             }
             PopupWindowLocation::TopLevel(adapter) => {
+                WindowInner::from_pub(adapter.window()).close_all_popups();
                 let _ = adapter.set_visible(false);
             }
         }
@@ -2586,6 +2605,35 @@ impl WindowInner {
         for popup in popups {
             self.close_popup_impl(&popup);
         }
+    }
+
+    /// The popup that a press outside of the popups closes, and the window that lists it.
+    /// It follows the top-most popup of this window and the top-most popups opened from it.
+    /// A `NoAutoClose` popup stays open, and so do the popups it was opened from.
+    fn popup_to_close_on_press_outside(&self) -> Option<(WindowAdapterRc, NonZeroU32)> {
+        let mut chain = Vec::new();
+        let mut window_adapter = self.window_adapter();
+        loop {
+            let next = {
+                let window = WindowInner::from_pub(window_adapter.window());
+                let popups = window.active_popups.borrow();
+                let Some(popup) = popups.last() else { break };
+                chain.push((window_adapter.clone(), popup.popup_id, popup.close_policy));
+                match &popup.location {
+                    PopupWindowLocation::TopLevel(adapter) => adapter.clone(),
+                    PopupWindowLocation::ChildWindow(_) => break,
+                }
+            };
+            window_adapter = next;
+        }
+        let first_to_close = chain
+            .iter()
+            .rposition(|(_, _, policy)| *policy == PopupClosePolicy::NoAutoClose)
+            .map_or(0, |index| index + 1);
+        chain
+            .into_iter()
+            .nth(first_to_close)
+            .map(|(window_adapter, popup_id, _)| (window_adapter, popup_id))
     }
 
     /// Close the top-most popup.
