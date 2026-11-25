@@ -113,6 +113,14 @@ let inner = inner.clone();
 click(inner.window(), 20., 20.);
 assert_eq!(popup_windows(instance.window()).len(), 3, "the innermost popup opens");
 
+// A click in the main window closes the innermost popup, two levels down.
+click(instance.window(), 250., 250.);
+let open = popup_windows(instance.window());
+assert_eq!(open.len(), 2, "a click in the main window closes only the innermost popup");
+assert!(std::rc::Rc::ptr_eq(&open[1], &inner));
+click(inner.window(), 20., 20.);
+assert_eq!(popup_windows(instance.window()).len(), 3, "the innermost popup opens again");
+
 // A click in the outer popup closes only the innermost popup.
 click(outer.window(), 150., 100.);
 let open = popup_windows(instance.window());
@@ -161,6 +169,12 @@ instance.invoke_show_outer();
 click(window, 25., 175.);
 click(window, 20., 20.);
 assert_eq!(open_popups(window), 3, "the innermost popup opens");
+
+// A click in the main window closes the innermost popup.
+click(window, 250., 250.);
+assert_eq!(open_popups(window), 2, "a click in the main window closes only the innermost popup");
+click(window, 20., 20.);
+assert_eq!(open_popups(window), 3, "the innermost popup opens again");
 
 // A click in the outer popup closes only the innermost popup.
 click(window, 150., 100.);

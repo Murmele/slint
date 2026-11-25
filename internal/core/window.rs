@@ -1163,6 +1163,21 @@ impl WindowInner {
         }
         let native_popup_to_close =
             pressed_outside_native_popups.then(|| self.popup_to_close_on_press_outside()).flatten();
+        let child_popups_to_close: Vec<_> = if pressed_event
+            && let Some(internal) = window_adapter.internal(crate::InternalToken)
+        {
+            internal
+                .get_children()
+                .iter()
+                .filter_map(Weak::upgrade)
+                .filter(|child| !WindowInner::from_pub(child.window()).is_native_popup())
+                .filter_map(|child| {
+                    WindowInner::from_pub(child.window()).popup_to_close_on_press_outside()
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
 
         let grab_result =
             crate::input::handle_mouse_grab(&event, &window_adapter, &mut mouse_input_state);
@@ -1333,7 +1348,8 @@ impl WindowInner {
         if let Some(popup_id) = popup_to_close {
             WindowInner::from_pub(to_check_window_adapter.window()).close_popup(popup_id);
         }
-        if let Some((window_adapter, popup_id)) = native_popup_to_close {
+        for (window_adapter, popup_id) in native_popup_to_close.into_iter().chain(child_popups_to_close)
+        {
             WindowInner::from_pub(window_adapter.window()).close_popup(popup_id);
         }
 
@@ -2635,6 +2651,17 @@ impl WindowInner {
         for popup in popups {
             self.close_popup_impl(&popup);
         }
+    }
+
+    fn is_native_popup(&self) -> bool {
+        let window_adapter = self.window_adapter();
+        self.parent_window_adapter().is_some_and(|parent| {
+            WindowInner::from_pub(parent.window())
+                .active_popups
+                .borrow()
+                .iter()
+                .any(|p| p.is_native_window(&window_adapter))
+        })
     }
 
     /// The popup that a press outside of the popups closes, and the window that lists it.
