@@ -2375,9 +2375,6 @@ impl QtWindow {
                 children: Default::default(),
             }
         });
-        if let Some(parent) = parent.upgrade() {
-            parent.children.borrow_mut().push(Rc::downgrade(&rc));
-        }
         let widget_ptr = rc.widget_ptr();
         let rust_window = Rc::as_ptr(&rc);
         cpp! {unsafe [widget_ptr as "SlintWidget*", rust_window as "void*"]  {
@@ -2857,18 +2854,10 @@ impl WindowAdapterInternal for QtWindow {
         self.parent.clone().upgrade().map(|rc| rc as _)
     }
 
-    fn get_children(&self) -> alloc::vec::Vec<Weak<dyn WindowAdapter>> {
-        self.children
-            .borrow()
-            .iter()
-            .filter_map(|v| {
-                let c = v.upgrade()?;
-                let mut vec = c.get_children();
-                vec.push(v.clone());
-                Some(vec)
-            })
-            .flatten()
-            .collect::<Vec<_>>()
+    fn visit_children(&self, visitor: &mut dyn FnMut(&Rc<dyn WindowAdapter>)) {
+        for child in self.children.borrow().iter().filter_map(Weak::upgrade) {
+            visitor(&(child as Rc<dyn WindowAdapter>));
+        }
     }
 
     fn start_drag(&self, request: &DragRequest) -> bool {
