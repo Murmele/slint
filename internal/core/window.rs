@@ -29,7 +29,7 @@ use crate::renderer::Renderer;
 use crate::{Callback, Coord, SharedString, SharedVector};
 use alloc::boxed::Box;
 use alloc::rc::{Rc, Weak};
-use alloc::vec::Vec;
+use alloc::vec::{self, Vec};
 use core::cell::{Cell, RefCell};
 use core::num::NonZeroU32;
 use core::pin::Pin;
@@ -238,6 +238,11 @@ pub trait WindowAdapterInternal: core::any::Any {
     /// Get the parent window adapter of this window adapter
     fn get_parent(&self) -> Option<Rc<dyn WindowAdapter>> {
         None
+    }
+
+    /// Get all children recursively up
+    fn get_children(&self) -> alloc::vec::Vec<Weak<dyn WindowAdapter>> {
+        Default::default()
     }
 
     /// Create a window for a popup.
@@ -1058,12 +1063,47 @@ impl WindowInner {
             }
         }
 
-        let parent_adapter = self.parent_window_adapter().unwrap_or_else(|| window_adapter.clone());
-        let active_popups = &WindowInner::from_pub(parent_adapter.window()).active_popups;
-        let native_popup_index =
-            active_popups.borrow().iter().position(|p| p.is_native_window(&window_adapter));
-
+        let (to_check_window_adapter, native_popup_index) =
+            if let Some((parent, native_popup_index)) =
+                self.parent_window_adapter().and_then(|parent| {
+                    let index = WindowInner::from_pub(parent.window())
+                        .active_popups
+                        .borrow()
+                        .iter()
+                        .position(|p| p.is_native_window(&window_adapter))?;
+                    Some((parent, Some(index)))
+                })
+            {
+                // self is in the parents active popups as native popup
+                // therefore we have to check the parents window adapter
+                (parent, native_popup_index)
+            } else {
+                // 1) Clicked outside of the popup native popup (In this case we must not use the parent)
+                // 2) Popup is a child window and not a native one
+                (window_adapter.clone(), None)
+            };
+        let active_popups = &WindowInner::from_pub(to_check_window_adapter.window()).active_popups;
         if pressed_event {
+            // 1) Non native popup: self is the parent
+            // 2) Native popup: self is the parent or the popup itself
+            // if native_popup_index.is_some() {
+            //     // 1) self is the native popup
+            //     self.had_popup_on_press.set(true);
+            // } else {
+            //     // 2) Whether the native popup was not pressed
+            //     // 3) or popup child window parent was pressed
+            //     let has_active_native_popups = active_popups
+            //         .borrow()
+            //         .iter()
+            //         .any(|p| matches!(p.location, PopupWindowLocation::TopLevel(_)));
+            //     if !has_active_native_popups {
+            //         // No active native popups. So wether some child window popups or no
+            //         self.had_popup_on_press.set(!active_popups.borrow().is_empty());
+            //     } else {
+            //         // The popups are not triggered so had_popup_on_press is false for those
+            //     }
+            // }
+            // Simplified version:
             self.had_popup_on_press.set(!active_popups.borrow().is_empty());
         }
 
@@ -1265,7 +1305,7 @@ impl WindowInner {
         }
 
         if let Some(popup_id) = popup_to_close {
-            WindowInner::from_pub(parent_adapter.window()).close_popup(popup_id);
+            WindowInner::from_pub(to_check_window_adapter.window()).close_popup(popup_id);
         }
 
         self.ensure_tree_instantiated();
