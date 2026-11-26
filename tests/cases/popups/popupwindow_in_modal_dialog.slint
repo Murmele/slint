@@ -1,0 +1,118 @@
+// Copyright © SixtyFPS GmbH <info@slint.dev>
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+
+// A popup opened in a window-modal dialog closes on a click outside it,
+// in the dialog or in the window the dialog is modal to.
+// Covers native and non-native popups.
+
+export component TestDialog inherits Dialog {
+    width: 200px;
+    height: 200px;
+
+    public function open-popup() {
+        popup.show();
+    }
+
+    Rectangle { }
+
+    popup := PopupWindow {
+        x: 100px;
+        y: 0;
+        width: 50px;
+        height: 50px;
+        close-policy: close-on-click-outside;
+    }
+}
+
+export component TestCase inherits Window {
+    width: 300px;
+    height: 300px;
+
+    out property <bool> test: true;
+}
+
+/*
+```rust
+// Native popup windows.
+use slint::{platform::WindowEvent, platform::PointerEventButton, LogicalPosition};
+use slint_testing::{PopupWindowLocation, WindowInner};
+
+fn click(window: &slint::Window, x: f32, y: f32) {
+    let position = LogicalPosition::new(x, y);
+    let button = PointerEventButton::Left;
+    window.dispatch_event(WindowEvent::PointerMoved { position });
+    window.dispatch_event(WindowEvent::PointerPressed { position, button });
+    slint_testing::mock_elapsed_time(50);
+    window.dispatch_event(WindowEvent::PointerReleased { position, button });
+}
+
+fn popup_count(window: &slint::Window) -> usize {
+    let inner = WindowInner::from_pub(window);
+    for p in inner.active_popups().iter() {
+        assert!(matches!(p.location, PopupWindowLocation::TopLevel(_)), "the popup should be a native popup window");
+    }
+    inner.active_popups().len()
+}
+
+let instance = TestCase::new().unwrap();
+slint_testing::access_testing_window(instance.window(), |w| w.use_native_popup(true));
+instance.show().unwrap();
+
+let dialog = TestDialog::new().unwrap();
+slint_testing::access_testing_window(dialog.window(), |w| w.use_native_popup(true));
+dialog.show_modal(slint::WindowModality::Window(instance.window())).unwrap();
+
+// A click in the dialog, outside the popup, closes it.
+dialog.invoke_open_popup();
+assert_eq!(popup_count(dialog.window()), 1, "the popup is open");
+click(dialog.window(), 10., 10.);
+assert_eq!(popup_count(dialog.window()), 0, "a click in the dialog closes the popup");
+
+// A click in the window the dialog is modal to closes it too.
+dialog.invoke_open_popup();
+assert_eq!(popup_count(dialog.window()), 1, "the popup is open");
+click(instance.window(), 250., 250.);
+assert_eq!(popup_count(dialog.window()), 0, "a click in the dialog's parent window closes the popup");
+```
+
+```rust
+// Non-native popups, shown inside the dialog.
+use slint::{platform::WindowEvent, platform::PointerEventButton, LogicalPosition};
+use slint_testing::{PopupWindowLocation, WindowInner};
+
+fn click(window: &slint::Window, x: f32, y: f32) {
+    let position = LogicalPosition::new(x, y);
+    let button = PointerEventButton::Left;
+    window.dispatch_event(WindowEvent::PointerMoved { position });
+    window.dispatch_event(WindowEvent::PointerPressed { position, button });
+    slint_testing::mock_elapsed_time(50);
+    window.dispatch_event(WindowEvent::PointerReleased { position, button });
+}
+
+fn popup_count(window: &slint::Window) -> usize {
+    let inner = WindowInner::from_pub(window);
+    for p in inner.active_popups().iter() {
+        assert!(matches!(p.location, PopupWindowLocation::ChildWindow(_)), "the popup should be shown inside the dialog");
+    }
+    inner.active_popups().len()
+}
+
+let instance = TestCase::new().unwrap();
+instance.show().unwrap();
+
+let dialog = TestDialog::new().unwrap();
+dialog.show_modal(slint::WindowModality::Window(instance.window())).unwrap();
+
+// A click in the dialog, outside the popup, closes it.
+dialog.invoke_open_popup();
+assert_eq!(popup_count(dialog.window()), 1, "the popup is open");
+click(dialog.window(), 10., 10.);
+assert_eq!(popup_count(dialog.window()), 0, "a click in the dialog closes the popup");
+
+// A click in the window the dialog is modal to closes it too.
+dialog.invoke_open_popup();
+assert_eq!(popup_count(dialog.window()), 1, "the popup is open");
+click(instance.window(), 250., 250.);
+assert_eq!(popup_count(dialog.window()), 0, "a click in the dialog's parent window closes the popup");
+```
+*/

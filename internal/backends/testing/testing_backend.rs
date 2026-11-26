@@ -222,7 +222,9 @@ impl i_slint_core::platform::Platform for TestingBackend {
             simulate_native_drag: Cell::new(false),
             native_drag: Default::default(),
             window_move_requests: Default::default(),
-            parent: None,
+            parent: Default::default(),
+            children: Default::default(),
+            modal: Default::default(),
             #[cfg(supports_headless)]
             renderer_name: self.renderer_name.clone(),
             #[cfg(supports_headless)]
@@ -330,7 +332,9 @@ pub struct TestingWindow {
     /// so the receive-side helpers can build the drop they deliver to a target window.
     native_drag: RefCell<Option<(i_slint_core::data_transfer::DataTransfer, AllowedDragActions)>>,
     window_move_requests: Cell<usize>,
-    parent: Option<Weak<dyn WindowAdapter>>,
+    parent: RefCell<Option<Weak<dyn WindowAdapter>>>,
+    children: RefCell<Vec<Weak<dyn WindowAdapter>>>,
+    modal: Cell<bool>,
     /// Remembered for child popups, so they pick the same rasterizer.
     #[cfg(supports_headless)]
     renderer_name: Option<SharedString>,
@@ -440,7 +444,25 @@ impl TestingWindow {
 
 impl WindowAdapterInternal for TestingWindow {
     fn get_parent(&self) -> Option<Rc<dyn WindowAdapter>> {
-        self.parent.as_ref()?.upgrade()
+        self.parent.borrow().as_ref()?.upgrade()
+    }
+
+    fn show_modal(
+        &self,
+        modality: i_slint_core::api::WindowModality,
+    ) -> Result<(), i_slint_core::platform::PlatformError> {
+        let i_slint_core::api::WindowModality::Window(parent) = modality else {
+            return Err(i_slint_core::platform::PlatformError::Unsupported);
+        };
+        self.set_parent(Some(WindowInner::from_pub(parent).window_adapter()));
+        self.modal.set(true);
+        self.set_visible(true)
+    }
+
+    fn visit_children(&self, visitor: &mut dyn FnMut(&Rc<dyn WindowAdapter>)) {
+        for child in self.children.borrow().iter().filter_map(Weak::upgrade) {
+            visitor(&child);
+        }
     }
 
     fn input_method_request(&self, request: i_slint_core::window::InputMethodRequest) {
@@ -506,7 +528,11 @@ impl WindowAdapterInternal for TestingWindow {
                 simulate_native_drag: self.simulate_native_drag.clone(),
                 native_drag: Default::default(),
                 window_move_requests: Default::default(),
-                parent: Some(Rc::downgrade(&WindowInner::from_pub(&self.window).window_adapter())),
+                parent: RefCell::new(Some(Rc::downgrade(
+                    &WindowInner::from_pub(&self.window).window_adapter(),
+                ))),
+                children: Default::default(),
+                modal: Default::default(),
                 #[cfg(supports_headless)]
                 renderer_name: self.renderer_name.clone(),
                 #[cfg(supports_headless)]
@@ -519,9 +545,36 @@ impl WindowAdapterInternal for TestingWindow {
     }
 }
 
+fn as_testing_window(adapter: &Rc<dyn WindowAdapter>) -> Option<&TestingWindow> {
+    let internal = adapter.internal(i_slint_core::InternalToken)?;
+    (internal as &dyn core::any::Any).downcast_ref::<TestingWindow>()
+}
+
+impl TestingWindow {
+    fn set_parent(&self, parent: Option<Rc<dyn WindowAdapter>>) {
+        let this = Rc::downgrade(&WindowInner::from_pub(&self.window).window_adapter());
+        let old = self.parent.replace(parent.as_ref().map(Rc::downgrade));
+        if let Some(old) = old.and_then(|w| w.upgrade())
+            && let Some(old) = as_testing_window(&old)
+        {
+            old.children.borrow_mut().retain(|c| !Weak::ptr_eq(c, &this));
+        }
+        if let Some(new) = parent.as_ref().and_then(as_testing_window) {
+            new.children.borrow_mut().push(this);
+        }
+    }
+}
+
 impl WindowAdapter for TestingWindow {
     fn window(&self) -> &i_slint_core::api::Window {
         &self.window
+    }
+
+    fn set_visible(&self, visible: bool) -> Result<(), i_slint_core::platform::PlatformError> {
+        if !visible && self.modal.take() {
+            self.set_parent(None);
+        }
+        Ok(())
     }
 
     fn size(&self) -> PhysicalSize {

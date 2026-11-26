@@ -2238,6 +2238,7 @@ impl WindowInner {
         &self,
         make_visible: impl FnOnce() -> Result<(), PlatformError>,
     ) -> Result<(), PlatformError> {
+        let was_visible = self.is_visible();
         if let Some(component) = self.try_component() {
             let previous = self.strong_component_ref.take();
             let keepalive = match previous {
@@ -2249,7 +2250,12 @@ impl WindowInner {
 
         self.ensure_tree_instantiated();
         self.update_window_properties();
-        make_visible()?;
+        if let Err(err) = make_visible() {
+            if !was_visible {
+                self.strong_component_ref.take();
+            }
+            return Err(err);
+        }
         // Make sure that the window's inner size is in sync with the root window item's
         // width/height.
         let size = self.window_adapter().size();
