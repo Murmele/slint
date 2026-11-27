@@ -755,7 +755,6 @@ pub struct WindowInner {
     /// fallback, and lets a drop back onto this same window restore the source's `DataTransfer`:
     /// the OS round-trip can't carry in-app `user_data`.
     native_drag: RefCell<Option<NativePendingDrag>>,
-    pub name: RefCell<&'static str>,
 }
 
 impl Drop for WindowInner {
@@ -859,7 +858,6 @@ impl WindowInner {
             ctx: Default::default(),
             menubar: Default::default(),
             native_drag: Default::default(),
-            name: RefCell::new("Default WindowInner"),
         }
     }
 
@@ -974,7 +972,6 @@ impl WindowInner {
     /// `Exit` (if not). The reported `accepted` reflects the rewritten event, so a
     /// `Released` that completes a drop on a non-accepting target reports `accepted = false`.
     pub(crate) fn process_mouse_input(&self, mut event: MouseEvent) -> Option<MouseDispatchResult> {
-        println!("Window process_mouse_input: {}", self.name.borrow());
         crate::animations::update_animations(crate::animations::Instant::now(self.context()));
 
         let item_tree = self.try_component()?;
