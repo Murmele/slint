@@ -7,6 +7,7 @@
 mod lower_dialog;
 mod lower_popup;
 
+pub use lower_dialog::lower_dialog_layout;
 pub use lower_popup::is_popup_window;
 
 use crate::diagnostics::{BuildDiagnostics, SourceLocation, Spanned};
