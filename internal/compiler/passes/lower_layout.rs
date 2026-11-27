@@ -309,7 +309,7 @@ pub fn lower_layouts(
             // redundant size constraint on a popup root is only a warning (not an error like on a
             // window root) for compatibility with older versions of Slint that did not report it.
             if Rc::ptr_eq(elem, &component.root_element) {
-                for popup in component.popup_windows.borrow().iter() {
+                for popup in component.sub_windows.borrow().iter() {
                     *popup.component.root_constraints.borrow_mut() = LayoutConstraints::new(
                         &popup.component.root_element,
                         Some((&mut *diag, DiagnosticLevel::Warning)),
@@ -541,7 +541,7 @@ fn lower_grid_layout(
                 new_row = false;
             }
             new_row = true; // the end of a Row means the next item is the first of a new row
-            if layout_child.borrow().has_popup_child {
+            if layout_child.borrow().has_sub_window_child {
                 // We need to keep that element otherwise the popup will malfunction
                 layout_child.borrow_mut().base_type = type_register.empty_type();
                 collected_children.push(layout_child);
@@ -2600,7 +2600,7 @@ pub fn check_window_layout(component: &Rc<Component>) {
 }
 
 pub fn check_popup_layout(component: &Rc<Component>) {
-    component.popup_windows.borrow().iter().for_each(|p| {
+    component.sub_windows.borrow().iter().for_each(|p| {
         if p.component.root_constraints.borrow().fixed_height {
             adjust_window_layout(&p.component, "height");
         }

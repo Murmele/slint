@@ -2486,7 +2486,6 @@ impl QtWindow {
     }
 
     fn mouse_event(&self, event: BackendMouseEvent) {
-        println!("Mouse move: {}", WindowInner::from_pub(&self.window).name.borrow());
         self.window.dispatch_event(WindowEvent::internal(event));
         timer_event();
     }
@@ -2644,6 +2643,22 @@ impl WindowAdapter for QtWindow {
                     if (auto size = widget_ptr->sizeHint(); size.isValid()) {
                         widget_ptr->resize(size.boundedTo(widget_ptr->screen()->availableSize()));
                     }
+                }
+                // Center a dialog over its parent, like QDialog::adjustPosition does,
+                // unless it was moved explicitly.
+                if (auto parent = widget_ptr->parentWidget();
+                        parent && widget_ptr->windowType() == Qt::Dialog
+                        && !widget_ptr->testAttribute(Qt::WA_Moved)) {
+                    QRect geometry(QPoint(), widget_ptr->size());
+                    geometry.moveCenter(parent->window()->geometry().center());
+                    if (auto screen = parent->window()->screen()) {
+                        QRect available = screen->availableGeometry();
+                        geometry.moveLeft(std::max(available.left(), std::min(geometry.left(), available.right() - geometry.width())));
+                        geometry.moveTop(std::max(available.top(), std::min(geometry.top(), available.bottom() - geometry.height())));
+                    }
+                    widget_ptr->move(geometry.topLeft());
+                    // Center it again on the next show, if the user doesn't move it meanwhile.
+                    widget_ptr->setAttribute(Qt::WA_Moved, false);
                 }
                 widget_ptr->show();
             }};
@@ -3024,10 +3039,7 @@ impl WindowAdapterInternal for QtWindow {
         let parent_ptr = self.widget_ptr();
 
         let window_kind = match window_kind {
-            WindowKind::Popup => {
-                WindowInner::from_pub(&child_window.window).name.replace("Popup");
-                Qt_WindowType_Popup
-            }
+            WindowKind::Popup => Qt_WindowType_Popup,
             WindowKind::ToolTip => Qt_WindowType_ToolTip,
             WindowKind::Menu => Qt_WindowType_Popup,
         };
@@ -3172,7 +3184,6 @@ impl WindowAdapterInternal for QtWindow {
 
     fn show_modal(&self, modality: WindowModality) -> Result<(), PlatformError> {
         let widget_ptr = self.widget_ptr();
-        WindowInner::from_pub(&self.window).name.replace("Dialog");
         match modality {
             WindowModality::Application => {
                 cpp!(unsafe [widget_ptr as "QWidget*"] {

@@ -131,7 +131,7 @@ fn static_ancestor(
                 .repeated
                 .iter()
                 .map(|r| r.sub_tree.root)
-                .chain(sc.popup_windows.iter().map(|p| p.item_tree.root))
+                .chain(sc.sub_windows.iter().map(|p| p.item_tree.root))
                 .chain(sc.menu_item_trees.iter().map(|t| t.root));
             roots.any(|root| root == current).then_some(idx)
         })?;
@@ -2542,6 +2542,13 @@ fn call_builtin_function(
             ))
         })(),
         BuiltinFunction::ShowPopupWindow => crate::popup::show_popup_window(ctx, arguments),
+        BuiltinFunction::ShowDialog
+        | BuiltinFunction::ShowDialogModal
+        | BuiltinFunction::HideDialog => {
+            // TODO: Showing a Dialog declared within another component isn't implemented in the interpreter yet
+            i_slint_core::debug_log!("{f:?} isn't supported in the interpreter yet");
+            Value::Void
+        }
         BuiltinFunction::ClosePopupWindow => crate::popup::close_popup_window(ctx, arguments),
         BuiltinFunction::SetFocusItem => (|| {
             if let Some(Expression::PropertyReference(mr)) = arguments.first()

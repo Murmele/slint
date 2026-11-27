@@ -1,0 +1,8 @@
+// Copyright © SixtyFPS GmbH <info@slint.dev>
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+
+export component SelfShowing inherits Dialog {
+    Text { text: "Hello"; }
+    init => { root.show-modal(DialogModality.window-modal); }
+//                 >        <error{A Dialog cannot show itself, call 'show()' or 'show-modal()' from the component that declares it}
+}

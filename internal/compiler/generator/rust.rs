@@ -1422,7 +1422,7 @@ fn generate_child_item_trees(
         RustGeneratorContext { global_access: quote!(_self.globals()) },
         parent_ctx,
     );
-    let popups = component.popup_windows.iter().map(|popup| {
+    let popups = component.sub_windows.iter().map(|popup| {
         generate_item_tree(&popup.item_tree, root, Some(&ParentScope::new(&ctx, None)), None, true)
     });
     let menus = component.menu_item_trees.iter().map(|tree| {
@@ -1837,12 +1837,22 @@ fn generate_sub_component_body(
         sub_component_types.push(sub_component_id);
     }
 
-    let popup_id_names = component
-        .popup_windows
+    // A popup is tracked by its id in the window, a dialog by its own window adapter.
+    let (sub_window_field_names, sub_window_field_types): (Vec<_>, Vec<_>) = component
+        .sub_windows
         .iter()
         .enumerate()
-        .map(|(i, _)| internal_popup_id(i))
-        .collect::<Vec<_>>();
+        .map(|(i, p)| match p.kind {
+            llr::SubWindowKind::Popup { .. } => (
+                internal_popup_id(i),
+                quote!(::core::cell::Cell<sp::Option<::core::num::NonZeroU32>>),
+            ),
+            llr::SubWindowKind::Dialog => (
+                internal_dialog_window(i),
+                quote!(::core::cell::RefCell<sp::Option<sp::Weak<dyn sp::WindowAdapter>>>),
+            ),
+        })
+        .unzip();
 
     for twb in &component.two_way_bindings {
         let p1 = access_local_member(&twb.prop1, &ctx);
@@ -2273,7 +2283,7 @@ fn generate_sub_component_body(
                 Self {
                     #(#item_names: #default,)*
                     #(#sub_component_names: #default,)*
-                    #(#popup_id_names: #default,)*
+                    #(#sub_window_field_names: #default,)*
                     #(#declared_property_vars: #default,)*
                     #(#declared_callbacks: #default,)*
                     #(#callback_tracker_names: #default,)*
@@ -2296,7 +2306,7 @@ fn generate_sub_component_body(
         pub struct #inner_component_id {
             #(pub(super) #item_names : sp::#item_types,)*
             #(pub(super) #sub_component_names : #sub_component_types,)*
-            #(pub(super) #popup_id_names : ::core::cell::Cell<sp::Option<::core::num::NonZeroU32>>,)*
+            #(pub(super) #sub_window_field_names : #sub_window_field_types,)*
             #(pub(super) #declared_property_vars : sp::Property<#declared_property_types>,)*
             #(pub(super) #declared_callbacks : sp::Callback<(#(#declared_callbacks_types,)*), #declared_callbacks_ret>,)*
             #(pub(super) #callback_tracker_names : sp::Property<()>,)*
@@ -3462,6 +3472,12 @@ fn inner_component_id(component: &llr::SubComponent) -> proc_macro2::Ident {
 fn internal_popup_id(index: usize) -> proc_macro2::Ident {
     let mut name = index.to_string();
     name.insert_str(0, "popup_id_");
+    ident(&name)
+}
+
+fn internal_dialog_window(index: usize) -> proc_macro2::Ident {
+    let mut name = index.to_string();
+    name.insert_str(0, "dialog_window_");
     ident(&name)
 }
 
@@ -4930,7 +4946,10 @@ fn compile_builtin_function_call(
                     &local_reference.sub_component_path,
                     |parent_ctx| {
                 let popup = &ctx.compilation_unit.sub_components[parent_ctx.sub_component]
-                    .popup_windows[*popup_index as usize];
+                    .sub_windows[*popup_index as usize];
+                let llr::SubWindowKind::Popup { position, is_tooltip } = &popup.kind else {
+                    panic!("internal error: ShowPopupWindow on a Dialog")
+                };
                 let popup_window_id =
                     inner_component_id(&ctx.compilation_unit.sub_components[popup.item_tree.root]);
                 let popup_ctx = EvaluationContext::new_sub_component(
@@ -4939,10 +4958,10 @@ fn compile_builtin_function_call(
                     RustGeneratorContext { global_access: quote!(_self.globals()) },
                     Some(&parent_ctx),
                 );
-                let position = compile_expression(&popup.position.borrow(), &popup_ctx);
+                let position = compile_expression(&position.borrow(), &popup_ctx);
                 let close_policy = compile_expression(close_policy, ctx);
                 let popup_id_name = internal_popup_id(*popup_index as usize);
-                let window_kind = if popup.is_tooltip {
+                let window_kind = if *is_tooltip {
                     quote!(sp::WindowKind::ToolTip)
                 } else {
                     quote!(sp::WindowKind::Popup)
@@ -5000,7 +5019,6 @@ fn compile_builtin_function_call(
                             let _self = popup_instance_vrc_for_position.as_pin_ref(); #position
                         });
 
-                        println!("Show popup. Parent: {}", window.name.borrow());
 
                         #is_open_self_weak_decl
                         let popup_id = window.show_popup(
@@ -5021,6 +5039,102 @@ fn compile_builtin_function_call(
             } else {
                 panic!("internal error: invalid args to ShowPopupWindow {arguments:?}")
             }
+        })(),
+        BuiltinFunction::ShowDialog | BuiltinFunction::ShowDialogModal => (|| {
+            let (dialog_index, modality, owner_ref) = match arguments {
+                [Expression::NumberLiteral(i), Expression::PropertyReference(o)] => (i, None, o),
+                [Expression::NumberLiteral(i), m, Expression::PropertyReference(o)] => {
+                    (i, Some(m), o)
+                }
+                _ => panic!("internal error: invalid args to {function:?} {arguments:?}"),
+            };
+            let llr::MemberReference::Relative { parent_level, local_reference } = owner_ref else {
+                unreachable!()
+            };
+            let component_access_tokens = parent_access_path(*parent_level)
+                .map_or(MemberAccess::Direct(quote!(_self)), MemberAccess::Option);
+            let (suffix, _) = follow_sub_component_path_fields(
+                ctx.compilation_unit,
+                ctx.parent_sub_component_idx(*parent_level).unwrap(),
+                &local_reference.sub_component_path,
+            );
+            let dialog_id_name = internal_dialog_window(*dialog_index as usize);
+            let show = match modality {
+                Some(modality) => {
+                    let modality = compile_expression(modality, ctx);
+                    quote! {
+                        let modality = match #modality {
+                            sp::DialogModality::ApplicationModal => slint::WindowModality::Application,
+                            _ => slint::WindowModality::Window(parent_window_adapter.window()),
+                        };
+                        // Not every backend supports modal windows: still show the dialog then.
+                        if dialog_window.show_modal(modality).is_err() {
+                            let _ = dialog_window.show();
+                        }
+                    }
+                }
+                None => quote!(let _ = dialog_window.show();),
+            };
+            ctx.with_reference_scope(*parent_level, &local_reference.sub_component_path, |parent_ctx| {
+                let dialog = &ctx.compilation_unit.sub_components[parent_ctx.sub_component]
+                    .sub_windows[*dialog_index as usize];
+                let dialog_id =
+                    inner_component_id(&ctx.compilation_unit.sub_components[dialog.item_tree.root]);
+                component_access_tokens.then(|component_access_tokens| {
+                    let compo = quote!(#component_access_tokens #suffix);
+                    quote!({
+                        let shared_global = sp::unwrap(#compo.globals.get());
+                        let shown = #compo.#dialog_id_name.borrow().as_ref()
+                            .and_then(|w| w.upgrade())
+                            .is_some_and(|w| w.window().is_visible());
+                        if !shown {
+                            if let sp::Ok(dialog_window_adapter) = shared_global.context().create_window_adapter() {
+                                let parent_window_adapter = shared_global.window_adapter_impl();
+                                let globals = shared_global.clone_with_window_adapter(dialog_window_adapter.clone());
+                                let dialog_instance = #dialog_id::new(sp::unwrap(#compo.self_weak.get()).clone(), globals).unwrap();
+                                let dialog_instance_vrc = sp::VRc::map(dialog_instance.clone(), |x| x);
+                                let dialog_window = sp::WindowInner::from_pub(dialog_window_adapter.window());
+                                // The window only keeps a weak reference until it's shown.
+                                let dialog_item_tree: sp::ItemTreeRc = sp::VRc::into_dyn(dialog_instance.into());
+                                dialog_window.set_component(&dialog_item_tree);
+                                #dialog_id::user_init(dialog_instance_vrc);
+                                *#compo.#dialog_id_name.borrow_mut() = sp::Some(sp::Rc::downgrade(&dialog_window_adapter));
+                                // While shown, the window keeps the dialog instance alive.
+                                #show
+                                drop(dialog_item_tree);
+                            }
+                        }
+                    })
+                })
+            })
+        })(),
+        BuiltinFunction::HideDialog => (|| {
+            let [Expression::NumberLiteral(dialog_index), Expression::PropertyReference(owner_ref)] =
+                arguments
+            else {
+                panic!("internal error: invalid args to HideDialog {arguments:?}")
+            };
+            let llr::MemberReference::Relative { parent_level, local_reference } = owner_ref else {
+                unreachable!()
+            };
+            let component_access_tokens = parent_access_path(*parent_level)
+                .map_or(MemberAccess::Direct(quote!(_self)), MemberAccess::Option);
+            let (suffix, _) = follow_sub_component_path_fields(
+                ctx.compilation_unit,
+                ctx.parent_sub_component_idx(*parent_level).unwrap(),
+                &local_reference.sub_component_path,
+            );
+            let dialog_id_name = internal_dialog_window(*dialog_index as usize);
+            component_access_tokens.then(|component_access_tokens| {
+                let compo = quote!(#component_access_tokens #suffix);
+                quote!({
+                    let dialog_window_adapter = #compo.#dialog_id_name.take().and_then(|w| w.upgrade());
+                    if let sp::Some(dialog_window_adapter) = dialog_window_adapter {
+                        // Releases the dialog instance, which the window kept alive.
+                        let _ = dialog_window_adapter.window().hide();
+                    }
+                })
+            })
         })(),
         BuiltinFunction::ClosePopupWindow => (|| {
             if let [

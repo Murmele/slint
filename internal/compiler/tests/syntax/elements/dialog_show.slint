@@ -1,0 +1,33 @@
+// Copyright © SixtyFPS GmbH <info@slint.dev>
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+
+component MyDialog inherits Dialog {
+    in property <string> message;
+    Text { text: root.message; }
+}
+
+export component Test inherits Window {
+    property <bool> strict;
+
+    dlg := MyDialog {
+        message: "hello";
+    }
+
+    // Never shown: lays out its buttons in place
+    inline := Dialog {
+        Text { text: "inline"; }
+    }
+
+    TouchArea {
+        clicked => {
+            dlg.show-modal(strict ? DialogModality.application-modal : DialogModality.window-modal);
+            dlg.show();
+            dlg.hide();
+            debug(dlg.message);
+//          >   <error{Cannot access property or callback 'dlg.message' inside of a Dialog from enclosing component}
+            dlg.width = 5px;
+//          >        <error{Cannot access property or callback 'dlg.width' inside of a Dialog from enclosing component}
+            inline.hide();
+        }
+    }
+}

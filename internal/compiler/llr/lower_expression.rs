@@ -285,6 +285,11 @@ fn lower_function_call(
         Callable::Builtin(BuiltinFunction::ClosePopupWindow) => {
             lower_close_popup_window(arguments, ctx)
         }
+        Callable::Builtin(
+            f @ (BuiltinFunction::ShowDialog
+            | BuiltinFunction::ShowDialogModal
+            | BuiltinFunction::HideDialog),
+        ) => lower_dialog_function(f.clone(), arguments, ctx),
         Callable::Builtin(f) => {
             let mut arguments =
                 arguments.iter().map(|e| lower_expression(e, ctx)).collect::<Vec<_>>();
@@ -677,25 +682,25 @@ fn lower_listview_ensure_row_visible(
 /// component is the parent item's enclosing component, which is not always the parent item
 /// itself (it may be a nested sub-component instance), so this reference must be resolved
 /// separately from the parent item used for positioning.
-fn lower_popup_owner(
+fn lower_sub_window_owner(
     e: &ElementWeak,
     ctx: &mut ExpressionLoweringCtx,
 ) -> (Rc<Component>, llr_Expression, usize) {
-    let popup_window = e.upgrade().unwrap();
-    let pop_comp = popup_window.borrow().enclosing_component.upgrade().unwrap();
-    let parent_elem = pop_comp.parent_element().unwrap();
+    let sub_window = e.upgrade().unwrap();
+    let sub_window_comp = sub_window.borrow().enclosing_component.upgrade().unwrap();
+    let parent_elem = sub_window_comp.parent_element().unwrap();
     let parent_component = parent_elem.borrow().enclosing_component.upgrade().unwrap();
     let owner_ref = lower_expression(
         &tree_Expression::ElementReference(Rc::downgrade(&parent_component.root_element)),
         ctx,
     );
-    let popup_index = parent_component
-        .popup_windows
+    let index = parent_component
+        .sub_windows
         .borrow()
         .iter()
-        .position(|p| Rc::ptr_eq(&p.component, &pop_comp))
+        .position(|p| Rc::ptr_eq(&p.component, &sub_window_comp))
         .unwrap();
-    (parent_component, owner_ref, popup_index)
+    (parent_component, owner_ref, index)
 }
 
 fn lower_show_popup_window(
@@ -703,11 +708,12 @@ fn lower_show_popup_window(
     ctx: &mut ExpressionLoweringCtx,
 ) -> llr_Expression {
     if let [tree_Expression::ElementReference(e)] = args {
-        let (parent_component, owner_ref, popup_index) = lower_popup_owner(e, ctx);
-        let popup_list = parent_component.popup_windows.borrow();
-        let popup = &popup_list[popup_index];
+        let (parent_component, owner_ref, popup_index) = lower_sub_window_owner(e, ctx);
+        let sub_windows = parent_component.sub_windows.borrow();
+        let sub_window = &sub_windows[popup_index];
+        let popup = sub_window.as_popup().expect("ShowPopupWindow on a Dialog");
         let item_ref = lower_expression(
-            &tree_Expression::ElementReference(Rc::downgrade(&popup.parent_element)),
+            &tree_Expression::ElementReference(Rc::downgrade(&sub_window.parent_element)),
             ctx,
         );
 
@@ -738,7 +744,7 @@ fn lower_close_popup_window(
     ctx: &mut ExpressionLoweringCtx,
 ) -> llr_Expression {
     if let [tree_Expression::ElementReference(e)] = args {
-        let (_, owner_ref, popup_index) = lower_popup_owner(e, ctx);
+        let (_, owner_ref, popup_index) = lower_sub_window_owner(e, ctx);
         llr_Expression::BuiltinFunctionCall {
             function: BuiltinFunction::ClosePopupWindow,
             arguments: vec![llr_Expression::NumberLiteral(popup_index as _), owner_ref],
@@ -747,6 +753,47 @@ fn lower_close_popup_window(
     } else {
         panic!("invalid arguments to ClosePopupWindow");
     }
+}
+
+/// `ShowDialog`, `ShowDialogModal` and `HideDialog` on a Dialog declared within another component
+/// become `(dialog_index, [modality,] owner)`.
+/// `hide()` on a Dialog that is the root of a component shown from native code hides its window.
+fn lower_dialog_function(
+    function: BuiltinFunction,
+    args: &[tree_Expression],
+    ctx: &mut ExpressionLoweringCtx,
+) -> llr_Expression {
+    let [tree_Expression::ElementReference(e), modality @ ..] = args else {
+        panic!("invalid arguments to {function:?}");
+    };
+    let dialog = e.upgrade().unwrap();
+    let dialog_comp = dialog.borrow().enclosing_component.upgrade().unwrap();
+    let is_lowered_dialog = Rc::ptr_eq(&dialog_comp.root_element, &dialog)
+        && dialog_comp.parent_element().is_some_and(|p| {
+            p.borrow().enclosing_component.upgrade().is_some_and(|c| {
+                c.sub_windows.borrow().iter().any(|p| {
+                    Rc::ptr_eq(&p.component, &dialog_comp)
+                        && matches!(p.kind, crate::object_tree::SubWindowKind::Dialog)
+                })
+            })
+        });
+    if !is_lowered_dialog {
+        return match function {
+            BuiltinFunction::HideDialog => llr_Expression::BuiltinFunctionCall {
+                function: BuiltinFunction::WindowHide,
+                arguments: vec![lower_expression(&args[0], ctx)],
+                source_location: None,
+            },
+            // A Dialog can't show itself, which the lower_sub_windows pass reports
+            _ => llr_Expression::CodeBlock(vec![]),
+        };
+    }
+    let (_, owner_ref, dialog_index) = lower_sub_window_owner(e, ctx);
+    let arguments = std::iter::once(llr_Expression::NumberLiteral(dialog_index as _))
+        .chain(modality.iter().map(|m| lower_expression(m, ctx)))
+        .chain(std::iter::once(owner_ref))
+        .collect();
+    llr_Expression::BuiltinFunctionCall { function, arguments, source_location: None }
 }
 
 pub fn lower_animation(a: &PropertyAnimation, ctx: &mut ExpressionLoweringCtx<'_>) -> Animation {

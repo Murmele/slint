@@ -1,0 +1,110 @@
+// Copyright © SixtyFPS GmbH <info@slint.dev>
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+
+// A Dialog declared within another component is only instantiated while shown,
+// in its own window. `show-modal(window-modal)` makes it modal to the window that declares it.
+
+component ConfirmDialog inherits Dialog {
+    width: 100px;
+    height: 100px;
+    callback answered();
+
+    TouchArea {
+        clicked => { root.answered(); }
+    }
+}
+
+export component TestCase inherits Window {
+    width: 300px;
+    height: 300px;
+
+    in-out property <int> dialog-inits;
+    in-out property <DialogModality> modality: DialogModality.window-modal;
+    in-out property <int> answers;
+
+    public function open-modal() {
+        confirm.show-modal(root.modality);
+    }
+    public function open() {
+        confirm.show();
+    }
+    public function close() {
+        confirm.hide();
+    }
+
+    confirm := ConfirmDialog {
+        init => {
+            root.dialog-inits += 1;
+        }
+        answered => {
+            root.answers += 1;
+            // Hiding from within the dialog
+            self.hide();
+        }
+    }
+
+    out property <bool> test: dialog-inits == 0;
+}
+
+/*
+```rust
+use slint::{platform::WindowEvent, platform::PointerEventButton, platform::WindowAdapter, LogicalPosition};
+
+fn click(window: &slint::Window, x: f32, y: f32) {
+    let position = LogicalPosition::new(x, y);
+    let button = PointerEventButton::Left;
+    window.dispatch_event(WindowEvent::PointerMoved { position });
+    window.dispatch_event(WindowEvent::PointerPressed { position, button });
+    slint_testing::mock_elapsed_time(50);
+    window.dispatch_event(WindowEvent::PointerReleased { position, button });
+}
+
+fn child_windows(window: &slint::Window) -> Vec<std::rc::Rc<dyn WindowAdapter>> {
+    slint_testing::access_testing_window(window, |w| w.child_windows())
+}
+
+let instance = TestCase::new().unwrap();
+instance.show().unwrap();
+assert_eq!(instance.get_dialog_inits(), 0, "the dialog isn't instantiated with the window");
+
+// show-modal(window-modal) shows the dialog modal to the window that declares it
+instance.invoke_open_modal();
+assert_eq!(instance.get_dialog_inits(), 1);
+let children = child_windows(instance.window());
+assert_eq!(children.len(), 1, "the dialog has the window as parent");
+let dialog = children[0].clone();
+assert!(dialog.window().is_visible());
+assert!(slint_testing::access_testing_window(dialog.window(), |w| w.is_modal()));
+
+// Showing it again while it's shown does nothing
+instance.invoke_open_modal();
+assert_eq!(instance.get_dialog_inits(), 1);
+assert_eq!(child_windows(instance.window()).len(), 1);
+
+// hide() from within the dialog
+click(dialog.window(), 50., 50.);
+assert_eq!(instance.get_answers(), 1);
+assert!(!dialog.window().is_visible());
+assert!(child_windows(instance.window()).is_empty());
+drop(dialog);
+
+// A new instance is created when showing it again
+instance.invoke_open_modal();
+assert_eq!(instance.get_dialog_inits(), 2);
+let dialog = child_windows(instance.window())[0].clone();
+// hide() from the enclosing component
+instance.invoke_close();
+assert!(!dialog.window().is_visible());
+drop(dialog);
+
+// show() shows a non-modal dialog
+instance.invoke_open();
+assert_eq!(instance.get_dialog_inits(), 3);
+assert!(child_windows(instance.window()).is_empty(), "a non-modal dialog has no parent");
+instance.invoke_open();
+assert_eq!(instance.get_dialog_inits(), 3, "it's already shown");
+instance.invoke_close();
+instance.invoke_open();
+assert_eq!(instance.get_dialog_inits(), 4, "it was hidden");
+```
+*/

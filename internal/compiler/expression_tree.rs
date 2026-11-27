@@ -83,6 +83,9 @@ fn builtin_function_is_const(
         BuiltinFunction::SetFocusItem | BuiltinFunction::ClearFocusItem => false,
         BuiltinFunction::ShowPopupWindow
         | BuiltinFunction::ClosePopupWindow
+        | BuiltinFunction::ShowDialog
+        | BuiltinFunction::ShowDialogModal
+        | BuiltinFunction::HideDialog
         | BuiltinFunction::ShowPopupMenu
         | BuiltinFunction::ShowPopupMenuInternal => false,
         BuiltinFunction::SetSelectionOffsets

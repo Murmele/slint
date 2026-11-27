@@ -77,6 +77,16 @@ macro_rules! for_each_builtin_function {
             ListViewEnsureRowVisible: impure fn(repeater: ElementReference, flickable: ElementReference, row: i32, behavior: ScrollBehavior) -> ()
             ShowPopupWindow: impure fn(popup: ElementReference) -> ()
             ClosePopupWindow: impure fn(popup: ElementReference) -> ()
+            /// Show a `Dialog` declared within another component in its own, non-modal window.
+            /// In the LLR, the arguments are `(dialog_index, owner)`.
+            ShowDialog: impure fn(dialog: ElementReference) -> ()
+            /// Show a `Dialog` declared within another component as a modal window,
+            /// with the window of the declaring component as parent.
+            /// In the LLR, the arguments are `(dialog_index, modality, owner)`.
+            ShowDialogModal: impure fn(dialog: ElementReference, modality: DialogModality) -> ()
+            /// Hide a `Dialog` declared within another component.
+            /// In the LLR, the arguments are `(dialog_index, owner)`.
+            HideDialog: impure fn(dialog: ElementReference) -> ()
             /// Show a context popup menu.
             /// Arguments are `(parent, menu_tree, position)`
             ///

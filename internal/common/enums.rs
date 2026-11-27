@@ -741,10 +741,12 @@ macro_rules! for_each_enums {
                 Smooth,
             }
 
+            /// This enum describes which windows a modal `Dialog` blocks.
             #[non_exhaustive]
             pub enum DialogModality {
-                None,
+                /// The dialog blocks input to the window that it was opened from.
                 WindowModal,
+                /// The dialog blocks input to all windows of the application.
                 ApplicationModal,
             }
         }

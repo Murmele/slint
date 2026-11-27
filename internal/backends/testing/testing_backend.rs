@@ -376,6 +376,16 @@ impl TestingWindow {
         self.mouse_cursor.borrow().clone()
     }
 
+    /// The windows that have this window as parent, such as a window-modal dialog.
+    pub fn child_windows(&self) -> Vec<Rc<dyn WindowAdapter>> {
+        self.children.borrow().iter().filter_map(Weak::upgrade).collect()
+    }
+
+    /// Whether this window was shown with `show_modal()` and not hidden since.
+    pub fn is_modal(&self) -> bool {
+        self.modal.get()
+    }
+
     /// Number of interactive window moves requested via `WindowMoveArea`.
     pub fn window_move_request_count(&self) -> usize {
         self.window_move_requests.get()

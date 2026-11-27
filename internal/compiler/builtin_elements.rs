@@ -3825,9 +3825,38 @@ fn build(l: &mut Loader) {
         /// ## Functions
         ///
         /// Same as <Link type="Window"/>.
+        ///
+        /// ## Showing a Dialog from Slint
+        ///
+        /// A `Dialog` declared within another component isn't shown with that component. It's created in its own window
+        /// when calling `show()` or `show-modal(modality)`, and destroyed when calling `hide()` or when the user closes its window.
+        /// It isn't allowed to access properties of elements within the dialog from outside of the `Dialog`.
+        ///
+        /// ```slint
+        /// import { StandardButton, Button } from "std-widgets.slint";
+        /// export component Example inherits Window {
+        ///     confirm := Dialog {
+        ///         Text { text: "Are you sure?"; }
+        ///         StandardButton { kind: yes; clicked => { confirm.hide(); } }
+        ///         StandardButton { kind: no; clicked => { confirm.hide(); } }
+        ///     }
+        ///     Button {
+        ///         text: "Delete";
+        ///         clicked => { confirm.show-modal(DialogModality.window-modal); }
+        ///     }
+        /// }
+        /// ```
         /// \group:window
         @skip_inherited @constant_layout_info(0.)
-        Dialog: WindowItem
+        Dialog: WindowItem {
+            /// Show the dialog declared within another component in its own window. The dialog doesn't block input to other windows.
+            function show() { BuiltinFunction.ShowDialog }
+            /// Show the dialog declared within another component in its own window, with the window that declares it as parent.
+            /// `modality` decides whether the dialog blocks only that window or the whole application.
+            function show-modal(modality: DialogModality) { BuiltinFunction.ShowDialogModal }
+            /// Hide the dialog and destroy its window.
+            function hide() { BuiltinFunction.HideDialog }
+        }
     }
 
     element! {

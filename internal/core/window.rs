@@ -2544,7 +2544,6 @@ impl WindowInner {
         // `active_popups` while running user-provided code.
         is_open_setter(true);
 
-        println!("Adding popup to active popups. Parent: {}", self.name.borrow());
         self.active_popups.borrow_mut().push(PopupWindow {
             popup_id,
             location,
