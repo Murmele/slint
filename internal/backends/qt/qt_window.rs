@@ -2386,6 +2386,9 @@ impl QtWindow {
                 children: Default::default(),
             }
         });
+        if let Some(parent) = parent.upgrade() {
+            parent.children.borrow_mut().push(Rc::downgrade(&rc));
+        }
         let widget_ptr = rc.widget_ptr();
         let rust_window = Rc::as_ptr(&rc);
         cpp! {unsafe [widget_ptr as "SlintWidget*", rust_window as "void*"]  {
@@ -2885,7 +2888,8 @@ impl WindowAdapterInternal for QtWindow {
     }
 
     fn visit_children(&self, visitor: &mut dyn FnMut(&Rc<dyn WindowAdapter>)) {
-        for child in self.children.borrow().iter().filter_map(Weak::upgrade) {
+        let children = self.children.borrow().clone(); // Do not borrow for the complete visit
+        for child in children.iter().filter_map(Weak::upgrade) {
             visitor(&(child as Rc<dyn WindowAdapter>));
         }
     }
