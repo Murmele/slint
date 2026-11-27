@@ -748,6 +748,9 @@ pub struct WindowInner {
     /// Bit mask of the buttons whose press an open menu blocked, indexed by `PointerEventButton as u8`.
     buttons_blocked_by_menu: Cell<u8>,
     close_requested: Callback<(), CloseRequestResponse>,
+    /// Set while the root `WindowItem`'s `rejected` callback runs, so that a handler closing the
+    /// window doesn't reject it again.
+    rejecting: Cell<bool>,
     click_state: ClickState,
     ctx: core::cell::OnceCell<crate::SlintContext>,
     /// The native drag we started, if one is in flight.
@@ -853,6 +856,7 @@ impl WindowInner {
             kind: Default::default(),
             buttons_blocked_by_menu: Default::default(),
             close_requested: Default::default(),
+            rejecting: Default::default(),
             click_state: ClickState::default(),
             prevent_focus_change: Default::default(),
             ctx: Default::default(),
@@ -1627,6 +1631,12 @@ impl WindowInner {
 
             if close_on_escape {
                 window.close_top_popup();
+            } else if self.kind.get().is_none_or(|kind| !kind.is_popup())
+                && self.window_item().is_some_and(|w| w.as_pin_ref().rejected.has_handler())
+                && self.request_close()
+            {
+                // Like QDialog, Esc rejects a dialog.
+                let _ = self.hide();
             }
             self.ensure_tree_instantiated();
             return crate::input::KeyEventResult::EventAccepted;
@@ -2895,6 +2905,15 @@ impl WindowInner {
     /// If the callback returns KeepWindowShown, this function returns false. That should prevent the Window from closing.
     /// Otherwise it returns true, which allows the Window to hide.
     pub fn request_close(&self) -> bool {
+        // Like QDialog::closeEvent(), closing a shown dialog rejects it.
+        if self.is_visible()
+            && !self.rejecting.get()
+            && let Some(window_item) = self.window_item()
+        {
+            self.rejecting.set(true);
+            window_item.as_pin_ref().rejected.call(&());
+            self.rejecting.set(false);
+        }
         match self.close_requested.call(&()) {
             CloseRequestResponse::HideWindow => true,
             CloseRequestResponse::KeepWindowShown => false,

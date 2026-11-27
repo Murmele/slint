@@ -1938,6 +1938,7 @@ fn lower_dialog_layout(
     );
 
     let mut main_widget = None;
+    let mut reject_button = None;
     let mut button_roles = Vec::new();
     let mut seen_buttons = HashSet::new();
     let mut num_cached_items: usize = 0;
@@ -2056,6 +2057,10 @@ fn lower_dialog_layout(
             false
         };
 
+        if is_button && reject_button.is_none() && button_roles.last().is_some_and(|r| r == "reject")
+        {
+            reject_button = Some(layout_child.clone());
+        }
         if is_button {
             grid.add_element_with_coord(
                 layout_child,
@@ -2077,6 +2082,27 @@ fn lower_dialog_layout(
         }
     }
     dialog_element.borrow_mut().children = layout_children;
+
+    if let Some(reject_button) = reject_button
+        && matches!(
+            reject_button
+                .borrow()
+                .lookup_property("clicked", PropertyLookupMode::ComponentLocal)
+                .property_type,
+            Type::Callback(_)
+        )
+        && !dialog_element.borrow().is_binding_set("rejected", false)
+    {
+        let click = Expression::CodeBlock(vec![Expression::FunctionCall {
+            function: Callable::Callback(NamedReference::new(
+                &reject_button,
+                SmolStr::new_static("clicked"),
+            )),
+            arguments: vec![],
+            source_location: None,
+        }]);
+        dialog_element.borrow_mut().set_binding(SmolStr::new_static("rejected"), click.into());
+    }
 
     if let Some(main_widget) = main_widget {
         grid.add_element_with_coord(

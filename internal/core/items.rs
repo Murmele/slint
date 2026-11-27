@@ -1288,6 +1288,7 @@ pub struct WindowItem {
     pub default_font_family: Property<SharedString>,
     pub default_font_size: Property<LogicalLength>,
     pub default_font_weight: Property<i32>,
+    pub rejected: Callback<VoidArg>,
     pub cached_rendering_data: CachedRenderingData,
 }
 

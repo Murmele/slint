@@ -71,7 +71,8 @@ export component Test inherits Window {
     // Closure as the right-hand side of a non-array property still produces a single
     // conversion error at the property's binding, not a cascade inside the closure body.
     property <int> rejected: (x) => x + 1;
-//                           >           <error{Cannot convert closure to int}
+//                 >      <warning{'rejected' shadows the builtin callback of the same name}
+//                           >           <^error{Cannot convert closure to int}
 
     TouchArea {
         clicked => (x) => x > 0;

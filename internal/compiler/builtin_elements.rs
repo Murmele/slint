@@ -2296,6 +2296,10 @@ fn build(l: &mut Loader) {
         /// The window title that is shown in the title bar.
         /// \default the name of the running program
         in property <string> title { BuiltinFunction.DefaultWindowTitle }
+        /// Invoked when the user closes a `Dialog`'s window or presses Esc, like rejecting a `QDialog`.
+        /// The window is hidden afterwards.
+        /// By default, a `Dialog` clicks its button with the `reject` role, such as a `StandardButton` of kind `cancel`.
+        @shadowable callback rejected;
         /// Some devices, such as mobile phones, allow programs to overlap the system UI. A few examples for this are the notch on iPhones, the window buttons on macOS on windows that extend their content over the titlebar and the system bar on Android. This property exposes the amount of space at the edges of the window that can be drawn to but where no interactive elements should be placed. On most devices, this is 0 for all sides.
         out property <Edges> safe-area-insets;
         /// On mobile devices, virtual keyboards (aka software keyboards or onscreen keyboards) are displayed on top of the application. When such a keyboard is shown, this property denotes the position of the top left boundary of the rectangle covered by it in window coordinates.

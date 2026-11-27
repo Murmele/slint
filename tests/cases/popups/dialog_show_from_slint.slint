@@ -3,14 +3,24 @@
 
 // A Dialog declared within another component is only instantiated while shown,
 // in its own window. `show-modal(window-modal)` makes it modal to the window that declares it.
+// Like a QDialog, closing its window or pressing Esc clicks its reject button and hides it.
+
+import { StandardButton } from "std-widgets.slint";
 
 component ConfirmDialog inherits Dialog {
     width: 100px;
     height: 100px;
     callback answered();
+    callback canceled();
 
     TouchArea {
         clicked => { root.answered(); }
+    }
+
+    // Doesn't hide the dialog itself: rejecting the dialog hides it.
+    StandardButton {
+        kind: cancel;
+        clicked => { root.canceled(); }
     }
 }
 
@@ -21,6 +31,7 @@ export component TestCase inherits Window {
     in-out property <int> dialog-inits;
     in-out property <DialogModality> modality: DialogModality.window-modal;
     in-out property <int> answers;
+    in-out property <int> cancels;
 
     public function open-modal() {
         confirm.show-modal(root.modality);
@@ -40,6 +51,9 @@ export component TestCase inherits Window {
             root.answers += 1;
             // Hiding from within the dialog
             self.hide();
+        }
+        canceled => {
+            root.cancels += 1;
         }
     }
 
@@ -106,5 +120,28 @@ assert_eq!(instance.get_dialog_inits(), 3, "it's already shown");
 instance.invoke_close();
 instance.invoke_open();
 assert_eq!(instance.get_dialog_inits(), 4, "it was hidden");
+instance.invoke_close();
+
+// Closing the window rejects the dialog: it clicks the cancel button and hides the window
+instance.invoke_open_modal();
+let dialog = child_windows(instance.window())[0].clone();
+dialog.window().dispatch_event(slint::platform::WindowEvent::CloseRequested);
+assert_eq!(instance.get_cancels(), 1);
+assert!(!dialog.window().is_visible());
+drop(dialog);
+
+// So does Esc
+instance.invoke_open_modal();
+let dialog = child_windows(instance.window())[0].clone();
+dialog.window().dispatch_event(WindowEvent::KeyPressed { text: slint::platform::Key::Escape.into() });
+dialog.window().dispatch_event(WindowEvent::KeyReleased { text: slint::platform::Key::Escape.into() });
+assert_eq!(instance.get_cancels(), 2);
+assert!(!dialog.window().is_visible());
+drop(dialog);
+
+// Esc in the main window doesn't reject anything
+instance.window().dispatch_event(WindowEvent::KeyPressed { text: slint::platform::Key::Escape.into() });
+assert_eq!(instance.get_cancels(), 2);
+assert!(instance.window().is_visible());
 ```
 */
